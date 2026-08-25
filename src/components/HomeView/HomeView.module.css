@@ -1619,12 +1619,22 @@
   background: var(--bg-elevated);
 }
 
+.actionCard:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-ring);
+  outline: none;
+}
+
 .actionIcon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: var(--fg-faint);
   flex-shrink: 0;
+}
+
+.actionCard:hover .actionIcon {
+  color: var(--accent);
 }
 
 .actionLabel {
@@ -2549,11 +2559,35 @@
   font: 11px var(--font-mono);
   cursor: pointer;
   backdrop-filter: blur(8px);
+  transition:
+    border-color var(--anim-fast) var(--ease-out-fluid),
+    background var(--anim-fast) var(--ease-out-fluid),
+    color var(--anim-fast) var(--ease-out-fluid);
 }
 
 .heroSecondaryAction:hover {
   color: var(--fg);
+  border-color: var(--border-strong);
   background: var(--bg-elevated);
+}
+
+.heroSecondaryAction:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-ring);
+  outline: none;
+}
+
+/* The feature-workspace flow is the hero's headline action. */
+.heroPrimaryAction {
+  border-color: var(--accent-border-soft);
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg));
+  color: var(--accent-strong);
+}
+
+.heroPrimaryAction:hover {
+  border-color: var(--accent-border);
+  background: color-mix(in srgb, var(--accent) 20%, var(--bg));
+  color: var(--accent-strong);
 }
 
 .overviewGrid {

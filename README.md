@@ -3,7 +3,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/theylor999/utopia-agent">
-    <img src="./src/assets/utopia-hero.png" alt="Utopia Agent" width="220">
+    <img src="./src/assets/utopia-logo.png" alt="Utopia Agent" width="260">
   </a>
 
   <h1 align="center">Utopia Agent</h1>
@@ -11,24 +11,26 @@
   <p align="center">
     <b>The multi-agent coding workspace.</b>
     <br />
-    Run Oh My Pi, Grok Build and Claude Code side by side — in one local-first desktop app.
+    Run Oh My Pi, Grok Build, Claude Code and plain shells side by side, in real terminals, inside one
+    local-first desktop app.
   </p>
 
   <p align="center">
-    <a href="https://github.com/theylor999/utopia-agent/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/theylor999/utopia-agent/ci.yml?branch=main&label=ci&style=flat-square"></a>
-    <a href="https://github.com/theylor999/utopia-agent/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/theylor999/utopia-agent?style=flat-square"></a>
-    <a href="https://github.com/theylor999/utopia-agent/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/theylor999/utopia-agent?style=flat-square"></a>
-    <a href="https://github.com/theylor999/utopia-agent/graphs/contributors"><img alt="Contributors" src="https://img.shields.io/github/contributors/theylor999/utopia-agent?style=flat-square"></a>
-    <a href="https://github.com/theylor999/utopia-agent/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/theylor999/utopia-agent?style=flat-square"></a>
+    <a href="https://github.com/theylor999/utopia-agent/blob/main/LICENSE"><img alt="License: AGPL-3.0-or-later" src="https://img.shields.io/badge/license-AGPL--3.0--or--later-blue?style=flat-square"></a>
+    <a href="#install-windows"><img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-informational?style=flat-square"></a>
+    <a href="#credits--upstream"><img alt="Fork of Alethe Agents" src="https://img.shields.io/badge/fork%20of-Kc1t%2Falethe--agents-8957e5?style=flat-square"></a>
     <a href="https://github.com/theylor999/utopia-agent/issues"><img alt="Open issues" src="https://img.shields.io/github/issues/theylor999/utopia-agent?style=flat-square"></a>
+    <a href="https://github.com/theylor999/utopia-agent/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/theylor999/utopia-agent?style=flat-square"></a>
   </p>
 
   <p align="center">
-    <a href="https://github.com/theylor999/utopia-agent/releases">Download</a>
+    <a href="#install-windows">Install</a>
     ·
-    <a href="https://github.com/theylor999/utopia-agent/issues/new?labels=bug">Report Bug</a>
+    <a href="#new-feature--git-worktree-in-one-dialog">New feature</a>
     ·
-    <a href="https://github.com/theylor999/utopia-agent/issues/new?labels=enhancement">Request Feature</a>
+    <a href="#develop">Develop</a>
+    ·
+    <a href="#credits--upstream">Credits</a>
     ·
     <a href="./SECURITY.md">Security</a>
     ·
@@ -38,257 +40,280 @@
   </p>
 </div>
 
-> [!IMPORTANT]
-> Utopia Agent is a local-first desktop workspace. Update checks are off in this fork until a signed release pipeline exists. Provider usage polling can still contact Claude. Manual GitHub Gist Sync is already available. See [privacy and data-flow](./docs/PRIVACY.md).
+---
 
-<div align="center">
-  <img src="./src/assets/utopia-hero.png" alt="Utopia Agent mark" width="420">
-</div>
+## What Utopia Agent is
 
-## What Utopia Agent Is
+Utopia Agent is a desktop workspace for coding agents. Every agent runs in a real terminal (a PTY),
+inside a project you saved, in a layout you chose. Panes keep their working directory, their
+scrollback, and their session, so closing a window does not lose the work.
 
-Utopia Agent is a desktop workspace for running coding agents in real terminals, with projects,
-splits, MCP, and Git in one window.
+It is built with Tauri 2, Rust, React and `xterm.js`, and it runs on Windows, macOS and Linux.
+Windows is the most tested platform.
 
-This repository is a maintained fork of [Alethe](https://github.com/Kc1t/alethe-agents) by Kauã Miguel,
-released under AGPL-3.0-or-later. The product name, icon, default providers, and GitHub destination
-are specific to this fork.
+"Local-first" describes where the workspace state lives, not an internet-free guarantee. See
+[`docs/PRIVACY.md`](./docs/PRIVACY.md) for the current network surfaces and defaults.
 
-Cross-platform (Windows, macOS, Linux), built with Tauri, Rust, React, and `xterm.js`.
-
-“Local-first” describes workspace persistence, not an internet-free guarantee; see
-[`docs/PRIVACY.md`](./docs/PRIVACY.md) for current network defaults, credentials, and retention.
-
-## Supported Platforms
-
-<table>
-  <tr>
-    <th width="33.33%">macOS</th>
-    <th width="33.33%">Windows</th>
-    <th width="33.33%">Linux</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="./docs/screenshots/alethe-macos.png" alt="Alethe running on macOS" width="100%">
-    </td>
-    <td align="center">
-      <img src="./docs/screenshots/alethe-windows.png" alt="Alethe running on Windows" width="100%">
-    </td>
-    <td align="center">
-      <img src="./docs/screenshots/alethe-linux.png" alt="Alethe running on Linux" width="100%">
-    </td>
-  </tr>
-  <tr>
-    <td align="center">Available on macOS</td>
-    <td align="center">Available on Windows</td>
-    <td align="center">Available on Linux</td>
-  </tr>
-</table>
+> [!NOTE]
+> This repository is a maintained fork of [Alethe Agents](https://github.com/Kc1t/alethe-agents) by
+> Kauã Miguel ([@Kc1t](https://github.com/Kc1t)), under AGPL-3.0-or-later. See
+> [Credits / Upstream](#credits--upstream).
 
 ## Agents
 
-| Agent | CLI | |
+| Agent | CLI | Notes |
 |---|---|---|
-| **OMP** | `omp` | Primary provider |
+| **Oh My Pi** | `omp` | The primary provider of this fork. |
 | **Grok Build** | `grok` | |
-| **Claude Code** | `claude` | Session resume, usage cards, local history |
-| **Shell** | pwsh / bash / zsh | The plain terminal, same pane model |
+| **Claude Code** | `claude` | Session resume, usage cards, local conversation history. |
+| **Shell** | `pwsh` / `bash` / `zsh` | A plain terminal, in the same pane model. |
 
-Missing CLIs can be installed, updated, and uninstalled from inside Utopia Agent. Already-installed
-CLIs are discovered across PATH and common Windows install locations.
+Utopia Agent finds the CLIs already installed on the machine — it searches `PATH` and the common
+Windows install locations. A missing CLI can be installed, updated and uninstalled from inside the
+app.
 
-## What It Does
+You choose the agent per pane, so a project can hold an `omp` pane, a `claude` pane and a shell at
+the same time, each with its own process and working directory.
+
+## New feature — Git worktree in one dialog
+
+Starting a task usually means: create a branch, create a worktree, put it somewhere sensible, open
+it, and repeat for every repository the task touches. **New feature** does all of it in one dialog.
+
+Open it from the home screen ("New feature") or from a project's context menu in the sidebar, then:
+
+1. **Pick the workspace type** — `Backend`, `Frontend`, `Backend + frontend`, or `Scripts`. Utopia
+   Agent inspects your projects and suggests which one fits each role.
+2. **Pick the source project** for each role. `Backend + frontend` takes two different repositories.
+3. **Type a category and a name** — for example `fix` + `foo`, or `feature` + `foo-bar`. The branch
+   is `category/name`, so `fix/foo` and `feature/foo-bar`. The category list offers `feature`, `fix`,
+   `chore` and `refactor`, and accepts anything else you type.
+4. **Read the plan preview** — the branch, the workspace folder, and the destination of every
+   worktree, before anything is written to disk.
+
+Press create, and the app does the rest by itself:
+
+- Creates the branch and a **Git worktree** for every source repository, with `git worktree add`.
+- Creates a workspace folder next to the main repository, named after the branch — `feature/foo-bar`
+  becomes `feature-foo-bar/` — with one subfolder per role (`backend/`, `frontend/`, `scripts/`).
+- Registers each worktree as a **project** in the workspace, opens a shell in it, and groups the
+  projects together when the feature spans more than one repository.
+
+Creation is transactional: if any step fails, the worktrees, branches and folders already created are
+rolled back, and the error tells you which check failed — an existing branch, an occupied
+destination, or a duplicated source repository.
+
+## What it does
 
 **Run agents in parallel**
 
-- Projects, groups, and subgroups organize repositories; each open project becomes a container with
+- Projects, groups and subgroups organize repositories. Opening a project gives it a container with
   its own panes.
-- One agent per pane, or several agents as sub-tabs inside the same pane — each with its own PTY,
-  working directory, and session.
-- Auto, spotlight, sidebar, and custom grid layouts, editable directly on the grid.
-- Closing a container hides it; the process keeps running.
+- One agent per pane, or several agents as sub-tabs inside one pane — each with its own PTY, working
+  directory and session.
+- Auto, spotlight, sidebar and custom grid layouts, editable directly on the grid.
+- Closing a container hides it. The processes keep running.
 
 **Keep the context**
 
-- Sessions of Claude Code, Codex, and OpenCode resume after a crash or a restart.
+- Agent sessions resume after a restart or a crash.
 - **Recent chats** lists the conversations of a pane's working directory and reopens any of them.
-- A Claude Code conversation can be **handed off to Codex** (and back) through a locally redacted
-  context packet — no copy-pasting the thread by hand. Redaction is best effort, so review the packet
-  before starting the target agent.
 - Scrollback is persisted per PTY, so reattaching shows what happened before.
+- A conversation can be handed off between agents through a locally redacted context packet, instead
+  of copy-pasting the thread. Redaction is best effort — review the packet before you start the
+  target agent.
 
 **Manage what the agents share**
 
-- **MCP tab**: every MCP server configured on the machine, grouped by server and showing which agents
-  have it — read from Claude Code, Codex, and OpenCode configs. Add, remove, copy a server from one
-  agent to another, search the official registry, and ask each agent to verify it can really reach a
-  server. Every write is backed up, re-parsed, and committed atomically.
-- **Skills tab**: the skills installed for each agent, with links and shared stores resolved so a
-  shared skill shows up once.
-- **Graphify**: a code graph of the project, served to the agents as an MCP server.
+- **MCP tab** — every MCP server configured on the machine, grouped by server, showing which agents
+  have it. Add, remove, copy a server between agents, search the official registry, and ask an agent
+  to verify it really reaches a server. Every write is backed up, re-parsed and committed atomically.
+- **Skills tab** — the skills installed for each agent, with links and shared stores resolved so a
+  shared skill appears once.
+- **Graphify** — a code graph of the project, served to the agents as an MCP server.
 
 **Stay in control**
 
-- RAM readout in the title bar; disable a terminal or suspend a whole group to get memory back.
-- Git panel per project — status, stage, commit, branches, diffs in a pane — plus worktrees for
-  parallel tasks.
-- Content panes beside the terminals: file explorer, Markdown, diffs, images, video, embedded browser.
-- Todos per project, isolated profiles, local backup export/import, 14 UI and terminal themes,
-  EN and pt-BR.
-- **Remote Control**: an authenticated LAN web view, paired by QR code, to follow and answer agents
-  from your phone. It is off by default and uses unencrypted HTTP/WebSocket transport on the LAN, so
-  enable it only on a trusted network. Clean profiles are read-only; answering agents requires a
-  separate input opt-in, and shell input has its own additional opt-in.
-- Spotify Now Playing, using your own Spotify app credentials in **Preferences ▸ Spotify** with
-  `http://127.0.0.1:8888/callback` as the redirect URI. Current releases store those credentials in
-  local profile files; see the privacy guide before exporting or sharing profile data.
+- Git panel per project: status, stage, commit, branches, diffs in a pane, plus worktrees.
+- RAM readout in the title bar. Disable a terminal or suspend a group to get memory back.
+- Content panes beside the terminals: file explorer, Markdown, diffs, images, video, embedded
+  browser.
+- Todos per project, isolated profiles, local backup export/import, 18 UI and terminal themes,
+  English and pt-BR.
+- **Remote Control** — an authenticated LAN web view, paired by QR code, to follow and answer agents
+  from a phone. Off by default, and it uses unencrypted HTTP/WebSocket on the LAN, so enable it only
+  on a trusted network. Answering agents needs a separate opt-in, and shell input another one.
+- Spotify Now Playing, with your own Spotify app credentials in **Preferences ▸ Spotify**.
 
-## Core Concepts
+## Core concepts
 
 | | |
 |---|---|
-| **Group** | A collection of projects that opens, collapses, and suspends together. |
+| **Group** | A set of projects that opens, collapses and suspends together. |
 | **Project** | A saved working context: terminals, layout, color, local state. |
-| **Container** | The visible frame of an opened project. Closing it does not kill anything. |
+| **Container** | The visible frame of an opened project. Closing it kills nothing. |
 | **Pane** | A terminal view inside a container. |
 | **Sub-tab** | A separate agent or shell session inside the same pane. |
 | **PTY** | The real backend process, alive independently of the UI. |
 
-## Product Philosophy
+## Screenshot
 
-A focused core with optional capabilities, closer to Obsidian than to a maximalist IDE. Non-essential
-features ship behind feature flags or opt-in settings, and a clean installation stays a first-class
-experience. Coherence over volume.
+<div align="center">
+  <img src="./docs/screenshots/home-view.png" alt="The home view: projects, recent projects, an agent launcher and the todo panel" width="100%">
+</div>
 
-## Install
+<sub>Screenshot inherited from the upstream project. Fork-specific screenshots are pending.</sub>
 
-Use the published installers from [Releases](https://github.com/Kc1t/alethe-agents/releases).
+## Install (Windows)
 
-> [!WARNING]
-> Windows builds are **not code-signed yet**, so Defender may flag `alethe.exe` as
-> `Trojan:Win32/Bearfoos.A!ml` and quarantine it. The `!ml` suffix denotes a machine-learning
-> heuristic rather than a publisher signature, and terminal-multiplexer behavior such as spawning
-> child processes and creating PTYs can produce false positives. Verify that the download came from
-> the official Releases page; do not bypass a warning for an artifact from another source.
+This fork has no published installers yet, so you build it once from source. It takes one command
+more than a download and it produces a normal desktop app.
 
-To recover it: **Windows Security → Virus & threat protection → Protection history → Actions →
-Restore**, then add an exclusion for `%LOCALAPPDATA%\Alethe` (and `src-tauri/target` if you build
-from source). Reports of incorrect detection go to
-[Microsoft Security Intelligence](https://www.microsoft.com/wdsi/filesubmission). macOS builds are
-not notarized yet either — right-click the app and choose **Open** to bypass Gatekeeper. Signing and
-notarization are on the [roadmap](#roadmap).
-
-## Run From Source
-
-```sh
-git clone https://github.com/Kc1t/alethe-agents.git
-cd alethe-agents
+```powershell
+git clone https://github.com/theylor999/utopia-agent.git
+cd utopia-agent
 npm install
-npm run app
+npm run tauri build
 ```
 
-Requirements: Node.js 18+, Rust stable, Visual Studio Build Tools on Windows, Tauri system
-dependencies on Linux:
+Then run the app that the build produced:
+
+```
+src-tauri\target\release\Utopia Agent.exe
+```
+
+The MSI and NSIS installers land in `src-tauri\target\release\bundle\`, if you prefer to install the
+app instead of running it from the build folder.
+
+**Requirements:** Node.js 18+, Rust stable, and Visual Studio Build Tools (MSVC). If `npm run tauri
+build` cannot find the MSVC toolchain, run it inside the Visual Studio environment:
+
+```powershell
+cmd /c '"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" >NUL && npm run tauri build'
+```
+
+On Linux you also need the Tauri system dependencies:
 
 ```sh
 sudo apt install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 ```
 
+> [!WARNING]
+> Builds of this fork are **not code-signed**, and macOS builds are not notarized. Windows Defender
+> can flag a self-built binary through a machine-learning heuristic (`!ml`), because a terminal
+> multiplexer spawning child processes and creating PTYs looks unusual. If that happens with a binary
+> **you built yourself**, restore it under **Windows Security ▸ Virus & threat protection ▸
+> Protection history**, and add an exclusion for `src-tauri\target`. Never bypass a warning for a
+> binary you did not build and cannot trace.
+
+## Develop
+
 ```sh
-npm run app          # desktop app with hot reload
-npm run dev          # frontend only
-npm run build        # typecheck + build frontend
+npm install
+npm run app          # the desktop app with hot reload — the normal way to develop
+npm run dev          # the frontend only
+npm run build        # typecheck + build the frontend
 npm run tauri build  # installers → src-tauri/target/release/bundle/
+npm test             # unit tests
+npm run lint         # eslint
 ```
 
-## Terminal Command
+`npm run app` runs the app under a separate identifier from the release build, so a dev session does
+not touch your real workspace data.
 
-Install the `alethe` command from **Settings ▸ Integrations ▸ Terminal command**:
+## Terminal command
+
+Install the `utopia-agent` command from **Settings ▸ Integrations ▸ Terminal command**:
 
 ```bash
-alethe                # opens the current folder as a project
-alethe ~/some/project # opens the given folder
+utopia-agent                # opens the current folder as a project
+utopia-agent ~/some/project # opens the given folder
 ```
 
-If the folder is already a project, it is brought into the workspace instead of duplicated. If Alethe
-is already running, the existing window is focused. The command lands in `~/.local/bin/alethe`
-(macOS/Linux) or `%LOCALAPPDATA%\Alethe\bin\alethe.cmd` (Windows) — reinstall it after moving the app.
+If the folder is already a project, it is brought into the workspace instead of duplicated. If the
+app is already running, the existing window is focused. The shim lands in
+`%LOCALAPPDATA%\utopia-agent\bin\utopia-agent.cmd` on Windows, or `~/.local/bin/utopia-agent` on
+macOS and Linux — reinstall it after moving the app.
 
-## Roadmap
+## Where your data lives
 
-- [x] Multi-agent workspace with projects, groups, containers, and sub-tabs.
-- [x] Real PTYs with spawn, attach, resize, scrollback, and session resume.
-- [x] Agent install/update/uninstall, MCP and skills management.
-- [x] Releases for Windows, Linux, and macOS.
-- [ ] Windows release signing and macOS notarization.
-- [ ] Broader Linux/macOS validation on real machines.
-- [ ] First-party hosted cloud sync/backup (manual GitHub Gist Sync is already available).
+Workspace state, profiles and scrollback live under the app's local data directory:
+`%LOCALAPPDATA%\com.theylor.utopiaagent\profiles\<profile>\` on Windows. Each profile is isolated.
+[`docs/PRIVACY.md`](./docs/PRIVACY.md) documents every file, every network call and its default.
+
+> [!IMPORTANT]
+> The startup update check is still active and points at this repository's releases. Until this fork
+> publishes signed releases, it finds nothing. Provider usage polling can contact Claude.
+> Manual GitHub Gist Sync is available and off by default.
+
+## Docs
+
+| | |
+|---|---|
+| [`docs/OVERVIEW.md`](./docs/OVERVIEW.md) | Architecture and workspace model. |
+| [`docs/FEATURES.md`](./docs/FEATURES.md) | Feature reference. |
+| [`docs/PRIVACY.md`](./docs/PRIVACY.md) | Data flows, network surfaces, retention. |
+| [`docs/THEMES.md`](./docs/THEMES.md) | How to add a theme. |
+| [`docs/BRAND.md`](./docs/BRAND.md) | Design tokens and assets. |
+| [`docs/ROADMAP.md`](./docs/ROADMAP.md) | Direction. |
+| [`docs/CHANGELOG.md`](./docs/CHANGELOG.md) | History, including the upstream history. |
+| [`AGENTS.md`](./AGENTS.md) | Working guide for coding agents in this repository. |
+| [`SHOWCASE.md`](./SHOWCASE.md) | Things built with Utopia Agent as the workspace. |
 
 ## Contributing
 
-Contributions are welcome. Read [`CONTRIBUTING.md`](CONTRIBUTING.md) for setup, project layout, and
-house rules. The easiest ways to help:
+Contributions are welcome. [`CONTRIBUTING.md`](CONTRIBUTING.md) has the setup, the project layout and
+the house rules. The easiest ways to help: report a bug with real reproduction steps, validate the
+app on macOS or Linux, or improve the docs and screenshots.
 
-- Pick an issue labeled [`good first issue`](https://github.com/Kc1t/alethe-agents/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) or [`help wanted`](https://github.com/Kc1t/alethe-agents/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) — comment to claim it.
-- Report a bug with clear reproduction steps, or request a feature with the workflow it improves.
-- Improve docs, screenshots, and platform validation — Linux and macOS are the least tested.
+For anything larger, open an issue first so the direction can be discussed.
 
-For larger changes, open an issue first so the direction can be discussed.
+## Staying current with upstream
 
-## Built with Alethe
+Utopia Agent tracks Alethe Agents. This fork's work lives on the `custom/theylor` branch, and the
+upstream remote is fetch-only:
 
-Projects and products built with Alethe as the workspace — agents running in parallel, shells alongside them, sessions resumed across days.
+```sh
+git remote -v
+# origin    https://github.com/theylor999/utopia-agent.git (fetch/push)
+# upstream  https://github.com/Kc1t/alethe-agents.git (fetch)
+# upstream  DISABLED (push)
+```
 
-<!-- showcase:start -->
+To pull upstream changes in:
 
-_Nothing here yet._ Built something with Alethe? Add it to [`SHOWCASE.md`](SHOWCASE.md) — it's one line and a pull request, and you end up in the contributors list too.
+```sh
+git checkout custom/theylor
+git fetch upstream
+git merge upstream/main
+```
 
-<!-- showcase:end -->
+If the remote is not configured yet:
 
-See [`SHOWCASE.md`](SHOWCASE.md) for the full list and how to submit.
+```sh
+git remote add upstream https://github.com/Kc1t/alethe-agents.git
+git remote set-url --push upstream DISABLED
+```
 
-## Watch Alethe in Action
+Setting the push URL to `DISABLED` is deliberate: it makes an accidental `git push upstream` fail
+instead of sending fork commits to the upstream repository. Resolve merge conflicts in favor of the
+fork's product identity (name, icon, providers, GitHub destination) and in favor of upstream for
+everything else.
 
-See Alethe in real development workflows and learn how to orchestrate coding agents in parallel.
+## Credits / Upstream
 
-<table>
-  <tr>
-    <th width="38%">Video</th>
-    <th>What you will see</th>
-  </tr>
-  <tr>
-    <td>
-      <a href="https://www.youtube.com/watch?v=8jvrucR7QCU&amp;t=54s">
-        <img src="https://i.ytimg.com/vi/8jvrucR7QCU/hqdefault.jpg" alt="Stop Using One AI Agent at a Time: Orchestrate AI Agents" width="100%">
-      </a>
-    </td>
-    <td>
-      <strong><a href="https://www.youtube.com/watch?v=8jvrucR7QCU&amp;t=54s">Stop Using One AI Agent at a Time: Orchestrate AI Agents</a></strong>
-      <br><br>
-      A practical introduction to coordinating multiple AI coding agents instead of working with only one at a time.
-      <br><br>
-      <sub>Kauã Miguel - Dev · Portuguese</sub>
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <a href="https://www.youtube.com/watch?v=reUN7CkMbgM&amp;t=100s">
-        <img src="https://i.ytimg.com/vi/reUN7CkMbgM/hqdefault.jpg" alt="A Day in the Life of a Software Developer — Devlog 1" width="100%">
-      </a>
-    </td>
-    <td>
-      <strong><a href="https://www.youtube.com/watch?v=reUN7CkMbgM&amp;t=100s">A Day in the Life of a Software Developer — Devlog 1</a></strong>
-      <br><br>
-      A real-world developer workflow showing Alethe as part of the day-to-day coding process.
-      <br><br>
-      <sub>Guilherme Dev · Portuguese</sub>
-    </td>
-  </tr>
-</table>
+**Utopia Agent is a fork of [Alethe Agents](https://github.com/Kc1t/alethe-agents), created by Kauã
+Miguel ([@Kc1t](https://github.com/Kc1t)).** The architecture, the terminal engine, the workspace
+model and the great majority of this codebase are his and his contributors' work. This fork changes
+the product identity, the default agent providers, and adds features such as the New feature worktree
+creator.
 
-## Contributors
+- Upstream project: <https://github.com/Kc1t/alethe-agents>
+- Upstream author: [Kauã Miguel (@Kc1t)](https://github.com/Kc1t)
+- Upstream contributors: [contributor graph](https://github.com/Kc1t/alethe-agents/graphs/contributors)
+- Copyright notices, upstream included, are preserved in [`NOTICE`](NOTICE) and [`LICENSE`](LICENSE).
 
-Thanks to everyone helping shape Alethe.
+Everyone who shaped the code this fork is built on:
 
 <p align="center">
   <!-- contributors:start -->
@@ -328,17 +353,23 @@ Thanks to everyone helping shape Alethe.
   <!-- contributors:end -->
 </p>
 
+Report bugs of **this fork** to
+[theylor999/utopia-agent/issues](https://github.com/theylor999/utopia-agent/issues), not to the
+upstream tracker. Bugs you can reproduce in upstream Alethe Agents belong upstream.
+
+The **Alethe** name, logo and branding belong to the upstream project and are covered by its
+[`TRADEMARK.md`](TRADEMARK.md). They are not used as the identity of this fork. The **Utopia Agent**
+name and mark identify this fork's builds.
+
 ## License
 
-The source code is distributed under **AGPL-3.0-or-later**. See [`LICENSE`](LICENSE) for details.
-Official hosted services, such as sync, backup, billing, or cloud features, may be proprietary and
-offered separately. The **Alethe** name, logo, and official branding are reserved for official builds
-— see [`TRADEMARK.md`](TRADEMARK.md).
+The source code is distributed under **AGPL-3.0-or-later** — see [`LICENSE`](LICENSE). This is
+inherited from upstream and unchanged.
 
 ## Community
 
 - Security reports: [`SECURITY.md`](SECURITY.md)
 - Privacy and data flows: [`docs/PRIVACY.md`](docs/PRIVACY.md)
-- Maintainer: [Kc1t](https://github.com/Kc1t)
-- Project: <https://github.com/Kc1t/alethe-agents>
-- Bugs and feature requests: <https://github.com/Kc1t/alethe-agents/issues>
+- Maintainer of this fork: [@theylor999](https://github.com/theylor999)
+- Project: <https://github.com/theylor999/utopia-agent>
+- Bugs and feature requests: <https://github.com/theylor999/utopia-agent/issues>

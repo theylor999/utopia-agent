@@ -1,4 +1,4 @@
-# Alethe Features
+# Utopia Agent Features
 
 This document summarizes the main product capabilities in the public desktop app.
 
@@ -15,7 +15,7 @@ This document summarizes the main product capabilities in the public desktop app
 
 ## Layouts
 
-Alethe supports layouts at project, group, and workspace level.
+Utopia Agent supports layouts at project, group, and workspace level.
 
 - **Auto**: one pane full size, two panes side by side, three or more in a grid.
 - **Spotlight**: one primary pane with secondary panes stacked beside it.
@@ -27,7 +27,7 @@ Custom grids support `colSpan`, `rowSpan`, drag-and-drop swapping, and resizable
 ## Terminals and PTYs
 
 - Real backend PTYs through `portable-pty`.
-- Shell, Claude Code, Codex, and OpenCode terminal types.
+- Oh My Pi (`omp`), Grok Build (`grok`), Claude Code, and Shell terminal types.
 - Spawn, attach, write, resize, restart, and kill through Tauri commands.
 - Persisted scrollback per PTY.
 - Automatic terminal resize through `ResizeObserver` and `xterm-fit`.
@@ -42,17 +42,14 @@ Custom grids support `colSpan`, `rowSpan`, drag-and-drop swapping, and resizable
 - Each sub-tab can have its own agent type, cwd, and PTY.
 - The sub-tab lane can be hidden or shown.
 - Multi-tab terminals force the lane visible.
-- New tabs can be created as Shell, Claude Code, Codex, or OpenCode.
+- New tabs can be created as Oh My Pi, Grok Build, Claude Code, or Shell.
 
 ## Agents and Launchers
 
 - CLI launcher resolution before spawning an agent.
 - Windows launcher lookup across PATH, npm, pnpm, Volta, fnm, nvm-windows, Bun, Cargo, Scoop, Chocolatey, and common Node.js paths.
 - Manual launcher override when a CLI cannot be found.
-- Per-agent unrestricted mode flags:
-  - Claude Code: `--dangerously-skip-permissions`
-  - Codex: `--dangerously-bypass-approvals-and-sandbox`
-  - OpenCode: `--dangerously-skip-permissions`
+- Per-agent unrestricted mode flags, for example Claude Code's `--dangerously-skip-permissions`.
 
 ## Local Accounts
 
@@ -63,7 +60,7 @@ Custom grids support `colSpan`, `rowSpan`, drag-and-drop swapping, and resizable
 
 ## Resume and History
 
-- Persist active Claude/Codex/OpenCode sessions for local resume.
+- Persist active agent sessions for local resume.
 - Reattach scrollback after app restart.
 - List local Claude session metadata when available.
 - Open history modals from agent panes.
@@ -126,6 +123,26 @@ Custom grids support `colSpan`, `rowSpan`, drag-and-drop swapping, and resizable
   | `R` | Restart the selected terminal when focus is on the UI, not inside the terminal |
   | `Esc` | Close the open modal, or leave fullscreen |
 
+## Git and Feature Workspaces
+
+- Git panel per project: status, stage, commit, branches, diffs, and worktrees.
+- **New feature** creates a whole feature workspace in one dialog. Open it from the home screen or
+  from a project's context menu in the sidebar.
+  - Workspace type: `Backend`, `Frontend`, `Backend + frontend`, or `Scripts`. The app detects the
+    stack of each project and suggests the role that fits.
+  - Source project per role. `Backend + frontend` needs two different repositories.
+  - Category plus name gives the branch: `feature`, `fix`, `chore`, `refactor` or any typed value,
+    then a name — for example `fix/foo` or `feature/foo-bar`.
+  - A plan preview shows the branch, the workspace folder, and every worktree destination before
+    anything is written.
+- On create, the app runs `git worktree add` for each source repository, creates a workspace folder
+  next to the main repository named after the branch (`feature/foo-bar` → `feature-foo-bar/`) with one
+  subfolder per role (`backend/`, `frontend/`, `scripts/`), registers each worktree as a project,
+  opens a shell in it, and groups the projects when the feature spans more than one repository.
+- Creation is transactional. A failure rolls back the worktrees, branches, and folders already
+  created, and reports which check failed: existing branch, occupied destination, or duplicated
+  source repository.
+
 ## System Integration
 
 - Custom title bar.
@@ -153,4 +170,4 @@ Custom grids support `colSpan`, `rowSpan`, drag-and-drop swapping, and resizable
 
 ## Agent Planning
 
-Agent Planning / Agent Canvas is experimental. It provides a visual control surface for coordinating agent sessions and workers from inside Alethe.
+Agent Planning / Agent Canvas is experimental. It provides a visual control surface for coordinating agent sessions and workers from inside Utopia Agent.

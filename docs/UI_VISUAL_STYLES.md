@@ -1,6 +1,6 @@
-# Alethe visual styles
+# Utopia Agent visual styles
 
-Alethe supports two application-wide visual languages. They share behavior, accessibility, theme
+Utopia Agent supports two application-wide visual languages. They share behavior, accessibility, theme
 palettes, and component logic; only presentation changes.
 
 ## Normal

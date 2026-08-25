@@ -208,7 +208,7 @@ export function useXtermSession(params: {
     if (!container) return
 
     if (import.meta.env.DEV) {
-      console.debug('[Alethe][xterm] mount', {
+      console.debug('[Utopia][xterm] mount', {
         sessionPersistenceKey,
         retryKey,
         ptyId: ptyIdRef.current,
@@ -629,7 +629,7 @@ export function useXtermSession(params: {
       try {
         fitAddon.fit()
       } catch (error) {
-        if (import.meta.env.DEV) console.error('[Alethe][xterm] fit failed', error)
+        if (import.meta.env.DEV) console.error('[Utopia][xterm] fit failed', error)
 
         return
       }
@@ -639,7 +639,7 @@ export function useXtermSession(params: {
       try {
         terminal.refresh(0, Math.max(0, terminal.rows - 1))
       } catch (error) {
-        if (import.meta.env.DEV) console.error('[Alethe][xterm] refresh failed', error)
+        if (import.meta.env.DEV) console.error('[Utopia][xterm] refresh failed', error)
       }
       clampHorizontalScroll()
       const force = forceNextResize
@@ -1216,7 +1216,7 @@ export function useXtermSession(params: {
           removeSession(sessionPersistenceKey)
           onSessionIdRef.current?.(undefined)
           terminal.write(
-            '\r\n\x1b[33m[alethe] Codex session is busy — opening a fresh session…\x1b[0m\r\n',
+            '\r\n\x1b[33m[Utopia] Codex session is busy — opening a fresh session…\x1b[0m\r\n',
           )
           void killPty(response.id).catch(() => {})
           setRetryKey((value) => value + 1)
@@ -1299,7 +1299,7 @@ export function useXtermSession(params: {
             removeSession(sessionPersistenceKey)
             onSessionIdRef.current?.(undefined)
             terminal.write(
-              '\r\n\x1b[33m[alethe] sessão anterior indisponível — reabrindo sessão nova…\x1b[0m\r\n',
+              '\r\n\x1b[33m[Utopia] sessão anterior indisponível — reabrindo sessão nova…\x1b[0m\r\n',
             )
             setRetryKey((v) => v + 1)
             return
@@ -1310,7 +1310,7 @@ export function useXtermSession(params: {
               `[pty-launch] ${command} saiu em ${elapsed}ms (code ${payload.code ?? '—'}) — sem retry`,
             )
             terminal.write(
-              `\r\n\x1b[31m[alethe] ${command} encerrou imediatamente (code ${payload.code ?? '—'}).\x1b[0m\r\n` +
+              `\r\n\x1b[31m[Utopia] ${command} encerrou imediatamente (code ${payload.code ?? '—'}).\x1b[0m\r\n` +
                 '\x1b[90mVerifique a instalação do CLI ou configure o caminho nas preferências.\x1b[0m\r\n',
             )
           }
@@ -1371,7 +1371,7 @@ export function useXtermSession(params: {
 
     return () => {
       if (import.meta.env.DEV) {
-        console.debug('[Alethe][xterm] unmount', {
+        console.debug('[Utopia][xterm] unmount', {
           sessionPersistenceKey,
           retryKey,
           ptyId: ptyIdRef.current,

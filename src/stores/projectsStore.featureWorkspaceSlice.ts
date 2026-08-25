@@ -85,6 +85,7 @@ export function createFeatureWorkspaceSlice({
               t('featureWorkspace.cleanupRetryFailed', {
                 error: featureWorkspaceReadableError(cleanupError),
               }),
+              { cause: cleanupError },
             )
           }
           if (!cleanup.complete) {

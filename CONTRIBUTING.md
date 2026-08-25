@@ -1,12 +1,16 @@
-# Contributing to Alethe
+# Contributing to Utopia Agent
 
-Thanks for being here. Alethe is a small project with a real user base, and outside
-contributions have shipped some of its best features — the in-app updater, mouse scroll inside
-TUIs, Linux CLI detection, the Git diff explorer. Yours can be next.
+Thanks for being here. Utopia Agent is a small project, and outside contributions have shipped some
+of the best features of the codebase it is built on — the in-app updater, mouse scroll inside TUIs,
+Linux CLI detection, the Git diff explorer. Yours can be next.
+
+This repository is a fork of [Alethe Agents](https://github.com/Kc1t/alethe-agents) by
+[@Kc1t](https://github.com/Kc1t). See [Fork and upstream](#fork-and-upstream) before you open a pull
+request — some changes belong upstream, not here.
 
 This guide is written so you can go from `git clone` to an open pull request without having to
 ask anyone anything. If a step here doesn't work, that's a bug in this document — please
-[open an issue](https://github.com/Kc1t/alethe-agents/issues/new?labels=documentation) and say so.
+[open an issue](https://github.com/theylor999/utopia-agent/issues/new?labels=documentation) and say so.
 
 **Language:** the codebase, docs, and commit messages are in English. Issues and pull request
 descriptions in **English or Portuguese are both fine** — write in whichever you think clearly.
@@ -25,6 +29,8 @@ Nobody will be turned away over language.
 - [Commits and pull requests](#commits-and-pull-requests)
 - [What happens after you open a PR](#what-happens-after-you-open-a-pr)
 - [Troubleshooting](#troubleshooting)
+- [License](#license)
+- [Fork and upstream](#fork-and-upstream)
 
 ---
 
@@ -32,16 +38,16 @@ Nobody will be turned away over language.
 
 Roughly ordered from "you can do this today" to "talk to us first":
 
-1. **Pick a [`good first issue`](https://github.com/Kc1t/alethe-agents/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).**
+1. **Pick a [`good first issue`](https://github.com/theylor999/utopia-agent/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).**
    These are scoped on purpose: the file is named, the expected result is described, and you
    don't need to understand the whole app to finish one.
 2. **Report a bug** with steps to reproduce, your OS, and the app version. A good bug report is
    a real contribution — several fixes here started as one.
-3. **Validate a platform.** Alethe is Windows-first and still under-tested on Linux and macOS.
+3. **Validate a platform.** Utopia Agent is Windows-first and still under-tested on Linux and macOS.
    Running it on your machine and reporting exactly what broke is genuinely useful.
 4. **Improve docs, screenshots, or setup notes.** If something confused you during setup, you're
    the best-positioned person in the world to fix it. See the [theme guide](docs/THEMES.md) for adding or documenting themes.
-5. **Pick a [`help wanted`](https://github.com/Kc1t/alethe-agents/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) issue.**
+5. **Pick a [`help wanted`](https://github.com/theylor999/utopia-agent/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) issue.**
    Bigger, less hand-held, still well-defined.
 6. **Propose a feature.** Open an issue describing the *workflow* it would improve before writing
    code — it's the cheapest way to avoid building something that won't be merged.
@@ -83,8 +89,8 @@ sudo apt install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patc
 ### Clone and run
 
 ```sh
-git clone https://github.com/Kc1t/alethe-agents.git
-cd alethe-agents
+git clone https://github.com/theylor999/utopia-agent.git
+cd utopia-agent
 npm install
 npm run app
 ```
@@ -156,7 +162,7 @@ src/                  React 18 + TypeScript frontend
     tauri.ts          Every backend `invoke` call goes through here
     types.ts          Domain types (Project, Group, Terminal, GridLayout…)
     i18n/             messages/en.ts (source of truth) + messages/pt-BR.ts
-  styles/theme.css    Design tokens for all 12 themes
+  styles/theme.css    Design tokens for all 18 themes
 
 src-tauri/src/        Rust + Tauri backend
   lib.rs              Command registry (#[tauri::command] handlers)
@@ -191,8 +197,8 @@ fails `npm run build`. Never hardcode user-facing text in a component.
 
 **2. Colors and spacing come from tokens — never literals.**
 Use the CSS custom properties in `src/styles/theme.css` (`--bg`, `--fg`, `--accent`, `--border`,
-`--status-working`, …). Alethe ships 12 themes; a hardcoded `#10b981` looks right in dark mode and
-wrong in the other eleven. No gradients.
+`--status-working`, …). Utopia Agent ships 18 themes; a hardcoded `#10b981` looks right in dark mode
+and wrong in the other seventeen. No gradients.
 
 **3. One `.module.css` per component.**
 CSS Modules + custom properties. No Tailwind, no styled-components, no global styles.
@@ -234,7 +240,7 @@ resource in this project.
 
 - What changed and why, in a couple of sentences.
 - `Closes #123` if it resolves an issue.
-- **Before/after screenshots or a GIF for any UI change.** Not optional — Alethe is a visual app
+- **Before/after screenshots or a GIF for any UI change.** Not optional — Utopia Agent is a visual app
   and this is often the fastest way to get a yes.
 - Which OS you tested on. "Windows only, untested on macOS" is a perfectly good thing to write,
   and far better than silence.
@@ -246,7 +252,7 @@ Run `npm run format` before pushing.
 CI runs the frontend build and tests plus `cargo check`/`cargo test` on all three platforms. Get
 it green — a red PR usually just waits.
 
-Review is done by the maintainer ([@Kc1t](https://github.com/Kc1t)), who works on this alongside a
+Review is done by the maintainer ([@theylor999](https://github.com/theylor999)), who works on this alongside a
 full-time job. Expect a first response within a few days. If a week goes by with nothing, a polite
 bump on the PR is welcome and not annoying.
 
@@ -259,7 +265,7 @@ for it — you don't have to do anything).
 ## Troubleshooting
 
 **Windows Defender deletes the binary you just built.**
-Alethe spawns processes and creates PTYs from an unsigned binary, which trips Defender's ML
+Utopia Agent spawns processes and creates PTYs from an unsigned binary, which trips Defender's ML
 heuristic (`Trojan:Win32/Bearfoos.A!ml`). It's a false positive. Add an exclusion for
 `src-tauri/target` — otherwise your dev builds get quarantined mid-work. See the README for
 details.
@@ -282,6 +288,33 @@ The Rust backend compiles from scratch the first time. Grab a coffee; it's cache
 
 ## License
 
-Alethe is licensed under **AGPL-3.0-or-later**. By contributing, you agree that your contribution
-is licensed under the same terms. The **Alethe** name, logo, and branding are reserved for
-official builds — see [`TRADEMARK.md`](TRADEMARK.md).
+Utopia Agent is licensed under **AGPL-3.0-or-later**, inherited from upstream. By contributing, you
+agree that your contribution is licensed under the same terms.
+
+The upstream **Alethe** name, logo, and branding belong to the upstream project and are covered by
+[`TRADEMARK.md`](TRADEMARK.md). The **Utopia Agent** name and mark identify this fork's builds. Do
+not ship either identity in a build that is not the one it names.
+
+## Fork and upstream
+
+Utopia Agent tracks Alethe Agents. Knowing which repository a change belongs to saves everyone time:
+
+- **Bugs you can reproduce in upstream Alethe Agents** belong in the
+  [upstream tracker](https://github.com/Kc1t/alethe-agents/issues). Fixing them upstream helps both
+  projects, and the fix reaches this fork through the next merge.
+- **Anything specific to this fork** — the product identity, the `omp` and `grok` providers, the New
+  feature worktree creator — belongs in
+  [theylor999/utopia-agent](https://github.com/theylor999/utopia-agent/issues).
+
+The maintainer pulls upstream changes on the `custom/theylor` branch:
+
+```sh
+git checkout custom/theylor
+git fetch upstream
+git merge upstream/main
+```
+
+The `upstream` remote (`https://github.com/Kc1t/alethe-agents.git`) is fetch-only — its push URL is
+set to `DISABLED`, so an accidental `git push upstream` fails instead of sending fork commits to the
+upstream repository. Resolve merge conflicts in favor of the fork for product identity, and in favor
+of upstream for everything else.

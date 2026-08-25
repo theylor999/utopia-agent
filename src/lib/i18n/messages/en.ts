@@ -2414,6 +2414,13 @@ export const en = {
   'skills.removedLinkOnly': 'The shared copy was kept at {path}',
   'skills.removeFailed': 'Could not remove the skill',
   'skills.errBundled': 'This skill ships with the agent and cannot be removed from Utopia Agent.',
+  'featureWorkspace.namePreview': 'Branch and folder will use: {branch}',
+  'featureWorkspace.nameUnusable':
+    'Use at least one letter or number in the feature name.',
+  'featureWorkspace.sameSourceWarning':
+    'Pick two different projects for the backend and the frontend.',
+  'featureWorkspace.pairedNeedsTwoProjects':
+    'Register a second project to pair a backend and a frontend worktree.',
 } as const
 
 export type MessageKey = keyof typeof en

@@ -3,7 +3,7 @@ name = "utopia-agent"
 default-run = "utopia-agent"
 version = "1.6.0"
 description = "Utopia Agent — multi-agent coding workspace"
-authors = ["Kauã Miguel"]
+authors = ["Theylor Machado", "Kauã Miguel (upstream: Alethe Agents)"]
 license = "AGPL-3.0-or-later"
 edition = "2021"
 

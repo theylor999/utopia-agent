@@ -1,12 +1,44 @@
 # Changelog
 
-Notable user-facing changes to **Alethe** are documented here. The format is based on
+Notable user-facing changes to **Utopia Agent** are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows
 [Semantic Versioning](https://semver.org/). Dates use UTC.
 
 > **Rule:** every feature addition, change, or removal must be recorded under
 > `[Unreleased]` in the same task. During a release, `[Unreleased]` becomes the new
 > dated version and a new empty `[Unreleased]` section is added at the top.
+
+> **History:** Utopia Agent is a fork of [Alethe Agents](https://github.com/Kc1t/alethe-agents).
+> Entries below the fork entry are the upstream Alethe history and are kept unchanged, product name
+> included, because that is what actually shipped at the time.
+
+## [Fork] - 2026-08-25
+
+### Changed
+
+- The project continues as **Utopia Agent**, a fork of
+  [Alethe Agents](https://github.com/Kc1t/alethe-agents) by Kauã Miguel
+  ([@Kc1t](https://github.com/Kc1t)), still under AGPL-3.0-or-later. Upstream copyright and
+  attribution are preserved in `NOTICE`, `LICENSE`, and the README credits.
+- Product identity: new name, logo (`src/assets/utopia-logo.png`), app identifier
+  `com.theylor.utopiaagent`, terminal command `utopia-agent`, and GitHub home
+  [theylor999/utopia-agent](https://github.com/theylor999/utopia-agent). The upstream Alethe name,
+  logo, and branding are not used as this fork's identity.
+- Agent providers: **Oh My Pi** (`omp`, the primary provider), **Grok Build** (`grok`),
+  **Claude Code** (`claude`), and **Shell**. `codex` and `opencode` remain as legacy agent types in
+  the code but are no longer surfaced.
+- Documentation now describes this fork: README, `CONTRIBUTING.md`, `SECURITY.md`, `SHOWCASE.md`,
+  `AGENTS.md`, `CLAUDE.md`, and `docs/**`. Vulnerability reports go through this repository's private
+  GitHub advisory channel.
+
+### Added
+
+- **New feature** creates a whole feature workspace from one dialog: pick backend, frontend,
+  backend + frontend, or scripts, type a category and a name (`fix/foo`, `feature/foo-bar`), and the
+  app creates the branch, the Git worktrees, the workspace folder, and the projects by itself, with
+  rollback when any step fails. See `docs/FEATURES.md`.
+- Maintainer workflow for upstream updates: `git fetch upstream && git merge upstream/main` on
+  `custom/theylor`, with the `upstream` remote fetch-only.
 
 ## [Unreleased]
 
@@ -940,7 +972,7 @@ the sidebar, and adds Antigravity support.
 - Removed the **Loose/Ungrouped** section label above ungrouped sidebar projects.
 - Removed the parked-terminal text notice from the overlay; the resume action remains available.
 
-[Unreleased]: https://github.com/Kc1t/alethe-agents/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/theylor999/utopia-agent/compare/v1.6.0...HEAD
 [1.5.0]: https://github.com/Kc1t/alethe-agents/compare/v1.4.1...v1.5.0
 [1.4.1]: https://github.com/Kc1t/alethe-agents/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/Kc1t/alethe-agents/compare/v1.3.0...v1.4.0

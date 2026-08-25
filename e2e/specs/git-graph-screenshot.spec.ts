@@ -37,8 +37,8 @@ describe('visual diagnostic: commit graph', function () {
     // lane + divergence curve + merge curve, all on the same screen.
     const repoPath = fixture.path
     git(repoPath, ['init', '--initial-branch', 'main'])
-    git(repoPath, ['config', 'user.email', 'e2e@alethe.test'])
-    git(repoPath, ['config', 'user.name', 'Alethe E2E'])
+    git(repoPath, ['config', 'user.email', 'e2e@utopia-agent.test'])
+    git(repoPath, ['config', 'user.name', 'Utopia Agent E2E'])
     writeFileSync(join(repoPath, 'main.txt'), 'main v1\n')
     git(repoPath, ['add', 'main.txt'])
     git(repoPath, ['commit', '-m', 'main: commit inicial'])

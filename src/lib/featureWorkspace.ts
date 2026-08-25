@@ -1,5 +1,3 @@
-import { invoke } from '@tauri-apps/api/core'
-
 export type FeatureKind = 'backend' | 'frontend' | 'backendFrontend' | 'scripts'
 
 export type FeatureRole = 'backend' | 'frontend' | 'scripts'
@@ -45,20 +43,10 @@ export type FeatureWorkspaceRemovalResult = {
   complete: boolean
 }
 
-export async function planFeatureWorkspace(
-  request: FeatureWorkspaceRequest,
-): Promise<FeatureWorkspacePlan> {
-  return invoke<FeatureWorkspacePlan>('feature_workspace_plan', { request })
-}
-
-export async function createFeatureWorkspace(
-  request: FeatureWorkspaceRequest,
-): Promise<FeatureWorkspaceResult> {
-  return invoke<FeatureWorkspaceResult>('feature_workspace_create', { request })
-}
-
-export async function removeFeatureWorkspace(
-  workspace: FeatureWorkspaceResult,
-): Promise<FeatureWorkspaceRemovalResult> {
-  return invoke<FeatureWorkspaceRemovalResult>('feature_workspace_remove', { workspace })
-}
+// The IPC wrappers live in `lib/tauri/`, the only place allowed to call
+// invoke() directly. They are re-exported here so callers keep one import.
+export {
+  createFeatureWorkspace,
+  planFeatureWorkspace,
+  removeFeatureWorkspace,
+} from './tauri/featureWorkspace'

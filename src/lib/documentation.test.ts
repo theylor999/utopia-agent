@@ -10,7 +10,7 @@ describe('security and privacy documentation', () => {
     const text = normalize(security)
 
     expect(text).toContain('Supported versions')
-    expect(text).toContain('contact@kc1t.com')
+    expect(text).toContain('security/advisories/new')
     expect(text).toContain('Do not open a public issue')
     expect(text).toContain('Coordinated disclosure')
     expect(text).toContain('Bugs, questions, and feature requests')
@@ -68,13 +68,12 @@ describe('security and privacy documentation', () => {
     const overviewText = normalize(overview)
 
     expect(readmeText).toContain(
-      '“Local-first” describes workspace persistence, not an internet-free guarantee',
+      '"Local-first" describes where the workspace state lives, not an internet-free guarantee',
     )
-    expect(readmeText).toContain('Update checks are off in this fork until a signed release pipeline exists')
-    expect(readmeText).toContain('Manual GitHub Gist Sync is already available')
+    expect(readmeText).toContain('The startup update check is still active')
+    expect(readmeText).toContain('Manual GitHub Gist Sync is available and off by default')
     expect(readmeText).toContain('Redaction is best effort')
-    expect(readmeText).toContain('unencrypted HTTP/WebSocket transport')
-    expect(readmeText).toContain('Clean profiles are read-only')
+    expect(readmeText).toContain('unencrypted HTTP/WebSocket on the LAN')
     expect(readmeText).not.toContain('This is a false positive')
     expect(overviewText).toContain('root-level `logs/`')
     expect(overviewText).toContain('plaintext credential storage')

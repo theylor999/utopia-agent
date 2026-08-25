@@ -4,6 +4,13 @@ Copyright (C) 2026 Theylor Machado
 Utopia Agent is a fork of Alethe.
 Copyright (C) 2026 Kauã Miguel
 
+Upstream project: Alethe Agents - https://github.com/Kc1t/alethe-agents
+Upstream author:  Kauã Miguel (@Kc1t) - https://github.com/Kc1t
+This fork:        https://github.com/theylor999/utopia-agent
+
+Most of this codebase is the work of the upstream project and its contributors,
+listed at https://github.com/Kc1t/alethe-agents/graphs/contributors.
+
 The source code is licensed under AGPL-3.0-or-later.
 The Alethe name, logo, and official branding remain covered by TRADEMARK.md
 from the upstream project and are not used as the product identity of this fork.

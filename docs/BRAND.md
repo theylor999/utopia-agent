@@ -1,11 +1,13 @@
-# Alethe Brand and Design Tokens
+# Utopia Agent Brand and Design Tokens
 
 This file documents the public app assets and the core design tokens used by the interface.
 
 ## Logo and Icons
 
-- Main mark: [src/assets/alethe-mark.svg](../src/assets/alethe-mark.svg)
-- Loading mark: [src/assets/alethe-loading-mark.png](../src/assets/alethe-loading-mark.png)
+- Product logo: [src/assets/utopia-logo.png](../src/assets/utopia-logo.png)
+- Hero art: [src/assets/utopia-hero.png](../src/assets/utopia-hero.png)
+- Upstream mark, still in the tree: [src/assets/alethe-mark.svg](../src/assets/alethe-mark.svg)
+- Upstream loading mark, still in the tree: [src/assets/alethe-loading-mark.png](../src/assets/alethe-loading-mark.png)
 - Default profile avatar: [src/assets/default-profile.svg](../src/assets/default-profile.svg)
 - App icons: [src-tauri/icons/](../src-tauri/icons/)
 
@@ -19,11 +21,13 @@ npx tauri icon ./logo.png
 
 | Agent | Asset | Identity color |
 |---|---|---|
-| Shell | inline icon | `#10b981` |
+| Oh My Pi (`omp`) | [src/assets/omp.png](../src/assets/omp.png) | `#a78bfa` |
+| Grok Build (`grok`) | [src/assets/grok.png](../src/assets/grok.png) | `#f43f5e` |
 | Claude Code | [src/assets/claude-code.png](../src/assets/claude-code.png) | `#ec9333` |
-| Codex | [src/assets/codex.png](../src/assets/codex.png) | `#06b6d4` |
-| OpenCode light | [src/assets/open-black.png](../src/assets/open-black.png) | `#8b8b95` |
-| OpenCode dark | [src/assets/open-white.png](../src/assets/open-white.png) | `#8b8b95` |
+| Shell | inline icon | `#10b981` |
+| Codex (legacy, upstream) | [src/assets/codex.png](../src/assets/codex.png) | `#06b6d4` |
+| OpenCode light (legacy, upstream) | [src/assets/open-black.png](../src/assets/open-black.png) | `#8b8b95` |
+| OpenCode dark (legacy, upstream) | [src/assets/open-white.png](../src/assets/open-white.png) | `#8b8b95` |
 | VS Code | [src/assets/vscode.svg](../src/assets/vscode.svg) | `#007ACC` |
 
 ## Typography
@@ -111,4 +115,6 @@ Common usage:
 
 ## Trademark
 
-The Alethe name, logo, and official branding are reserved for official builds. See [TRADEMARK.md](../TRADEMARK.md).
+The Utopia Agent name and mark identify this fork's builds. The upstream **Alethe** name, logo, and
+branding belong to the upstream project and are covered by [TRADEMARK.md](../TRADEMARK.md); they are
+not used as the identity of this fork.

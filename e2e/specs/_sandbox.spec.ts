@@ -165,7 +165,7 @@ describe('sandbox: ad-hoc exploration', () => {
         })
       }
 
-      // 8. Confirms via real git (outside Alethe) whether the merge actually
+      // 8. Confirms via real git (outside Utopia Agent) whether the merge actually
       // happened — never trust only what the UI reports.
       await new Promise((resolve) => setTimeout(resolve, 3000))
       let mergedContent: string | null = null

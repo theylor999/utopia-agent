@@ -1,13 +1,21 @@
-import { FileCode2, GitBranch, Layers, Loader2, Monitor, Server } from 'lucide-react'
+import {
+  AlertTriangle,
+  FileCode2,
+  GitBranch,
+  Layers,
+  Loader2,
+  Monitor,
+  Server,
+} from 'lucide-react'
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 
-import { readableError } from '../../lib/errors'
 import {
   planFeatureWorkspace,
   type FeatureKind,
   type FeatureRole,
   type FeatureWorkspacePlan,
 } from '../../lib/featureWorkspace'
+import { featureWorkspaceReadableError } from '../../lib/featureWorkspaceError'
 import { type MessageKey, useT } from '../../lib/i18n'
 import { detectProjectStack, type StackDetection } from '../../lib/tauri'
 import { getProjectDefaultCwd, useProjectsStore } from '../../stores/projectsStore'
@@ -32,6 +40,35 @@ const ROLE_LABEL_KEYS: Record<FeatureRole, MessageKey> = {
 }
 
 const CATEGORY_OPTIONS = ['feature', 'fix', 'chore', 'refactor'] as const
+
+/** Longest slug we allow per branch segment, so paths stay usable on Windows. */
+const SEGMENT_MAX_LENGTH = 60
+
+/**
+ * Turns free text into a single Git-safe, filesystem-safe branch segment:
+ * accents are folded to ASCII, letters are lowercased, and every other run of
+ * characters (spaces, slashes, punctuation) collapses into one hyphen.
+ */
+export function slugifyFeatureSegment(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+/, '')
+    .slice(0, SEGMENT_MAX_LENGTH)
+    .replace(/-+$/, '')
+}
+
+/**
+ * Builds the branch name (`category/name`, the only slash) from raw input.
+ * Returns an empty string when either half has no usable characters.
+ */
+export function buildFeatureBranch(category: string, name: string): string {
+  const categorySlug = slugifyFeatureSegment(category)
+  const nameSlug = slugifyFeatureSegment(name)
+  return categorySlug && nameSlug ? `${categorySlug}/${nameSlug}` : ''
+}
 
 type SourceSelections = Record<FeatureRole, string>
 
@@ -80,7 +117,12 @@ export function NewFeatureModal() {
   const [planError, setPlanError] = useState('')
   const [isPlanning, setIsPlanning] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const suggestionsApplied = useRef(false)
+
+  const categorySlug = useMemo(() => slugifyFeatureSegment(category), [category])
+  const nameSlug = useMemo(() => slugifyFeatureSegment(featureName), [featureName])
+  const previewBranch = buildFeatureBranch(category, featureName)
 
   const availableProjects = useMemo<AvailableProject[]>(
     () =>
@@ -152,8 +194,21 @@ export function NewFeatureModal() {
     }
   }, [availableProjects, context?.sourceProjectId, open])
 
+  /**
+   * Reachable dead ends the create button alone cannot explain: paired mode
+   * needs two distinct repositories, so say so instead of staying disabled.
+   */
+  const blockingWarning: MessageKey | null =
+    kind !== 'backendFrontend'
+      ? null
+      : availableProjects.length < 2
+        ? 'featureWorkspace.pairedNeedsTwoProjects'
+        : sources.backend !== '' && sources.backend === sources.frontend
+          ? 'featureWorkspace.sameSourceWarning'
+          : null
+
   const request = useMemo<FeatureWorkspaceStoreRequest | null>(() => {
-    if (!category.trim() || !featureName.trim()) return null
+    if (!categorySlug || !nameSlug) return null
     const roles = ROLES_BY_KIND[kind]
     const selected = roles.map((role) => ({
       role,
@@ -168,19 +223,20 @@ export function NewFeatureModal() {
     }
     return {
       kind,
-      category: category.trim(),
-      name: featureName.trim(),
+      category: categorySlug,
+      name: nameSlug,
       sources: selected.map((entry) => ({
         role: entry.role,
         path: entry.project!.path,
         projectId: entry.project!.id,
       })),
     }
-  }, [availableProjects, category, featureName, kind, sources])
+  }, [availableProjects, categorySlug, kind, nameSlug, sources])
 
   useEffect(() => {
     setPlan(null)
     setPlanError('')
+    setSubmitError('')
     if (!open || !request) {
       setIsPlanning(false)
       return
@@ -194,7 +250,7 @@ export function NewFeatureModal() {
           if (!cancelled) setPlan(nextPlan)
         })
         .catch((error) => {
-          if (!cancelled) setPlanError(readableError(error))
+          if (!cancelled) setPlanError(featureWorkspaceReadableError(error))
         })
         .finally(() => {
           if (!cancelled) setIsPlanning(false)
@@ -215,6 +271,7 @@ export function NewFeatureModal() {
     setDetections({})
     setPlan(null)
     setPlanError('')
+    setSubmitError('')
     setIsPlanning(false)
     setIsSubmitting(false)
     suggestionsApplied.current = false
@@ -227,10 +284,12 @@ export function NewFeatureModal() {
   const submit = async () => {
     if (!request || !plan || isSubmitting) return
     setIsSubmitting(true)
+    setSubmitError('')
     try {
       await createFeatureWorkspace(request)
       closeAndReset()
-    } catch {
+    } catch (error) {
+      setSubmitError(featureWorkspaceReadableError(error))
       setIsSubmitting(false)
     }
   }
@@ -373,6 +432,13 @@ export function NewFeatureModal() {
           </div>
         )}
 
+        {blockingWarning ? (
+          <div className={styles.warning} role="alert">
+            <AlertTriangle size={14} aria-hidden="true" />
+            <span>{t(blockingWarning)}</span>
+          </div>
+        ) : null}
+
         <div className={styles.namingGrid}>
           <div className={controls.field}>
             <label className={controls.label}>{t('featureWorkspace.categoryLabel')}</label>
@@ -406,6 +472,15 @@ export function NewFeatureModal() {
               placeholder={t('featureWorkspace.namePlaceholder')}
               onKeyDown={(event) => event.key === 'Enter' && void submit()}
             />
+            {featureName.trim() && !nameSlug ? (
+              <small className={styles.hintInvalid}>
+                {t('featureWorkspace.nameUnusable')}
+              </small>
+            ) : previewBranch && previewBranch !== `${category.trim()}/${featureName.trim()}` ? (
+              <small className={styles.hint}>
+                {t('featureWorkspace.namePreview', { branch: previewBranch })}
+              </small>
+            ) : null}
           </div>
         </div>
 
@@ -415,11 +490,17 @@ export function NewFeatureModal() {
             <strong>{t('featureWorkspace.previewTitle')}</strong>
             {isPlanning ? <Loader2 className={styles.spinner} size={14} aria-hidden="true" /> : null}
           </div>
+          {submitError || planError ? (
+            <div className={styles.error} role="alert">
+              <AlertTriangle size={14} aria-hidden="true" />
+              <span>{submitError || planError}</span>
+            </div>
+          ) : null}
           {plan ? (
             <div className={styles.previewBody}>
               <div className={styles.previewRow}>
                 <span>{t('featureWorkspace.branchLabel')}</span>
-                <code>{plan.branch}</code>
+                <code className={styles.branchChip}>{plan.branch}</code>
               </div>
               <div className={styles.previewRow}>
                 <span>{t('featureWorkspace.workspaceRootLabel')}</span>
@@ -434,9 +515,7 @@ export function NewFeatureModal() {
                 </div>
               ))}
             </div>
-          ) : planError ? (
-            <div className={styles.error}>{planError}</div>
-          ) : (
+          ) : submitError || planError ? null : (
             <div className={styles.previewHint}>{t('featureWorkspace.previewHint')}</div>
           )}
         </section>

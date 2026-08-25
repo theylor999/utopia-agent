@@ -1,9 +1,9 @@
-# Built with Alethe
+# Built with Utopia Agent
 
-Projects, products, and experiments that were built with Alethe as the workspace —
+Projects, products, and experiments that were built with Utopia Agent as the workspace —
 agents running in parallel, shells alongside them, sessions resumed across days.
 
-Alethe is a tool, and a tool is worth what people build with it. This page is where that
+Utopia Agent is a tool, and a tool is worth what people build with it. This page is where that
 shows up.
 
 ## The list
@@ -20,7 +20,7 @@ Open a pull request adding one row to the table above. That is the whole process
 approval needed beforehand, no form to fill in first.
 
 If you'd rather not clone the repo, open a
-[showcase submission issue](https://github.com/Kc1t/alethe-agents/issues/new?template=showcase.yml)
+[showcase submission issue](https://github.com/theylor999/utopia-agent/issues/new?template=showcase.yml)
 instead and it will be added for you.
 
 ### Format
@@ -35,8 +35,8 @@ Keep the description to a single line — what it is, not why it's great.
 
 - **Something real that exists.** Shipped, published, deployed, or at minimum a public repo
   someone else can look at. Not a plan.
-- **Built with Alethe as part of the workflow.** It does not have to be built *exclusively*
-  in Alethe, and it does not have to be big. A weekend project counts.
+- **Built with Utopia Agent as part of the workflow.** It does not have to be built *exclusively*
+  in Utopia Agent, and it does not have to be big. A weekend project counts.
 - **Public.** If you can't link to it, it can't go on the list.
 
 Client work you can't disclose is welcome in spirit but not on the page — link a public
@@ -50,4 +50,4 @@ write-up instead if you have one.
 ---
 
 Adding a row is a real pull request against this repository, so you show up in the
-[contributors](https://github.com/Kc1t/alethe-agents/graphs/contributors) too.
+[contributors](https://github.com/theylor999/utopia-agent/graphs/contributors) too.

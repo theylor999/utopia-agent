@@ -60,7 +60,9 @@ representative at an online or offline event.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported to the community leaders responsible for enforcement at
-**contact@kc1t.com**.
+the maintainer of this repository, through a private
+[GitHub security advisory](https://github.com/theylor999/utopia-agent/security/advisories/new)
+or a direct message to [@theylor999](https://github.com/theylor999).
 
 All complaints will be reviewed and investigated promptly and fairly.
 

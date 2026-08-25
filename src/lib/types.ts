@@ -65,7 +65,7 @@ export type Theme =
   | 'elite-blush'
 
 /** Native desktop icon variants. The UI theme and app icon theme are independent. */
-export type AppIconTheme = 'elite-original' | 'elite-pure-black' | 'elite-indigo' | 'elite-blush'
+export type AppIconTheme = 'utopia' | 'elite-original' | 'elite-pure-black' | 'elite-indigo' | 'elite-blush'
 
 export type VisualStyle = 'normal' | 'clean'
 
@@ -540,7 +540,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   uiTheme: 'elite-indigo',
   visualStyle: 'normal',
   motionPreference: 'animated',
-  appIconTheme: 'elite-indigo',
+  appIconTheme: 'utopia',
   uiZoom: 1,
   windowOpacity: 1,
   terminalTheme: null,

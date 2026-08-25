@@ -29,6 +29,41 @@
   font-size: 10px;
 }
 
+.hint,
+.hintInvalid {
+  display: block;
+  padding-top: 5px;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.hint {
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+}
+
+.hintInvalid {
+  color: var(--status-offline);
+}
+
+.warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px;
+  border: 1px solid color-mix(in srgb, var(--status-waiting) 42%, var(--border));
+  border-radius: var(--radius-md);
+  background: var(--status-waiting-soft);
+  color: var(--fg);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.warning svg {
+  flex: none;
+  color: var(--status-waiting);
+}
+
 .notice,
 .preview {
   border: 1px solid var(--border);
@@ -54,8 +89,18 @@
   gap: 7px;
   padding: 10px 12px;
   border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
   color: var(--fg);
   font-size: 12px;
+}
+
+.previewHeader svg {
+  color: var(--accent);
+}
+
+.previewHeader strong {
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .spinner {
@@ -96,6 +141,18 @@
   font-size: 10px;
 }
 
+.branchChip {
+  justify-self: start;
+  max-width: 100%;
+  padding: 3px 7px;
+  border: 1px solid var(--accent-border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--accent-bg-soft);
+  color: var(--accent-strong);
+  font-size: 10px;
+  font-weight: 600;
+}
+
 .planItem {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr) auto minmax(0, 1fr);
@@ -107,29 +164,54 @@
 }
 
 .planItem strong {
+  justify-self: start;
+  padding: 2px 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
   color: var(--fg-muted);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.planItem > span[aria-hidden='true'] {
+  color: var(--fg-faint);
 }
 
 .planItem > span {
   color: var(--fg-muted);
 }
 
-.previewHint,
-.error {
+.previewHint {
   padding: 14px 12px;
+  color: var(--fg-muted);
   font-size: 11px;
   line-height: 1.45;
 }
 
-.previewHint {
-  color: var(--fg-muted);
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 11px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--status-offline) 32%, var(--border));
+  background: var(--status-offline-soft);
+  color: var(--fg);
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
-.error {
-  color: var(--status-error);
+.error svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--status-offline);
+}
+
+.error:last-child {
+  border-bottom: 0;
 }
 
 @keyframes spin {

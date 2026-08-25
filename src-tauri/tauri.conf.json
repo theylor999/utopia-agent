@@ -73,7 +73,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDdERjQwQTVDMDJFMDY3QzQKUldURVorQUNYQXIwZlpTZjNhc1dNamhiSERnalducjJCdDdiR0NFYy8ydnJqcU52VG05cFNqcHUK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDc3RkU5NkNGQTk2MjNBMkEKUldRcU9tS3B6NWIrZCtrODZITWtBM21LaG5MK2VMRm5DOUFTSTRHME8vRi8vV1VpR3BkUEc1bDUK",
       "endpoints": ["https://github.com/theylor999/utopia-agent/releases/latest/download/latest.json"],
       "windows": {
         "installMode": "passive"

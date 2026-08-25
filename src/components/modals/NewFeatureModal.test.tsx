@@ -7,6 +7,12 @@ const feature = vi.hoisted(() => ({
   plan: vi.fn(),
 }))
 
+const ALL_PROJECTS = [
+  { id: 'api', name: 'API', defaultCwd: 'C:/repos/api', archived: false },
+  { id: 'web', name: 'Web', defaultCwd: 'C:/repos/web', archived: false },
+]
+const ONLY_PROJECT = ALL_PROJECTS[0]
+
 const projectsStore = vi.hoisted(() => ({
   state: {
     projects: [
@@ -32,6 +38,8 @@ vi.mock('../../lib/featureWorkspace', () => ({
 
 vi.mock('../../lib/i18n', () => ({
   useT: () => (key: string) => key,
+  getLocale: () => 'en',
+  translate: (_locale: string, key: string) => key,
 }))
 
 vi.mock('../../lib/tauri', () => ({
@@ -48,7 +56,11 @@ vi.mock('../../stores/uiStore', () => ({
   useUiStore: (selector: (state: typeof uiStore.state) => unknown) => selector(uiStore.state),
 }))
 
-import { NewFeatureModal } from './NewFeatureModal'
+import {
+  buildFeatureBranch,
+  NewFeatureModal,
+  slugifyFeatureSegment,
+} from './NewFeatureModal'
 
 const PLAN = {
   branch: 'feature/orders',
@@ -67,12 +79,53 @@ const PLAN = {
   ],
 }
 
+describe('feature branch naming', () => {
+  it('lowercases, folds accents and collapses separators into single hyphens', () => {
+    expect(slugifyFeatureSegment('Correção  do Login')).toBe('correcao-do-login')
+    expect(slugifyFeatureSegment('Ação Rápida')).toBe('acao-rapida')
+    expect(slugifyFeatureSegment('ÜBER Cool')).toBe('uber-cool')
+  })
+
+  it('never lets the feature name introduce a second path segment', () => {
+    expect(slugifyFeatureSegment('foo/bar')).toBe('foo-bar')
+    expect(slugifyFeatureSegment('foo\\bar')).toBe('foo-bar')
+    expect(buildFeatureBranch('fix', 'foo/bar')).toBe('fix/foo-bar')
+  })
+
+  it('trims stray separators instead of emitting them at the edges', () => {
+    expect(slugifyFeatureSegment('  billing export  ')).toBe('billing-export')
+    expect(slugifyFeatureSegment('--weird--name--')).toBe('weird-name')
+    expect(slugifyFeatureSegment('feature #42!')).toBe('feature-42')
+  })
+
+  it('returns an empty slug when nothing usable remains', () => {
+    expect(slugifyFeatureSegment('')).toBe('')
+    expect(slugifyFeatureSegment('   ')).toBe('')
+    expect(slugifyFeatureSegment('***')).toBe('')
+  })
+
+  it('caps each segment and leaves no trailing hyphen after the cap', () => {
+    const slug = slugifyFeatureSegment(`${'a'.repeat(59)} tail`)
+    expect(slug).toBe('a'.repeat(59))
+    expect(slug.endsWith('-')).toBe(false)
+    expect(slugifyFeatureSegment('b'.repeat(80))).toBe('b'.repeat(60))
+  })
+
+  it('builds category/name with exactly one slash and refuses half-empty input', () => {
+    expect(buildFeatureBranch('Feature', 'Foo Bar')).toBe('feature/foo-bar')
+    expect(buildFeatureBranch('fix', '')).toBe('')
+    expect(buildFeatureBranch('', 'foo')).toBe('')
+    expect(buildFeatureBranch('re/factor', 'foo')).toBe('re-factor/foo')
+  })
+})
+
 describe('NewFeatureModal', () => {
   beforeEach(() => {
     feature.create.mockReset()
     feature.detect.mockReset()
     feature.plan.mockReset()
     uiStore.state.closeModal.mockReset()
+    projectsStore.state.projects = [...ALL_PROJECTS]
     feature.create.mockResolvedValue(undefined)
     feature.plan.mockResolvedValue(PLAN)
     feature.detect.mockImplementation(async (path: string) => ({
@@ -133,5 +186,81 @@ describe('NewFeatureModal', () => {
 
     expect(nameInput).toHaveValue('retry-me')
     expect(uiStore.state.closeModal).not.toHaveBeenCalled()
+  })
+
+  it('sends a sanitized branch segment even when the typed name is messy', async () => {
+    render(<NewFeatureModal />)
+
+    const nameInput = screen.getByPlaceholderText('featureWorkspace.namePlaceholder')
+    fireEvent.change(nameInput, { target: { value: 'Correção do Login/urgente' } })
+    await waitFor(() => expect(feature.plan).toHaveBeenCalled())
+
+    expect(feature.plan).toHaveBeenLastCalledWith(
+      expect.objectContaining({ category: 'feature', name: 'correcao-do-login-urgente' }),
+    )
+    expect(nameInput).toHaveValue('Correção do Login/urgente')
+    expect(screen.getByText(/featureWorkspace.namePreview/)).toBeInTheDocument()
+  })
+
+  it('never plans a branch when the typed name has no usable characters', async () => {
+    render(<NewFeatureModal />)
+
+    fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
+      target: { value: '***' },
+    })
+    await waitFor(() =>
+      expect(screen.getByText('featureWorkspace.nameUnusable')).toBeInTheDocument(),
+    )
+
+    expect(feature.plan).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'featureWorkspace.create' })).toBeDisabled()
+  })
+
+  it('shows the planning failure in the modal instead of failing silently', async () => {
+    feature.plan.mockRejectedValue(new Error('branch_exists:backend: C:/repos/api'))
+    render(<NewFeatureModal />)
+
+    fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
+      target: { value: 'orders' },
+    })
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('featureWorkspace.error.branchExists')
+    expect(screen.getByRole('button', { name: 'featureWorkspace.create' })).toBeDisabled()
+  })
+
+  it('shows the creation failure in the modal and keeps the modal open', async () => {
+    feature.create.mockRejectedValueOnce(new Error('git_command_failed:worktree add exploded'))
+    render(<NewFeatureModal />)
+
+    fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
+      target: { value: 'orders' },
+    })
+    const createButton = screen.getByRole('button', { name: 'featureWorkspace.create' })
+    await waitFor(() => expect(createButton).toBeEnabled())
+    fireEvent.click(createButton)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('featureWorkspace.error.gitCommand')
+    expect(uiStore.state.closeModal).not.toHaveBeenCalled()
+    await waitFor(() => expect(createButton).toBeEnabled())
+  })
+
+  it('explains why paired mode cannot run with a single registered project', async () => {
+    projectsStore.state.projects = [ONLY_PROJECT]
+    render(<NewFeatureModal />)
+
+    fireEvent.click(screen.getByRole('radio', { name: /featureWorkspace.kindPaired/ }))
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('featureWorkspace.pairedNeedsTwoProjects'),
+      ).toBeInTheDocument(),
+    )
+    fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
+      target: { value: 'orders' },
+    })
+    expect(screen.getByRole('button', { name: 'featureWorkspace.create' })).toBeDisabled()
+    expect(feature.plan).not.toHaveBeenCalled()
   })
 })

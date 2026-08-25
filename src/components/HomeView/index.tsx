@@ -433,7 +433,7 @@ export function HomeView() {
             </button>
             <button
               type="button"
-              className={styles.heroSecondaryAction}
+              className={`${styles.heroSecondaryAction} ${styles.heroPrimaryAction}`}
               onClick={() => openModal('newFeature')}
             >
               <GitBranch size={14} />

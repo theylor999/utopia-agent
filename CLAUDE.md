@@ -1,4 +1,4 @@
-# Alethe — working guide (AI)
+# Utopia Agent — working guide (AI)
 
 > Identical in content to [`AGENTS.md`](AGENTS.md) in this directory. Keep both in sync.
 > Contributing from outside? Start with [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, project
@@ -6,12 +6,17 @@
 
 ## 1. What it is
 
-**Alethe** is a **Windows-first** desktop app that organizes, operates, and resumes multiple coding
-agents (Claude Code, Codex, OpenCode) and shells in parallel, inside a persistent workspace with
-real terminals (PTYs), layouts, themes, history, and RAM control.
+**Utopia Agent** is a **Windows-first** desktop app that organizes, operates, and resumes multiple coding
+agents (Oh My Pi `omp`, Grok Build `grok`, Claude Code) and shells in parallel, inside a persistent
+workspace with real terminals (PTYs), layouts, themes, history, and RAM control.
 
 > Tagline: **Reveal the state of every agent, shell, and project.**
-> Status: **v1.3.0**, functional MVP in polish. Identifier: `com.kc1t.alethe`.
+> Status: **v1.6.0**, functional MVP in polish. Identifier: `com.theylor.utopiaagent`.
+> Fork: this repository is a fork of [Alethe Agents](https://github.com/Kc1t/alethe-agents) by
+> [@Kc1t](https://github.com/Kc1t), under AGPL-3.0-or-later. Fork work lives on `custom/theylor`;
+> pull upstream with `git fetch upstream && git merge upstream/main` (remote `upstream` is
+> fetch-only, its push URL is `DISABLED`). `codex` and `opencode` still exist as legacy agent types
+> in `src/lib/types.ts`, but `ALL_AGENT_TYPES` only surfaces `omp`, `grok`, `claude`, and `shell`.
 
 ## 2. Where you are
 
@@ -46,7 +51,7 @@ cmd /c '"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxil
 ```
 
 When returning the path of a generated installer, always report the **full absolute path on the PC**
-(for example, `D:\project\src-tauri\target\release\bundle\nsis\Alethe_setup.exe`), never just the
+(for example, `D:\project\src-tauri\target\release\bundle\nsis\Utopia Agent_setup.exe`), never just the
 path relative to the repository.
 
 
@@ -112,7 +117,7 @@ streaming through the Tauri events `pty://data/{id}` and `pty://exit/{id}`.
 - OAuth tokens (Spotify, Claude) are stored in **plaintext** in app data; do not log or expose them.
 - The Windows build requires `vcvars64`. The Rust toolchain on `C:` can be corrupted by Windows
   Defender — prefer building from `D:`.
-- Local data: `%APPDATA%/Alethe/` (profiles, `projects.json`, scrollback `*.bin`, `spawn.log`).
+- Local data: `%LOCALAPPDATA%/com.theylor.utopiaagent/` (profiles, `projects.json`, scrollback `*.bin`, `spawn.log`).
 
 ## 9. Going deeper
 
@@ -145,7 +150,7 @@ The domain glossary (Group, Project, Container, Pane, Sub-tab, PTY) is summarize
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
 
-Universal across the 3 agent providers Alethe spawns (Claude Code, Codex, OpenCode) when the project has Graphify enabled: each gets the Graphify MCP server wired into its session automatically (Claude via `--mcp-config`; Codex/OpenCode via `.codex/config.toml`/`opencode.json` in the project root — see `graphify_codex_config_write`/`graphify_opencode_config_write` in `src-tauri/src/graphify.rs`).
+Universal across the agent providers Utopia Agent spawns (Oh My Pi, Grok Build, Claude Code) when the project has Graphify enabled: each gets the Graphify MCP server wired into its session automatically (Claude via `--mcp-config`; Codex/OpenCode via `.codex/config.toml`/`opencode.json` in the project root — see `graphify_codex_config_write`/`graphify_opencode_config_write` in `src-tauri/src/graphify.rs`).
 
 Rules:
 - If a Graphify MCP tool (e.g. `graphify_query`/similar) is available in this session, prefer calling it directly over shelling out — same scoped-subgraph result, no extra process spawn.

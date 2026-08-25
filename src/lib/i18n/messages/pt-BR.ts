@@ -2433,4 +2433,11 @@ export const ptBR: Record<MessageKey, string> = {
   'skills.removedLinkOnly': 'A cópia compartilhada foi mantida em {path}',
   'skills.removeFailed': 'Não deu para remover a skill',
   'skills.errBundled': 'Essa skill vem com o agente e não pode ser removida pelo Utopia Agent.',
+  'featureWorkspace.namePreview': 'Branch e pasta vão usar: {branch}',
+  'featureWorkspace.nameUnusable':
+    'Use pelo menos uma letra ou número no nome da funcionalidade.',
+  'featureWorkspace.sameSourceWarning':
+    'Escolha dois projetos diferentes para o backend e o frontend.',
+  'featureWorkspace.pairedNeedsTwoProjects':
+    'Cadastre um segundo projeto para parear backend e frontend.',
 }
