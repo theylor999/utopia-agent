@@ -112,11 +112,18 @@ export const en = {
   'featureWorkspace.stackBackend': 'Suggested: backend',
   'featureWorkspace.stackFrontend': 'Suggested: frontend',
   'featureWorkspace.stackScripts': 'Suggested: scripts',
-  'featureWorkspace.chooseSource': 'Choose a project',
+  'featureWorkspace.chooseSource': 'Choose a repository',
   'featureWorkspace.searchProjects': 'Search projects',
   'featureWorkspace.noMatchingProjects': 'No matching projects',
-  'featureWorkspace.noProjects':
-    'Add a project with a working folder before you create a feature workspace.',
+  'featureWorkspace.browseFolder': 'Browse for a folder…',
+  'featureWorkspace.pickedFolder': 'Picked folder',
+  'featureWorkspace.sourcesHint':
+    'Each slice uses the repository set in Preferences › Organization. Override one here when a feature needs a different repository.',
+  'featureWorkspace.overrideSource': 'Use another repository',
+  'featureWorkspace.useConfiguredSource': 'Back to the configured repository',
+  'featureWorkspace.roleNotConfigured':
+    'No {role} repository configured yet. Pick one, or set it in Preferences › Organization.',
+  'featureWorkspace.rememberedSource': 'Saved as the {role} repository.',
   'featureWorkspace.categoryLabel': 'Category',
   'featureWorkspace.category.feature': 'Feature',
   'featureWorkspace.category.fix': 'Fix',
@@ -127,6 +134,15 @@ export const en = {
   'featureWorkspace.useCategory': 'Use “{category}”',
   'featureWorkspace.nameLabel': 'Feature name',
   'featureWorkspace.namePlaceholder': 'for example, billing-export',
+  'featureWorkspace.baseRefLabel': 'Base ref',
+  'featureWorkspace.baseRefHint':
+    'Every slice branches from {baseRef}. A remote ref is fetched (read-only) right before the branch is created.',
+  'featureWorkspace.baseRefUnusable':
+    'Use a ref name such as origin/hml, origin/main, or a local branch.',
+  'featureWorkspace.baseRefRequired': 'Enter the ref the feature should branch from.',
+  'featureWorkspace.useConfiguredBaseRef': 'Back to the configured base ref ({baseRef})',
+  'featureWorkspace.baseRefPreviewLabel': 'Base',
+  'featureWorkspace.baseRefItemTitle': '{role} branches from {baseRef}',
   'featureWorkspace.previewTitle': 'Plan preview',
   'featureWorkspace.branchLabel': 'Branch',
   'featureWorkspace.workspaceRootLabel': 'Workspace',
@@ -155,6 +171,12 @@ export const en = {
     'The workspace destination already exists: {path}',
   'featureWorkspace.error.destinationExistsForRole':
     'The destination for {role} already exists: {path}',
+  'featureWorkspace.error.invalidBaseRef':
+    'The base ref is not a usable ref name. Use something like origin/hml.',
+  'featureWorkspace.error.baseRefMissing':
+    'The {role} repository has no ref {baseRef}. Choose another base ref.',
+  'featureWorkspace.error.baseFetchFailed':
+    'Could not refresh the base ref from the remote for {role}: {detail}. Nothing was created — retry when the remote is reachable, or point the base ref at a local branch.',
   'featureWorkspace.error.gitCommand': 'Git could not create the workspace: {detail}',
   'featureWorkspace.error.filesystem': 'The workspace folder is unavailable: {detail}',
 
@@ -2427,9 +2449,22 @@ export const en = {
   'featureWorkspace.namePreview': 'Branch and folder will use: {branch}',
   'featureWorkspace.nameUnusable':
     'Use at least one letter or number in the feature name.',
-  'featureWorkspace.sameSourceWarning': 'Pick a different project for each slice.',
-  'featureWorkspace.needsMoreProjects':
-    'Register {count} projects with a working folder to create {count} worktrees.',
+  'featureWorkspace.sameSourceWarning': 'Pick a different repository for each slice.',
+  'featureWorkspace.sourceRequired': 'Choose a repository for every slice.',
+  'prefs.featureRepos': 'Feature repositories',
+  'prefs.featureReposDesc':
+    'Repository each slice of a new feature comes from. Set them once and creating a feature only needs a category and a name.',
+  'prefs.featureRepoNotSet': 'Not set',
+  'prefs.featureRepoChoose': 'Choose folder',
+  'prefs.featureRepoClear': 'Clear',
+  'prefs.featureBaseRef': 'Feature base ref',
+  'prefs.featureBaseRefDesc':
+    'Ref every new feature branch starts from, in every slice. A remote-tracking ref is refreshed with a read-only fetch before the branch is created; a local ref is used as it is.',
+  'prefs.featureBaseRefLabel': 'Base ref',
+  'prefs.featureBaseRefHint': 'New features will branch from {baseRef}.',
+  'prefs.featureBaseRefInvalid':
+    'Not a usable ref name. Until it is fixed, new features fall back to origin/hml.',
+  'prefs.featureBaseRefReset': 'Reset to {baseRef}',
 } as const
 
 export type MessageKey = keyof typeof en

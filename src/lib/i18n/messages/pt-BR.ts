@@ -110,11 +110,18 @@ export const ptBR: Record<MessageKey, string> = {
   'featureWorkspace.stackBackend': 'Sugestão: backend',
   'featureWorkspace.stackFrontend': 'Sugestão: frontend',
   'featureWorkspace.stackScripts': 'Sugestão: scripts',
-  'featureWorkspace.chooseSource': 'Escolha um projeto',
+  'featureWorkspace.chooseSource': 'Escolha um repositório',
   'featureWorkspace.searchProjects': 'Buscar projetos',
   'featureWorkspace.noMatchingProjects': 'Nenhum projeto encontrado',
-  'featureWorkspace.noProjects':
-    'Adicione um projeto com uma pasta de trabalho antes de criar um workspace de funcionalidade.',
+  'featureWorkspace.browseFolder': 'Procurar uma pasta…',
+  'featureWorkspace.pickedFolder': 'Pasta escolhida',
+  'featureWorkspace.sourcesHint':
+    'Cada camada usa o repositório definido em Preferências › Organização. Troque aqui quando uma funcionalidade precisar de outro repositório.',
+  'featureWorkspace.overrideSource': 'Usar outro repositório',
+  'featureWorkspace.useConfiguredSource': 'Voltar ao repositório configurado',
+  'featureWorkspace.roleNotConfigured':
+    'Nenhum repositório de {role} configurado. Escolha um agora, ou defina em Preferências › Organização.',
+  'featureWorkspace.rememberedSource': 'Salvo como o repositório de {role}.',
   'featureWorkspace.categoryLabel': 'Categoria',
   'featureWorkspace.category.feature': 'Funcionalidade',
   'featureWorkspace.category.fix': 'Correção',
@@ -125,6 +132,15 @@ export const ptBR: Record<MessageKey, string> = {
   'featureWorkspace.useCategory': 'Usar “{category}”',
   'featureWorkspace.nameLabel': 'Nome da funcionalidade',
   'featureWorkspace.namePlaceholder': 'por exemplo, exportacao-faturamento',
+  'featureWorkspace.baseRefLabel': 'Ref base',
+  'featureWorkspace.baseRefHint':
+    'Cada camada parte de {baseRef}. Uma ref remota é atualizada com um fetch somente leitura pouco antes de criar a branch.',
+  'featureWorkspace.baseRefUnusable':
+    'Use um nome de ref como origin/hml, origin/main ou uma branch local.',
+  'featureWorkspace.baseRefRequired': 'Informe a ref de onde a funcionalidade deve partir.',
+  'featureWorkspace.useConfiguredBaseRef': 'Voltar para a ref base configurada ({baseRef})',
+  'featureWorkspace.baseRefPreviewLabel': 'Base',
+  'featureWorkspace.baseRefItemTitle': '{role} parte de {baseRef}',
   'featureWorkspace.previewTitle': 'Prévia do plano',
   'featureWorkspace.branchLabel': 'Branch',
   'featureWorkspace.workspaceRootLabel': 'Workspace',
@@ -153,6 +169,12 @@ export const ptBR: Record<MessageKey, string> = {
     'O destino do workspace já existe: {path}',
   'featureWorkspace.error.destinationExistsForRole':
     'O destino de {role} já existe: {path}',
+  'featureWorkspace.error.invalidBaseRef':
+    'A ref base não é um nome de ref utilizável. Use algo como origin/hml.',
+  'featureWorkspace.error.baseRefMissing':
+    'O repositório de {role} não tem a ref {baseRef}. Escolha outra ref base.',
+  'featureWorkspace.error.baseFetchFailed':
+    'Não foi possível atualizar a ref base no remoto para {role}: {detail}. Nada foi criado — tente de novo quando o remoto estiver acessível, ou aponte a ref base para uma branch local.',
   'featureWorkspace.error.gitCommand': 'O Git não conseguiu criar o workspace: {detail}',
   'featureWorkspace.error.filesystem': 'A pasta do workspace está indisponível: {detail}',
 
@@ -2446,7 +2468,20 @@ export const ptBR: Record<MessageKey, string> = {
   'featureWorkspace.namePreview': 'Branch e pasta vão usar: {branch}',
   'featureWorkspace.nameUnusable':
     'Use pelo menos uma letra ou número no nome da funcionalidade.',
-  'featureWorkspace.sameSourceWarning': 'Escolha um projeto diferente para cada camada.',
-  'featureWorkspace.needsMoreProjects':
-    'Cadastre {count} projetos com pasta de trabalho para criar {count} worktrees.',
+  'featureWorkspace.sameSourceWarning': 'Escolha um repositório diferente para cada camada.',
+  'featureWorkspace.sourceRequired': 'Escolha um repositório para cada camada.',
+  'prefs.featureRepos': 'Repositórios das funcionalidades',
+  'prefs.featureReposDesc':
+    'Repositório de origem de cada camada de uma nova funcionalidade. Defina uma vez e criar uma funcionalidade passa a pedir só categoria e nome.',
+  'prefs.featureRepoNotSet': 'Não definido',
+  'prefs.featureRepoChoose': 'Escolher pasta',
+  'prefs.featureRepoClear': 'Limpar',
+  'prefs.featureBaseRef': 'Ref base das funcionalidades',
+  'prefs.featureBaseRefDesc':
+    'Ref de onde toda nova branch de funcionalidade parte, em todas as camadas. Uma ref de rastreamento remoto é atualizada com um fetch somente leitura antes de criar a branch; uma ref local é usada como está.',
+  'prefs.featureBaseRefLabel': 'Ref base',
+  'prefs.featureBaseRefHint': 'Novas funcionalidades vão partir de {baseRef}.',
+  'prefs.featureBaseRefInvalid':
+    'Não é um nome de ref utilizável. Até corrigir, novas funcionalidades usam origin/hml.',
+  'prefs.featureBaseRefReset': 'Voltar para {baseRef}',
 }

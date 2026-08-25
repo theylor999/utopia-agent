@@ -4,7 +4,12 @@ import {
   DEFAULT_PROFILE_IMAGE_URL,
   LEGACY_DEFAULT_PROFILE_IMAGE_URL,
 } from '../lib/profile'
-import { ALL_AGENT_TYPES, DEFAULT_PREFERENCES, EMPTY_PROJECTS_FILE } from '../lib/types'
+import {
+  ALL_AGENT_TYPES,
+  DEFAULT_FEATURE_BASE_REF,
+  DEFAULT_PREFERENCES,
+  EMPTY_PROJECTS_FILE,
+} from '../lib/types'
 import { migrate, normalizePreferences } from './projectsStore.migrations'
 const REMOVED_AGENT_TYPES = [
   'antigravity',
@@ -260,6 +265,50 @@ describe('identity survives partial persisted payloads', () => {
     expect(preferences.resourcePolicy.memoryBudgetMb).toBe(
       DEFAULT_PREFERENCES.resourcePolicy.memoryBudgetMb,
     )
+  })
+
+  it('defaults the feature repository fields without disturbing the identity', () => {
+    // The payload predates the per-role repositories and the seeding marker.
+    const preferences = normalizePreferences({ ...identity, accountCreated: true })
+
+    expect(preferences).toMatchObject({ ...identity, accountCreated: true })
+    expect(preferences.featureBackendRepoPath).toBe('')
+    expect(preferences.featureFrontendRepoPath).toBe('')
+    expect(preferences.featureScriptsRepoPath).toBe('')
+    expect(preferences.featureSliceGroupsSeeded).toBe(false)
+    expect(preferences.featureBaseRef).toBe(DEFAULT_FEATURE_BASE_REF)
+  })
+
+  it('keeps a configured base ref and falls back when it is blank', () => {
+    // The base ref is the newest preference field: an older payload carrying
+    // only the identity must still come back with the identity intact.
+    expect(normalizePreferences({ ...identity }).featureBaseRef).toBe(DEFAULT_FEATURE_BASE_REF)
+
+    const chosen = normalizePreferences({
+      ...identity,
+      featureBaseRef: '  origin/main  ',
+    })
+    expect(chosen).toMatchObject({ ...identity })
+    expect(chosen.featureBaseRef).toBe('origin/main')
+
+    const blank = normalizePreferences({ ...identity, featureBaseRef: '   ' })
+    expect(blank).toMatchObject({ ...identity })
+    expect(blank.featureBaseRef).toBe(DEFAULT_FEATURE_BASE_REF)
+  })
+
+  it('keeps configured feature repositories and the seeding marker', () => {
+    const preferences = normalizePreferences({
+      ...identity,
+      featureBackendRepoPath: '  D:/work/api  ',
+      featureFrontendRepoPath: 'D:/work/web',
+      featureSliceGroupsSeeded: true,
+    })
+
+    expect(preferences).toMatchObject({ ...identity })
+    expect(preferences.featureBackendRepoPath).toBe('D:/work/api')
+    expect(preferences.featureFrontendRepoPath).toBe('D:/work/web')
+    expect(preferences.featureScriptsRepoPath).toBe('')
+    expect(preferences.featureSliceGroupsSeeded).toBe(true)
   })
 
   it('derives accountCreated from a legacy onboarding flag', () => {

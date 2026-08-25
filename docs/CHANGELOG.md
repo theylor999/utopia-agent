@@ -44,6 +44,26 @@ Notable user-facing changes to **Utopia Agent** are documented here. The format 
 
 ### Added
 
+- Creating a feature no longer requires registering a project first. Each slice can point straight
+  at any Git repository folder through the folder picker, so a fresh install with zero projects can
+  create a feature workspace.
+- A repository per role is configured once in **Preferences › Organization** (backend, frontend,
+  scripts). After that, creating a feature is: check the slices, pick a category, type a name,
+  create — the modal resolves each slice's repository by itself and shows the path read-only. The
+  per-slice picker remains as a one-off override and as the fallback for an unconfigured role.
+  Browsing a folder for a role that has nothing configured saves it as that role's repository; a
+  role that is already configured is never rewritten by an override.
+- The slice groups `Backend`, `Frontend`, `Backend & frontend` and `Scripts` are seeded as empty
+  top-level groups on first run, so the folders are already there and the first feature reuses them
+  instead of creating a duplicate. Seeding runs once, guarded by a preference marker, never
+  re-creates a group the user deleted or renamed, and never runs on a failed load.
+- A configurable **base ref** (default `origin/hml`), editable per feature and settable in
+  Preferences › Organization. Before creating the worktrees the flow refreshes just that ref with
+  `git fetch --no-tags <remote> refs/heads/<branch>:refs/remotes/<remote>/<branch>`, then branches
+  from the resolved commit — so a feature starts from the updated integration branch instead of
+  whatever the checkout happened to be on. The plan preview shows the base ref per slice before
+  anything is written.
+
 - **New feature** now takes any combination of slices. Backend, frontend and scripts are
   independent checkboxes, so all seven combinations work — including `scripts + backend` and all
   three at once — instead of the four fixed kinds. Categories are offered in English (`feature`,
@@ -62,6 +82,13 @@ Notable user-facing changes to **Utopia Agent** are documented here. The format 
 
 ### Changed
 
+- The feature flow still never writes to a remote. Its only remote-touching commands are
+  `git remote` (list) and the read-only fetch above, whose refspec targets a local
+  remote-tracking ref with no leading `+`, so nothing is force-updated. There is no `push`,
+  `pull`, `tag`, `checkout` or `reset`: the user's working copy of the base branch never moves,
+  and `--no-track` keeps the created branch without an upstream, so publishing and opening the PR
+  stay manual. A failed fetch aborts before anything is written to disk rather than falling back
+  to a stale base.
 - The close confirmation is an in-app themed modal instead of the native Windows dialog, with
   Enter to confirm, Escape to cancel, a trapped focus ring and the destructive action as the
   focused primary. `window.confirm` remains the fallback for when the UI cannot render, and every

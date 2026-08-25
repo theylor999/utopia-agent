@@ -5,7 +5,15 @@ const feature = vi.hoisted(() => ({
   create: vi.fn(),
   detect: vi.fn(),
   plan: vi.fn(),
+  pick: vi.fn(),
+  setPreferences: vi.fn(),
 }))
+
+const NO_REPOS = {
+  featureBackendRepoPath: '',
+  featureFrontendRepoPath: '',
+  featureScriptsRepoPath: '',
+}
 
 const ALL_PROJECTS = [
   { id: 'api', name: 'API', defaultCwd: 'C:/repos/api', archived: false },
@@ -22,6 +30,12 @@ const projectsStore = vi.hoisted(() => ({
       { id: 'tools', name: 'Tools', defaultCwd: 'C:/repos/tools', archived: false },
     ],
     createFeatureWorkspace: feature.create,
+    preferences: {
+      featureBackendRepoPath: '',
+      featureFrontendRepoPath: '',
+      featureScriptsRepoPath: '',
+    },
+    setPreferences: feature.setPreferences,
   },
 }))
 
@@ -41,6 +55,11 @@ vi.mock('../../lib/featureWorkspace', async () => {
     )
   return {
     FEATURE_SLICES: actual.FEATURE_SLICES,
+    FEATURE_ROLE_REPO_PREFERENCE: actual.FEATURE_ROLE_REPO_PREFERENCE,
+    DEFAULT_FEATURE_BASE_REF: actual.DEFAULT_FEATURE_BASE_REF,
+    featureBaseRef: actual.featureBaseRef,
+    isUsableFeatureBaseRef: actual.isUsableFeatureBaseRef,
+    featureRoleRepoPath: actual.featureRoleRepoPath,
     canonicalFeatureSlices: actual.canonicalFeatureSlices,
     featureSliceGroupNameKey: actual.featureSliceGroupNameKey,
     planFeatureWorkspace: feature.plan,
@@ -55,6 +74,10 @@ vi.mock('../../lib/i18n', () => ({
 
 vi.mock('../../lib/tauri', () => ({
   detectProjectStack: feature.detect,
+}))
+
+vi.mock('../../lib/dialog', () => ({
+  pickDirectory: feature.pick,
 }))
 
 vi.mock('../../stores/projectsStore', () => ({
@@ -73,8 +96,11 @@ import {
   slugifyFeatureSegment,
 } from './NewFeatureModal'
 
+const BASE_REF = 'origin/hml'
+
 const PLAN = {
   branch: 'feature/orders',
+  baseRef: BASE_REF,
   workspaceRoot: 'C:/worktrees/feature-orders',
   items: [
     {
@@ -135,6 +161,10 @@ describe('NewFeatureModal', () => {
     feature.create.mockReset()
     feature.detect.mockReset()
     feature.plan.mockReset()
+    feature.pick.mockReset()
+    feature.pick.mockResolvedValue(null)
+    feature.setPreferences.mockReset()
+    projectsStore.state.preferences = { ...NO_REPOS }
     uiStore.state.closeModal.mockReset()
     projectsStore.state.projects = [...ALL_PROJECTS]
     feature.create.mockResolvedValue(undefined)
@@ -162,13 +192,16 @@ describe('NewFeatureModal', () => {
     expect(await screen.findByRole('option', { name: /Web/ })).toBeDisabled()
     fireEvent.keyDown(document, { key: 'Escape' })
     const nameInput = screen.getByRole('textbox', { name: 'featureWorkspace.nameLabel' })
-    expect(screen.getAllByRole('textbox')).toEqual([nameInput])
+    const baseRefInput = screen.getByRole('textbox', { name: 'featureWorkspace.baseRefLabel' })
+    // No source dropdown is rendered as a text field: only naming and the base ref.
+    expect(screen.getAllByRole('textbox')).toEqual([nameInput, baseRefInput])
     fireEvent.change(nameInput, { target: { value: 'orders' } })
     await waitFor(() => expect(feature.plan).toHaveBeenCalled())
     expect(feature.plan).toHaveBeenLastCalledWith({
       slices: ['backend', 'frontend'],
       category: 'feature',
       name: 'orders',
+      baseRef: BASE_REF,
       sources: [
         { role: 'backend', path: 'C:/repos/api', projectId: 'api' },
         { role: 'frontend', path: 'C:/repos/web', projectId: 'web' },
@@ -278,8 +311,11 @@ describe('NewFeatureModal', () => {
       target: { value: 'orders' },
     })
 
-    const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('featureWorkspace.error.branchExists')
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'featureWorkspace.error.branchExists',
+      ),
+    )
     expect(screen.getByRole('button', { name: 'featureWorkspace.create' })).toBeDisabled()
   })
 
@@ -300,19 +336,346 @@ describe('NewFeatureModal', () => {
     await waitFor(() => expect(createButton).toBeEnabled())
   })
 
-  it('explains that a second slice needs a second registered project', async () => {
-    projectsStore.state.projects = [ONLY_PROJECT]
+  it('sources a slice from a browsed folder, with no registered project involved', async () => {
+    projectsStore.state.projects = []
+    feature.pick.mockResolvedValue('C:/repos/fresh')
+    feature.plan.mockResolvedValue({
+      branch: 'feature/orders',
+      baseRef: BASE_REF,
+      workspaceRoot: 'C:/worktrees/feature-orders',
+      items: [
+        {
+          role: 'backend',
+          source: 'C:/repos/fresh',
+          destination: 'C:/worktrees/feature-orders/backend',
+        },
+      ],
+    })
     render(<NewFeatureModal />)
 
-    fireEvent.click(screen.getByRole('checkbox', { name: /featureWorkspace.roleFrontend/ }))
-
+    // Zero registered projects: the form asks for a source instead of blocking.
     await waitFor(() =>
-      expect(screen.getByText('featureWorkspace.needsMoreProjects')).toBeInTheDocument(),
+      expect(screen.getByText('featureWorkspace.sourceRequired')).toBeInTheDocument(),
+    )
+    expect(feature.detect).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'featureWorkspace.roleBackend' }))
+    fireEvent.click(await screen.findByRole('option', { name: /featureWorkspace.browseFolder/ }))
+    await waitFor(() => expect(feature.pick).toHaveBeenCalledTimes(1))
+    expect(feature.pick).toHaveBeenCalledWith({ defaultPath: undefined })
+    await waitFor(() =>
+      expect(screen.queryByText('featureWorkspace.sourceRequired')).not.toBeInTheDocument(),
+    )
+    expect(screen.getByText('C:/repos/fresh')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
+      target: { value: 'orders' },
+    })
+    await waitFor(() => expect(feature.plan).toHaveBeenCalled())
+    expect(feature.plan).toHaveBeenLastCalledWith({
+      slices: ['backend'],
+      category: 'feature',
+      name: 'orders',
+      baseRef: BASE_REF,
+      sources: [{ role: 'backend', path: 'C:/repos/fresh' }],
+    })
+
+    const createButton = screen.getByRole('button', { name: 'featureWorkspace.create' })
+    await waitFor(() => expect(createButton).toBeEnabled())
+    fireEvent.click(createButton)
+    await waitFor(() =>
+      expect(feature.create).toHaveBeenCalledWith({
+        slices: ['backend'],
+        category: 'feature',
+        name: 'orders',
+        baseRef: BASE_REF,
+        sources: [{ role: 'backend', path: 'C:/repos/fresh' }],
+      }),
+    )
+  })
+
+  it('mixes a registered project with a browsed folder and seeds the picker', async () => {
+    projectsStore.state.projects = [ONLY_PROJECT]
+    feature.pick.mockResolvedValue('C:/repos/picked-web')
+    render(<NewFeatureModal />)
+
+    await waitFor(() => expect(feature.detect).toHaveBeenCalledTimes(1))
+    fireEvent.click(screen.getByRole('checkbox', { name: /featureWorkspace.roleFrontend/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'featureWorkspace.roleFrontend' }))
+    fireEvent.click(await screen.findByRole('option', { name: /featureWorkspace.browseFolder/ }))
+
+    // With no folder yet for this slice, the picker starts at a known project.
+    await waitFor(() =>
+      expect(feature.pick).toHaveBeenCalledWith({ defaultPath: 'C:/repos/api' }),
     )
     fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
       target: { value: 'orders' },
     })
-    expect(screen.getByRole('button', { name: 'featureWorkspace.create' })).toBeDisabled()
+    await waitFor(() => expect(feature.plan).toHaveBeenCalled())
+    expect(feature.plan).toHaveBeenLastCalledWith({
+      slices: ['backend', 'frontend'],
+      category: 'feature',
+      name: 'orders',
+      baseRef: BASE_REF,
+      sources: [
+        { role: 'backend', path: 'C:/repos/api', projectId: 'api' },
+        { role: 'frontend', path: 'C:/repos/picked-web' },
+      ],
+    })
+  })
+
+  it('warns when two slices end up on the same repository', async () => {
+    projectsStore.state.projects = [ONLY_PROJECT]
+    feature.pick.mockResolvedValue('C:/repos/api')
+    render(<NewFeatureModal />)
+
+    await waitFor(() => expect(feature.detect).toHaveBeenCalledTimes(1))
+    fireEvent.click(screen.getByRole('checkbox', { name: /featureWorkspace.roleFrontend/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'featureWorkspace.roleFrontend' }))
+    fireEvent.click(await screen.findByRole('option', { name: /featureWorkspace.browseFolder/ }))
+
+    await waitFor(() =>
+      expect(screen.getByText('featureWorkspace.sameSourceWarning')).toBeInTheDocument(),
+    )
+    fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
+      target: { value: 'orders' },
+    })
     expect(feature.plan).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'featureWorkspace.create' })).toBeDisabled()
+  })
+
+  it('creates a feature straight from the configured repositories, with no picking', async () => {
+    projectsStore.state.projects = []
+    projectsStore.state.preferences = {
+      featureBackendRepoPath: 'D:/work/api',
+      featureFrontendRepoPath: 'D:/work/web',
+      featureScriptsRepoPath: '',
+    }
+    render(<NewFeatureModal />)
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /featureWorkspace.roleFrontend/ }))
+
+    // Both slices resolve on their own: no source dropdown is rendered at all.
+    expect(screen.getByText('D:/work/api')).toBeInTheDocument()
+    expect(screen.getByText('D:/work/web')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'featureWorkspace.roleBackend' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'featureWorkspace.roleFrontend' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText('featureWorkspace.sourceRequired')).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
+      target: { value: 'orders' },
+    })
+    await waitFor(() => expect(feature.plan).toHaveBeenCalled())
+    expect(feature.plan).toHaveBeenLastCalledWith({
+      slices: ['backend', 'frontend'],
+      category: 'feature',
+      name: 'orders',
+      baseRef: BASE_REF,
+      sources: [
+        { role: 'backend', path: 'D:/work/api' },
+        { role: 'frontend', path: 'D:/work/web' },
+      ],
+    })
+
+    const createButton = screen.getByRole('button', { name: 'featureWorkspace.create' })
+    await waitFor(() => expect(createButton).toBeEnabled())
+    fireEvent.click(createButton)
+    await waitFor(() => expect(feature.create).toHaveBeenCalled())
+    expect(feature.pick).not.toHaveBeenCalled()
+  })
+
+  it('falls back to the picker for a role with no configured repository', async () => {
+    projectsStore.state.projects = []
+    projectsStore.state.preferences = {
+      featureBackendRepoPath: 'D:/work/api',
+      featureFrontendRepoPath: '',
+      featureScriptsRepoPath: '',
+    }
+    feature.pick.mockResolvedValue('D:/work/web')
+    render(<NewFeatureModal />)
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /featureWorkspace.roleFrontend/ }))
+    // Backend is configured, frontend is not — only frontend offers a picker.
+    expect(
+      screen.queryByRole('button', { name: 'featureWorkspace.roleBackend' }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText('featureWorkspace.roleNotConfigured')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'featureWorkspace.roleFrontend' }))
+    fireEvent.click(await screen.findByRole('option', { name: /featureWorkspace.browseFolder/ }))
+    await waitFor(() => expect(feature.pick).toHaveBeenCalled())
+
+    // An unconfigured role adopts the folder it was pointed at.
+    expect(feature.setPreferences).toHaveBeenCalledWith({
+      featureFrontendRepoPath: 'D:/work/web',
+    })
+
+    fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
+      target: { value: 'orders' },
+    })
+    await waitFor(() => expect(feature.plan).toHaveBeenCalled())
+    expect(feature.plan).toHaveBeenLastCalledWith({
+      slices: ['backend', 'frontend'],
+      category: 'feature',
+      name: 'orders',
+      baseRef: BASE_REF,
+      sources: [
+        { role: 'backend', path: 'D:/work/api' },
+        { role: 'frontend', path: 'D:/work/web' },
+      ],
+    })
+  })
+
+  it('lets the user override a configured repository for one feature', async () => {
+    projectsStore.state.projects = []
+    projectsStore.state.preferences = {
+      featureBackendRepoPath: 'D:/work/api',
+      featureFrontendRepoPath: '',
+      featureScriptsRepoPath: '',
+    }
+    feature.pick.mockResolvedValue('D:/work/api-fork')
+    render(<NewFeatureModal />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'featureWorkspace.overrideSource' }))
+    fireEvent.click(screen.getByRole('button', { name: 'featureWorkspace.roleBackend' }))
+    fireEvent.click(await screen.findByRole('option', { name: /featureWorkspace.browseFolder/ }))
+    await waitFor(() => expect(feature.pick).toHaveBeenCalled())
+
+    // Overriding a configured role never rewrites the configured repository.
+    expect(feature.setPreferences).not.toHaveBeenCalled()
+    fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
+      target: { value: 'orders' },
+    })
+    await waitFor(() => expect(feature.plan).toHaveBeenCalled())
+    expect(feature.plan).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        sources: [{ role: 'backend', path: 'D:/work/api-fork' }],
+      }),
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'featureWorkspace.useConfiguredSource' }))
+    await waitFor(() =>
+      expect(feature.plan).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sources: [{ role: 'backend', path: 'D:/work/api' }] }),
+      ),
+    )
+  })
+
+  it('surfaces the backend error when the browsed folder is not a Git repository', async () => {
+    projectsStore.state.projects = []
+    feature.pick.mockResolvedValue('C:/not-a-repo')
+    feature.plan.mockRejectedValue(new Error('not_a_git_repository: C:/not-a-repo'))
+    render(<NewFeatureModal />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'featureWorkspace.roleBackend' }))
+    fireEvent.click(await screen.findByRole('option', { name: /featureWorkspace.browseFolder/ }))
+    await waitFor(() => expect(feature.pick).toHaveBeenCalled())
+    fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
+      target: { value: 'orders' },
+    })
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('git.error.notRepository')
+    expect(screen.getByRole('button', { name: 'featureWorkspace.create' })).toBeDisabled()
+  })
+  it('defaults the base ref to the configured one and states it per slice', async () => {
+    render(<NewFeatureModal />)
+
+    const baseRefInput = screen.getByRole('textbox', { name: 'featureWorkspace.baseRefLabel' })
+    expect(baseRefInput).toHaveValue(BASE_REF)
+    fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
+      target: { value: 'orders' },
+    })
+    await waitFor(() => expect(feature.plan).toHaveBeenCalled())
+    expect(feature.plan).toHaveBeenLastCalledWith(expect.objectContaining({ baseRef: BASE_REF }))
+
+    // One base row for the plan, plus one chip on each of the two slice rows.
+    await waitFor(() => expect(screen.getAllByText(BASE_REF)).toHaveLength(3))
+    expect(screen.getByText('featureWorkspace.baseRefPreviewLabel')).toBeInTheDocument()
+  })
+
+  it('reads the base ref configured in preferences', async () => {
+    projectsStore.state.preferences = { ...NO_REPOS, featureBaseRef: 'origin/main' }
+    render(<NewFeatureModal />)
+
+    expect(screen.getByRole('textbox', { name: 'featureWorkspace.baseRefLabel' })).toHaveValue(
+      'origin/main',
+    )
+    fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
+      target: { value: 'orders' },
+    })
+    await waitFor(() =>
+      expect(feature.plan).toHaveBeenLastCalledWith(
+        expect.objectContaining({ baseRef: 'origin/main' }),
+      ),
+    )
+  })
+
+  it('overrides the base ref for one feature and goes back to the configured one', async () => {
+    render(<NewFeatureModal />)
+
+    const baseRefInput = screen.getByRole('textbox', { name: 'featureWorkspace.baseRefLabel' })
+    fireEvent.change(baseRefInput, { target: { value: 'origin/release-1' } })
+    fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
+      target: { value: 'orders' },
+    })
+    await waitFor(() =>
+      expect(feature.plan).toHaveBeenLastCalledWith(
+        expect.objectContaining({ baseRef: 'origin/release-1' }),
+      ),
+    )
+    // Overriding the base ref for one feature never rewrites the preference.
+    expect(feature.setPreferences).not.toHaveBeenCalled()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /featureWorkspace.useConfiguredBaseRef/ }),
+    )
+    await waitFor(() =>
+      expect(feature.plan).toHaveBeenLastCalledWith(expect.objectContaining({ baseRef: BASE_REF })),
+    )
+  })
+
+  it('never plans with an unusable base ref', async () => {
+    render(<NewFeatureModal />)
+
+    fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
+      target: { value: 'orders' },
+    })
+    await waitFor(() => expect(feature.plan).toHaveBeenCalled())
+    feature.plan.mockClear()
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'featureWorkspace.baseRefLabel' }), {
+      target: { value: '--force' },
+    })
+
+    await waitFor(() =>
+      expect(screen.getByText('featureWorkspace.baseRefUnusable')).toBeInTheDocument(),
+    )
+    expect(screen.getByText('featureWorkspace.baseRefRequired')).toBeInTheDocument()
+    expect(feature.plan).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'featureWorkspace.create' })).toBeDisabled()
+  })
+
+  it('shows a failed base refresh and keeps the form ready for a retry', async () => {
+    feature.create.mockRejectedValueOnce(
+      new Error('base_fetch_failed:backend: fatal: could not read from remote repository'),
+    )
+    render(<NewFeatureModal />)
+
+    fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
+      target: { value: 'orders' },
+    })
+    const createButton = screen.getByRole('button', { name: 'featureWorkspace.create' })
+    await waitFor(() => expect(createButton).toBeEnabled())
+    fireEvent.click(createButton)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('featureWorkspace.error.baseFetchFailed')
+    expect(uiStore.state.closeModal).not.toHaveBeenCalled()
+    await waitFor(() => expect(createButton).toBeEnabled())
   })
 })

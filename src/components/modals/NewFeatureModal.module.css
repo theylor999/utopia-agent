@@ -65,6 +65,30 @@
   font-size: 10px;
 }
 
+.browseOption {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--accent-strong);
+}
+
+.browseOption svg {
+  flex: none;
+}
+
+.pathHint {
+  display: block;
+  overflow: hidden;
+  padding-top: 5px;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .hint,
 .hintInvalid {
   display: block;
@@ -100,23 +124,12 @@
   color: var(--status-waiting);
 }
 
-.notice,
-.preview {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-sunken);
-}
-
-.notice {
-  padding: 12px;
-  color: var(--fg-muted);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
 .preview {
   min-height: 112px;
   overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
 }
 
 .previewHeader {
@@ -189,9 +202,25 @@
   font-weight: 600;
 }
 
+.baseChip {
+  justify-self: start;
+  max-width: 100%;
+  padding: 2px 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.previewRow > .baseChip {
+  color: var(--fg);
+}
+
 .planItem {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: 72px minmax(0, 1fr) auto auto minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   padding-top: 8px;
@@ -266,6 +295,10 @@
     grid-template-columns: 64px minmax(0, 1fr);
   }
 
+  .planItem > .baseChip {
+    grid-column: 2;
+  }
+
   .planItem > span[aria-hidden='true'] {
     display: none;
   }
@@ -273,4 +306,50 @@
   .planItem code {
     grid-column: 2;
   }
+}
+
+.resolvedSource {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+}
+
+.resolvedSource svg {
+  flex: none;
+  color: var(--accent);
+}
+
+.resolvedPath {
+  overflow: hidden;
+  min-width: 0;
+  flex: 1;
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.linkButton {
+  flex: none;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-strong);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.resolvedSource .linkButton {
+  margin-top: 0;
+}
+
+.linkButton:hover {
+  text-decoration: underline;
 }

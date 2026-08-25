@@ -1,9 +1,70 @@
 import type { MessageKey } from './i18n'
+import { DEFAULT_FEATURE_BASE_REF, type Preferences } from './types'
+
+export { DEFAULT_FEATURE_BASE_REF }
 
 /** Canonical slice order. Plans, group names, and previews all follow it. */
 export const FEATURE_SLICES = ['backend', 'frontend', 'scripts'] as const
 
 export type FeatureRole = (typeof FEATURE_SLICES)[number]
+
+/**
+ * Preference holding the repository configured for each role. Set once, so
+ * creating a feature is only slices + category + name.
+ */
+export const FEATURE_ROLE_REPO_PREFERENCE = {
+  backend: 'featureBackendRepoPath',
+  frontend: 'featureFrontendRepoPath',
+  scripts: 'featureScriptsRepoPath',
+} as const satisfies Record<FeatureRole, keyof Preferences>
+
+/** Repository configured for `role`, or an empty string when unset. */
+export function featureRoleRepoPath(
+  preferences: Pick<Preferences, (typeof FEATURE_ROLE_REPO_PREFERENCE)[FeatureRole]>,
+  role: FeatureRole,
+): string {
+  return (preferences[FEATURE_ROLE_REPO_PREFERENCE[role]] ?? '').trim()
+}
+
+/**
+ * Configured base ref, falling back to the default when the preference is
+ * absent or blank. One ref for every slice: a feature is a single branch name
+ * across its repositories, and both repositories this flow targets integrate
+ * on the same branch, so a per-role ref would only triple the configuration.
+ */
+export function featureBaseRef(preferences: Pick<Preferences, 'featureBaseRef'>): string {
+  return (preferences.featureBaseRef ?? '').trim() || DEFAULT_FEATURE_BASE_REF
+}
+
+/**
+ * True when the ref can be handed to Git as an argument. Mirrors the backend
+ * check, so the modal can refuse before an IPC round-trip.
+ */
+export function isUsableFeatureBaseRef(value: string): boolean {
+  const trimmed = value.trim()
+  return (
+    trimmed.length > 0 &&
+    !trimmed.startsWith('-') &&
+    !trimmed.startsWith('/') &&
+    !trimmed.startsWith('.') &&
+    !trimmed.endsWith('/') &&
+    !trimmed.endsWith('.lock') &&
+    !trimmed.includes('..') &&
+    !trimmed.includes('//') &&
+    /^[A-Za-z0-9._/-]+$/.test(trimmed)
+  )
+}
+
+/**
+ * Slice combinations whose groups are seeded on first run, so the sidebar shows
+ * them before any feature exists. The rarer combinations stay on demand.
+ */
+export const SEEDED_FEATURE_SLICE_COMBINATIONS: readonly FeatureRole[][] = [
+  ['backend'],
+  ['frontend'],
+  ['backend', 'frontend'],
+  ['scripts'],
+]
 
 export type FeatureWorkspaceSource = {
   role: FeatureRole
@@ -15,6 +76,8 @@ export type FeatureWorkspaceRequest = {
   slices: FeatureRole[]
   category: string
   name: string
+  /** Ref every slice branches from, for example `origin/hml`. */
+  baseRef: string
   sources: FeatureWorkspaceSource[]
 }
 
@@ -26,6 +89,8 @@ export type FeatureWorkspaceItem = {
 
 export type FeatureWorkspacePlan = {
   branch: string
+  /** Ref every item branches from, echoed back by the backend. */
+  baseRef: string
   workspaceRoot: string
   items: FeatureWorkspaceItem[]
 }

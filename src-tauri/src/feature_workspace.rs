@@ -9,8 +9,11 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
-use crate::git_control::{checked_output, git_command, main_repository_root};
+use crate::git_control::{
+    checked_output, git_command, hide_console, main_repository_root, with_lock_awareness,
+};
 use crate::worktrees::git_arg;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -53,6 +56,12 @@ pub struct FeatureWorkspaceRequest {
     pub slices: Vec<FeatureRole>,
     pub category: String,
     pub name: String,
+    /// Ref every slice branches from, for example `origin/hml`, `origin/main`,
+    /// or a purely local branch. A remote-tracking ref is refreshed with a
+    /// read-only fetch before the worktrees are created. Defaulted only so a
+    /// caller that omits it gets `invalid_base_ref` instead of a serde error.
+    #[serde(default)]
+    pub base_ref: String,
     pub sources: Vec<FeatureWorkspaceSource>,
 }
 
@@ -68,6 +77,9 @@ pub struct FeatureWorkspaceItem {
 #[serde(rename_all = "camelCase")]
 pub struct FeatureWorkspacePlan {
     pub branch: String,
+    /// Ref every slice in `items` branches from, echoed back so the preview can
+    /// state it before the user commits to creating anything.
+    pub base_ref: String,
     pub workspace_root: String,
     pub items: Vec<FeatureWorkspaceItem>,
 }
@@ -99,6 +111,8 @@ pub struct FeatureWorkspaceRemovalResult {
 #[derive(Debug, Clone)]
 struct ResolvedFeatureWorkspace {
     plan: FeatureWorkspacePlan,
+    /// Validated base ref, identical to `plan.base_ref`.
+    base_ref: String,
     roots: Vec<PathBuf>,
     workspace_root: PathBuf,
     destinations: Vec<PathBuf>,
@@ -152,7 +166,10 @@ pub(crate) fn feature_workspace_create_inner(
     request: FeatureWorkspaceRequest,
 ) -> Result<FeatureWorkspaceResult, String> {
     let resolved = resolve_request(request, true)?;
-    create_planned_workspace(&resolved, add_named_worktree)
+    // The refresh runs after every preflight check and before the first byte is
+    // written to disk, so a failed fetch leaves no half-updated workspace.
+    let base_oids = refresh_planned_bases(&resolved)?;
+    create_planned_workspace(&resolved, &base_oids, add_named_worktree)
 }
 
 pub(crate) fn feature_workspace_remove_inner(
@@ -247,6 +264,7 @@ fn resolve_request(
         return Err("invalid_branch".to_string());
     }
     let branch = format!("{category}/{name}");
+    let base_ref = validated_base_ref(&request.base_ref)?;
 
     let mut roots = Vec::with_capacity(expected.len());
     let mut unique_roots = HashSet::with_capacity(expected.len());
@@ -283,9 +301,11 @@ fn resolve_request(
     let resolved = ResolvedFeatureWorkspace {
         plan: FeatureWorkspacePlan {
             branch,
+            base_ref: base_ref.clone(),
             workspace_root: git_arg(&workspace_root),
             items,
         },
+        base_ref,
         roots,
         workspace_root,
         destinations,
@@ -304,6 +324,141 @@ fn validate_branch(root: &Path, branch: &str) -> Result<(), String> {
     } else {
         Err("invalid_branch".to_string())
     }
+}
+
+/// Accepts a ref the flow may hand to Git as an argument: no leading dash, no
+/// whitespace, no revision operators, only the characters real refs use.
+fn validated_base_ref(base_ref: &str) -> Result<String, String> {
+    let trimmed = base_ref.trim();
+    let shaped = !trimmed.is_empty()
+        && !trimmed.starts_with('-')
+        && !trimmed.starts_with('/')
+        && !trimmed.starts_with('.')
+        && !trimmed.ends_with('/')
+        && !trimmed.ends_with(".lock")
+        && !trimmed.contains("..")
+        && !trimmed.contains("//")
+        && trimmed.chars().all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '.' | '_' | '-' | '/')
+        });
+    if shaped {
+        Ok(trimmed.to_string())
+    } else {
+        Err("invalid_base_ref".to_string())
+    }
+}
+
+/// Remote a base ref tracks and the branch on it, or `None` when the ref is
+/// purely local. Only a remote-tracking base is ever fetched.
+fn base_ref_remote(root: &Path, base_ref: &str) -> Result<Option<(String, String)>, String> {
+    let output = checked_output(root, &["remote"])?;
+    let text = String::from_utf8_lossy(&output.stdout);
+    let mut matched: Option<(String, String)> = None;
+    for remote in text.lines().map(str::trim).filter(|line| !line.is_empty()) {
+        let Some(branch) = base_ref.strip_prefix(&format!("{remote}/")) else {
+            continue;
+        };
+        if branch.is_empty() {
+            continue;
+        }
+        // Longest remote name wins, so a remote named `origin/mirror` is never
+        // mistaken for the remote `origin`.
+        let longer = match &matched {
+            Some((current, _)) => current.len() < remote.len(),
+            None => true,
+        };
+        if longer {
+            matched = Some((remote.to_string(), branch.to_string()));
+        }
+    }
+    Ok(matched)
+}
+
+/// Preflight for the base ref. A purely local base must already resolve; a
+/// remote-tracking base is proven by the fetch that runs before creation.
+fn ensure_base_ref_available(
+    root: &Path,
+    base_ref: &str,
+    role: FeatureRole,
+) -> Result<(), String> {
+    if base_ref_remote(root, base_ref)?.is_some() {
+        return Ok(());
+    }
+    if revision_oid(root, base_ref).is_err() {
+        return Err(format!("base_ref_missing:{}: {base_ref}", role.as_str()));
+    }
+    Ok(())
+}
+
+/// Downloads one branch into its own remote-tracking ref. The refspec has no
+/// leading `+`, so a rewritten remote branch is reported instead of silently
+/// discarding what the repository already had, and `GIT_TERMINAL_PROMPT=0`
+/// keeps a credential prompt from blocking the flow.
+fn fetch_base_branch(root: &Path, remote: &str, branch: &str) -> Result<(), String> {
+    let refspec = format!("refs/heads/{branch}:refs/remotes/{remote}/{branch}");
+    with_lock_awareness(root, || {
+        let mut command = Command::new("git");
+        command
+            .current_dir(root)
+            .args([
+                "fetch",
+                "--no-tags",
+                "--no-recurse-submodules",
+                remote,
+                &refspec,
+            ])
+            .env("GIT_TERMINAL_PROMPT", "0");
+        hide_console(&mut command);
+        let output = command.output().map_err(|error| {
+            if error.kind() == ErrorKind::NotFound {
+                "git_not_found".to_string()
+            } else {
+                format!("git_exec_failed:{error}")
+            }
+        })?;
+        if output.status.success() {
+            return Ok(());
+        }
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        Err(if stderr.is_empty() {
+            "git_command_failed".to_string()
+        } else {
+            format!("git_command_failed:{stderr}")
+        })
+    })
+}
+
+/// Brings the base ref up to date and returns the commit the slice will branch
+/// from. Read-only against the remote: it fetches one branch into its own
+/// remote-tracking ref, never pushes, never updates a ref on the remote, and
+/// never checks out or resets the base branch in the user's working copy.
+fn refresh_base_ref(root: &Path, base_ref: &str, role: FeatureRole) -> Result<String, String> {
+    if let Some((remote, branch)) = base_ref_remote(root, base_ref)? {
+        fetch_base_branch(root, &remote, &branch).map_err(|error| {
+            let detail = error
+                .strip_prefix("git_command_failed:")
+                .unwrap_or(&error)
+                .trim()
+                .to_string();
+            format!("base_fetch_failed:{}: {detail}", role.as_str())
+        })?;
+    }
+    revision_oid(root, base_ref)
+        .map_err(|_| format!("base_ref_missing:{}: {base_ref}", role.as_str()))
+}
+
+/// Refreshes every slice's base before anything is written, and returns the
+/// commit each slice branches from, in plan order.
+fn refresh_planned_bases(resolved: &ResolvedFeatureWorkspace) -> Result<Vec<String>, String> {
+    let mut base_oids = Vec::with_capacity(resolved.plan.items.len());
+    for (index, item) in resolved.plan.items.iter().enumerate() {
+        base_oids.push(refresh_base_ref(
+            &resolved.roots[index],
+            &resolved.base_ref,
+            item.role,
+        )?);
+    }
+    Ok(base_oids)
 }
 
 fn branch_slug(branch: &str) -> Result<String, String> {
@@ -337,6 +492,7 @@ fn preflight(resolved: &ResolvedFeatureWorkspace) -> Result<(), String> {
     }
 
     for (index, item) in resolved.plan.items.iter().enumerate() {
+        ensure_base_ref_available(&resolved.roots[index], &resolved.base_ref, item.role)?;
         ensure_item_available(
             item,
             &resolved.roots[index],
@@ -457,7 +613,14 @@ fn same_path(left: &Path, right: &Path) -> bool {
     comparable_path(left) == comparable_path(right)
 }
 
-fn add_named_worktree(root: &Path, branch: &str, destination: &Path) -> Result<(), String> {
+/// Creates the branch at `base_oid` with no upstream, so `git push` with no
+/// arguments fails and the user publishes and opens the PR by hand.
+fn add_named_worktree(
+    root: &Path,
+    branch: &str,
+    destination: &Path,
+    base_oid: &str,
+) -> Result<(), String> {
     let destination = git_arg(destination);
     checked_output(
         root,
@@ -468,7 +631,7 @@ fn add_named_worktree(root: &Path, branch: &str, destination: &Path) -> Result<(
             "-b",
             branch,
             &destination,
-            "HEAD",
+            base_oid,
         ],
     )?;
     Ok(())
@@ -476,11 +639,15 @@ fn add_named_worktree(root: &Path, branch: &str, destination: &Path) -> Result<(
 
 fn create_planned_workspace<F>(
     resolved: &ResolvedFeatureWorkspace,
+    base_oids: &[String],
     mut add_worktree: F,
 ) -> Result<FeatureWorkspaceResult, String>
 where
-    F: FnMut(&Path, &str, &Path) -> Result<(), String>,
+    F: FnMut(&Path, &str, &Path, &str) -> Result<(), String>,
 {
+    if base_oids.len() != resolved.plan.items.len() {
+        return Err("invalid_slices".to_string());
+    }
     fs::create_dir(&resolved.workspace_root).map_err(|error| {
         if error.kind() == ErrorKind::AlreadyExists {
             format!("destination_exists:{}", resolved.plan.workspace_root)
@@ -500,18 +667,15 @@ where
             let rollback_errors = rollback_created(resolved, &created, None);
             return Err(create_error(error, rollback_errors));
         }
-        let branch_oid = match revision_oid(&resolved.roots[index], "HEAD") {
-            Ok(oid) => oid,
-            Err(error) => {
-                let rollback_errors = rollback_created(resolved, &created, None);
-                return Err(create_error(error, rollback_errors));
-            }
-        };
+        // The branch starts at the refreshed base commit, and the same commit
+        // is what rollback later checks before it deletes anything.
+        let branch_oid = base_oids[index].clone();
 
         match add_worktree(
             &resolved.roots[index],
             &resolved.plan.branch,
             &resolved.destinations[index],
+            &branch_oid,
         ) {
             Ok(()) => created.push(CreatedWorkspaceItem { index, branch_oid }),
             Err(error) => {
@@ -684,6 +848,7 @@ fn resolve_workspace_descriptor(
         slices,
         category: category.to_string(),
         name: name.to_string(),
+        base_ref: workspace.base_ref.clone(),
         sources: workspace
             .items
             .iter()
@@ -695,6 +860,7 @@ fn resolve_workspace_descriptor(
     };
     let resolved = resolve_request(request, false)?;
     if resolved.plan.branch != workspace.branch
+        || resolved.plan.base_ref != workspace.base_ref
         || !same_path(
             Path::new(&resolved.plan.workspace_root),
             Path::new(&workspace.workspace_root),
@@ -861,12 +1027,45 @@ mod tests {
         name: &str,
         sources: Vec<FeatureWorkspaceSource>,
     ) -> FeatureWorkspaceRequest {
+        based_request(slices, name, "HEAD", sources)
+    }
+
+    fn based_request(
+        slices: &[FeatureRole],
+        name: &str,
+        base_ref: &str,
+        sources: Vec<FeatureWorkspaceSource>,
+    ) -> FeatureWorkspaceRequest {
         FeatureWorkspaceRequest {
             slices: slices.to_vec(),
             category: "feature".to_string(),
             name: name.to_string(),
+            base_ref: base_ref.to_string(),
             sources,
         }
+    }
+
+    /// Fixture "server": a normal repository the consumer only ever fetches
+    /// from, so no test ever writes to a remote.
+    fn add_fetch_only_remote(consumer: &Path, server: &Path) {
+        run_git(consumer, &["remote", "add", "origin", &git_arg(server)]);
+        run_git(consumer, &["fetch", "--no-tags", "origin"]);
+    }
+
+    fn head_oid(root: &Path) -> String {
+        revision_oid(root, "HEAD").expect("HEAD resolves")
+    }
+
+    fn commit_on(root: &Path, file: &str) {
+        fs::write(root.join(file), "more\n").expect("fixture file");
+        run_git(root, &["add", file]);
+        run_git(root, &["commit", "-m", file]);
+    }
+
+    fn current_branch(root: &Path) -> String {
+        let output = checked_output(root, &["rev-parse", "--abbrev-ref", "HEAD"])
+            .expect("current branch");
+        String::from_utf8_lossy(&output.stdout).trim().to_string()
     }
 
     #[test]
@@ -1209,16 +1408,18 @@ mod tests {
         )
         .expect("valid plan");
         let mut attempts = 0;
+        let base_oids = refresh_planned_bases(&resolved).expect("local base resolves");
 
-        let error = create_planned_workspace(&resolved, |root, branch, destination| {
-            attempts += 1;
-            if attempts == 2 {
-                Err("injected_second_add_failure".to_string())
-            } else {
-                add_named_worktree(root, branch, destination)
-            }
-        })
-        .unwrap_err();
+        let error =
+            create_planned_workspace(&resolved, &base_oids, |root, branch, destination, base| {
+                attempts += 1;
+                if attempts == 2 {
+                    Err("injected_second_add_failure".to_string())
+                } else {
+                    add_named_worktree(root, branch, destination, base)
+                }
+            })
+            .unwrap_err();
 
         assert_eq!(error, "injected_second_add_failure");
         assert!(!resolved.workspace_root.exists());
@@ -1230,6 +1431,188 @@ mod tests {
             .roots
             .iter()
             .all(|root| !local_branch_exists(root, &resolved.plan.branch).unwrap()));
+        fs::remove_dir_all(base).expect("cleanup fixture");
+    }
+
+    #[test]
+    fn rejects_a_base_ref_that_is_not_a_usable_ref_name() {
+        for base_ref in ["", "   ", "-delete", "origin/hml; rm", "origin//hml", "a..b", "x/"] {
+            assert_eq!(validated_base_ref(base_ref).unwrap_err(), "invalid_base_ref");
+        }
+        assert_eq!(validated_base_ref("  origin/hml  ").unwrap(), "origin/hml");
+        assert_eq!(validated_base_ref("release/1.2-rc").unwrap(), "release/1.2-rc");
+    }
+
+    #[test]
+    fn rejects_a_missing_local_base_ref_before_writing_anything() {
+        let base = temp_root("missing-base");
+        let repo = base.join("api");
+        init_repo(&repo);
+        let request = based_request(
+            &[FeatureRole::Backend],
+            "missing-base",
+            "hml",
+            vec![source(FeatureRole::Backend, &repo)],
+        );
+
+        let plan_error = feature_workspace_plan_inner(request.clone()).unwrap_err();
+        assert_eq!(plan_error, "base_ref_missing:backend: hml");
+        let create_error = feature_workspace_create_inner(request).unwrap_err();
+        assert_eq!(create_error, "base_ref_missing:backend: hml");
+        // The preflight failed before any directory was created.
+        assert!(!base.join("feature-missing-base").exists());
+        assert!(!local_branch_exists(&repo, "feature/missing-base").unwrap());
+        fs::remove_dir_all(base).expect("cleanup fixture");
+    }
+
+    #[test]
+    fn branches_from_the_refreshed_remote_base_without_an_upstream() {
+        let base = temp_root("remote-base");
+        let server = base.join("server");
+        let backend = base.join("api");
+        let frontend = base.join("web");
+        init_repo(&server);
+        init_repo(&backend);
+        init_repo(&frontend);
+        let server_branch = current_branch(&server);
+        let base_ref = format!("origin/{server_branch}");
+        add_fetch_only_remote(&backend, &server);
+        add_fetch_only_remote(&frontend, &server);
+        // The server moves on after both repositories fetched: only a refresh
+        // inside the flow can reach this commit.
+        commit_on(&server, "after-clone.txt");
+        let server_head = head_oid(&server);
+        assert_ne!(server_head, head_oid(&backend));
+
+        let created = feature_workspace_create_inner(based_request(
+            &[FeatureRole::Backend, FeatureRole::Frontend],
+            "remote-base",
+            &base_ref,
+            vec![
+                source(FeatureRole::Backend, &backend),
+                source(FeatureRole::Frontend, &frontend),
+            ],
+        ))
+        .expect("workspace from a remote-tracking base");
+
+        assert_eq!(created.base_ref, base_ref);
+        for (index, root) in [&backend, &frontend].into_iter().enumerate() {
+            // The branch starts at the commit the server has now, not at the
+            // stale checkout the repository was sitting on.
+            assert_eq!(
+                revision_oid(root, "feature/remote-base").unwrap(),
+                server_head
+            );
+            assert_eq!(
+                revision_oid(
+                    Path::new(&created.items[index].destination),
+                    "HEAD"
+                )
+                .unwrap(),
+                server_head
+            );
+            // The user's own checkout of the base branch never moved.
+            assert_ne!(head_oid(root), server_head);
+            // Still no upstream: `git push` with no arguments must fail.
+            let upstream = git_command(
+                root,
+                &[
+                    "rev-parse",
+                    "--abbrev-ref",
+                    "feature/remote-base@{upstream}",
+                ],
+            )
+            .expect("upstream probe runs");
+            assert!(!upstream.status.success(), "branch must have no upstream");
+        }
+
+        let cleanup = feature_workspace_remove_inner(created).expect("cleanup report");
+        assert!(cleanup.complete);
+        fs::remove_dir_all(base).expect("cleanup fixture");
+    }
+
+    #[test]
+    fn reports_a_failed_fetch_instead_of_branching_from_a_stale_base() {
+        let base = temp_root("fetch-failure");
+        let repo = base.join("api");
+        init_repo(&repo);
+        run_git(
+            &repo,
+            &[
+                "remote",
+                "add",
+                "origin",
+                &git_arg(&base.join("does-not-exist")),
+            ],
+        );
+
+        let error = feature_workspace_create_inner(based_request(
+            &[FeatureRole::Backend],
+            "fetch-failure",
+            "origin/hml",
+            vec![source(FeatureRole::Backend, &repo)],
+        ))
+        .unwrap_err();
+
+        assert!(
+            error.starts_with("base_fetch_failed:backend: "),
+            "unexpected error: {error}"
+        );
+        // Nothing was created, so the user can fix the remote and retry.
+        assert!(!base.join("feature-fetch-failure").exists());
+        assert!(!local_branch_exists(&repo, "feature/fetch-failure").unwrap());
+        fs::remove_dir_all(base).expect("cleanup fixture");
+    }
+
+    #[test]
+    fn plan_states_the_base_ref_every_slice_will_branch_from() {
+        let base = temp_root("plan-base-ref");
+        let backend = base.join("api");
+        let scripts = base.join("tools");
+        init_repo(&backend);
+        init_repo(&scripts);
+
+        let plan = feature_workspace_plan_inner(based_request(
+            &[FeatureRole::Backend, FeatureRole::Scripts],
+            "plan-base-ref",
+            "  HEAD  ",
+            vec![
+                source(FeatureRole::Backend, &backend),
+                source(FeatureRole::Scripts, &scripts),
+            ],
+        ))
+        .expect("plan with an explicit base ref");
+
+        assert_eq!(plan.base_ref, "HEAD");
+        assert_eq!(plan.items.len(), 2);
+        fs::remove_dir_all(base).expect("cleanup fixture");
+    }
+
+    #[test]
+    fn remove_rejects_a_descriptor_whose_base_ref_is_not_canonical() {
+        let base = temp_root("descriptor-base-ref");
+        let repo = base.join("api");
+        init_repo(&repo);
+        let plan = feature_workspace_plan_inner(request(
+            &[FeatureRole::Backend],
+            "descriptor-base-ref",
+            vec![source(FeatureRole::Backend, &repo)],
+        ))
+        .expect("valid plan");
+
+        let mut untrimmed = plan.clone();
+        untrimmed.base_ref = " HEAD ".to_string();
+        assert_eq!(
+            feature_workspace_remove_inner(untrimmed).unwrap_err(),
+            "invalid_workspace_descriptor"
+        );
+
+        let mut unusable = plan;
+        unusable.base_ref = "-delete".to_string();
+        assert_eq!(
+            feature_workspace_remove_inner(unusable).unwrap_err(),
+            "invalid_base_ref"
+        );
         fs::remove_dir_all(base).expect("cleanup fixture");
     }
 

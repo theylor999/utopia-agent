@@ -13,6 +13,7 @@ import { normalizeTodoTags, normalizeTodoTitle } from '../lib/todos'
 import {
   type AgentType,
   ALL_AGENT_TYPES,
+  DEFAULT_FEATURE_BASE_REF,
   DEFAULT_PREFERENCES,
   EMPTY_PROJECTS_FILE,
   type Group,
@@ -255,6 +256,16 @@ export function normalizePreferences(raw: LegacyPreferences | undefined): Prefer
     displayName: preferences.displayName.trim(),
     profileImageUrl: migrateLegacyDefaultProfileImageUrl(preferences.profileImageUrl),
     todoStoragePath: preferences.todoStoragePath.trim(),
+    // New in this version: absent in older payloads, so they default to unset
+    // through DEFAULT_PREFERENCES above. No schema version bump involved.
+    featureBackendRepoPath: (preferences.featureBackendRepoPath ?? '').trim(),
+    featureFrontendRepoPath: (preferences.featureFrontendRepoPath ?? '').trim(),
+    featureScriptsRepoPath: (preferences.featureScriptsRepoPath ?? '').trim(),
+    // A blank or absent base ref falls back to the default instead of leaving
+    // the flow without a ref to branch from.
+    featureBaseRef:
+      (preferences.featureBaseRef ?? '').trim() || DEFAULT_FEATURE_BASE_REF,
+    featureSliceGroupsSeeded: Boolean(preferences.featureSliceGroupsSeeded),
     spotifyClientId: preferences.spotifyClientId.trim(),
     spotifyClientSecret: preferences.spotifyClientSecret.trim(),
     uiZoom: clampUiZoom(preferences.uiZoom),

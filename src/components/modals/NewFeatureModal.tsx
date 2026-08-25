@@ -2,24 +2,32 @@ import {
   AlertTriangle,
   Check,
   FileCode2,
+  FolderOpen,
   FolderTree,
   GitBranch,
+  FolderGit2,
   Loader2,
   Monitor,
   Server,
 } from 'lucide-react'
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 
+import { pickDirectory } from '../../lib/dialog'
 import {
   canonicalFeatureSlices,
+  FEATURE_ROLE_REPO_PREFERENCE,
+  featureBaseRef,
+  featureRoleRepoPath,
   featureSliceGroupNameKey,
   FEATURE_SLICES,
+  isUsableFeatureBaseRef,
   planFeatureWorkspace,
   type FeatureRole,
   type FeatureWorkspacePlan,
 } from '../../lib/featureWorkspace'
 import { featureWorkspaceReadableError } from '../../lib/featureWorkspaceError'
 import { type MessageKey, useT } from '../../lib/i18n'
+import { basename, normalizeCwd, sameCwd } from '../../lib/paths'
 import { detectProjectStack, type StackDetection } from '../../lib/tauri'
 import { getProjectDefaultCwd, useProjectsStore } from '../../stores/projectsStore'
 import type { FeatureWorkspaceStoreRequest } from '../../stores/projectsStore.featureWorkspaceSlice'
@@ -52,6 +60,11 @@ const CATEGORY_OPTIONS = ['feature', 'fix', 'chore', 'refactor', 'hotfix'] as co
 /** Longest slug we allow per branch segment, so paths stay usable on Windows. */
 const SEGMENT_MAX_LENGTH = 60
 
+/** Sentinel dropdown value that opens the folder picker instead of selecting. */
+const BROWSE_VALUE = '__browse__'
+const PROJECT_PREFIX = 'project:'
+const FOLDER_PREFIX = 'folder:'
+
 /**
  * Turns free text into a single Git-safe, filesystem-safe branch segment:
  * accents are folded to ASCII, letters are lowercased, and every other run of
@@ -78,7 +91,16 @@ export function buildFeatureBranch(category: string, name: string): string {
   return categorySlug && nameSlug ? `${categorySlug}/${nameSlug}` : ''
 }
 
-type SourceSelections = Record<FeatureRole, string>
+/**
+ * Repository backing one slice. `projectId` is set only when the user picked a
+ * registered project; a browsed folder carries the path alone.
+ */
+type SliceSource = {
+  path: string
+  projectId?: string
+}
+
+type SourceSelections = Record<FeatureRole, SliceSource | null>
 
 type AvailableProject = {
   id: string
@@ -102,6 +124,17 @@ function stackLabelKey(detection: StackDetection | null): MessageKey {
   return 'featureWorkspace.stackUnknown'
 }
 
+function projectSource(project: AvailableProject | undefined): SliceSource | null {
+  return project ? { path: project.path, projectId: project.id } : null
+}
+
+const EMPTY_SELECTIONS: SourceSelections = { backend: null, frontend: null, scripts: null }
+const NO_OVERRIDING: Record<FeatureRole, boolean> = {
+  backend: false,
+  frontend: false,
+  scripts: false,
+}
+
 export function NewFeatureModal() {
   const t = useT()
   const open = useUiStore((state) => state.openModal === 'newFeature')
@@ -110,16 +143,26 @@ export function NewFeatureModal() {
   } | null
   const closeModal = useUiStore((state) => state.closeModal)
   const projects = useProjectsStore((state) => state.projects)
+  const preferences = useProjectsStore((state) => state.preferences)
+  const setPreferences = useProjectsStore((state) => state.setPreferences)
   const createFeatureWorkspace = useProjectsStore((state) => state.createFeatureWorkspace)
 
   const [slices, setSlices] = useState<FeatureRole[]>(['backend'])
   const [category, setCategory] = useState<string>('feature')
   const [featureName, setFeatureName] = useState('')
-  const [sources, setSources] = useState<SourceSelections>({
-    backend: '',
-    frontend: '',
-    scripts: '',
-  })
+  /**
+   * Base ref typed for this feature only. Null means "follow the configured
+   * one", so a preference change is picked up without reopening the modal.
+   */
+  const [baseRefOverride, setBaseRefOverride] = useState<string | null>(null)
+  /** Per-slice choice made inside this modal. Overrides the configured repo. */
+  const [overrides, setOverrides] = useState<SourceSelections>(EMPTY_SELECTIONS)
+  /** Registered-project guesses, used only for roles with nothing configured. */
+  const [suggestions, setSuggestions] = useState<SourceSelections>(EMPTY_SELECTIONS)
+  /** Roles whose picker the user opened on purpose to override the configured repo. */
+  const [overriding, setOverriding] = useState<Record<FeatureRole, boolean>>(NO_OVERRIDING)
+  /** Roles whose repository was just remembered from a browsed folder. */
+  const [remembered, setRemembered] = useState<Record<FeatureRole, boolean>>(NO_OVERRIDING)
   const [detections, setDetections] = useState<Record<string, StackDetection | null>>({})
   const [plan, setPlan] = useState<FeatureWorkspacePlan | null>(null)
   const [planError, setPlanError] = useState('')
@@ -127,7 +170,13 @@ export function NewFeatureModal() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const suggestionsApplied = useRef(false)
+  // Session-only memory of the last browsed folder: it seeds the next picker
+  // without touching the persisted store, so no schema change is involved.
+  const lastBrowsedPath = useRef('')
 
+  const configuredBaseRef = featureBaseRef(preferences)
+  const baseRef = baseRefOverride ?? configuredBaseRef
+  const baseRefUsable = isUsableFeatureBaseRef(baseRef)
   const categorySlug = useMemo(() => slugifyFeatureSegment(category), [category])
   const nameSlug = useMemo(() => slugifyFeatureSegment(featureName), [featureName])
   const previewBranch = buildFeatureBranch(category, featureName)
@@ -141,6 +190,34 @@ export function NewFeatureModal() {
       }),
     [projects],
   )
+
+  /**
+   * Repository configured for each role in preferences. This is the normal
+   * source of a slice: nothing to pick when it is set. When the path happens to
+   * be a registered project, the project lends its name and color downstream.
+   */
+  // One string identity for the three configured paths, so unrelated preference
+  // edits never re-run the resolution or the stack detection below.
+  const configuredKey = FEATURE_SLICES.map((role) => featureRoleRepoPath(preferences, role)).join(
+    ' ',
+  )
+  const configuredSources = useMemo<SourceSelections>(() => {
+    const paths = configuredKey.split(' ')
+    const entry = (role: FeatureRole): SliceSource | null => {
+      const path = paths[FEATURE_SLICES.indexOf(role)] ?? ''
+      if (!path) return null
+      const project = availableProjects.find((candidate) => sameCwd(candidate.path, path))
+      return project ? { path, projectId: project.id } : { path }
+    }
+    return { backend: entry('backend'), frontend: entry('frontend'), scripts: entry('scripts') }
+  }, [availableProjects, configuredKey])
+
+  /** Override first, then the configured repository, then a guessed project. */
+  const resolvedSources = useMemo<SourceSelections>(() => {
+    const pick = (role: FeatureRole) =>
+      overrides[role] ?? configuredSources[role] ?? suggestions[role] ?? null
+    return { backend: pick('backend'), frontend: pick('frontend'), scripts: pick('scripts') }
+  }, [configuredSources, overrides, suggestions])
 
   useEffect(() => {
     if (!open) return
@@ -160,7 +237,15 @@ export function NewFeatureModal() {
       setDetections(nextDetections)
       if (suggestionsApplied.current) return
 
-      const contextProject = availableProjects.find(
+      // A configured repository wins, so never guess for that role and never
+      // hand its repository to another role.
+      const configuredPaths = new Set(
+        configuredKey.split(' ').filter(Boolean).map(normalizeCwd),
+      )
+      const candidates = availableProjects.filter(
+        (project) => !configuredPaths.has(normalizeCwd(project.path)),
+      )
+      const contextProject = candidates.find(
         (project) => project.id === context?.sourceProjectId,
       )
       const contextRole = contextProject
@@ -168,30 +253,30 @@ export function NewFeatureModal() {
         : null
       const backend =
         (contextRole === 'backend' ? contextProject : undefined) ??
-        availableProjects.find((project) => {
+        candidates.find((project) => {
           const detection = nextDetections[project.id]
           return detection?.hasBackend && !detection.hasFrontend
         }) ??
-        availableProjects[0]
+        candidates[0]
       const frontend =
         (contextRole === 'frontend' ? contextProject : undefined) ??
-        availableProjects.find((project) => {
+        candidates.find((project) => {
           const detection = nextDetections[project.id]
           return detection?.hasFrontend && !detection.hasBackend && project.id !== backend?.id
         }) ??
-        availableProjects.find((project) => project.id !== backend?.id)
+        candidates.find((project) => project.id !== backend?.id)
       const scripts =
         (contextRole === 'scripts' ? contextProject : undefined) ??
-        availableProjects.find((project) => {
+        candidates.find((project) => {
           const detection = nextDetections[project.id]
           return detection?.stack === 'cli' || detection?.stack === 'unknown'
         }) ??
-        availableProjects[0]
+        candidates[0]
 
-      setSources({
-        backend: backend?.id ?? '',
-        frontend: frontend?.id ?? '',
-        scripts: scripts?.id ?? '',
+      setSuggestions({
+        backend: projectSource(backend),
+        frontend: projectSource(frontend),
+        scripts: projectSource(scripts),
       })
       if (contextRole) setSlices([contextRole])
       suggestionsApplied.current = true
@@ -200,7 +285,7 @@ export function NewFeatureModal() {
     return () => {
       cancelled = true
     }
-  }, [availableProjects, context?.sourceProjectId, open])
+  }, [availableProjects, configuredKey, context?.sourceProjectId, open])
 
   const toggleSlice = (role: FeatureRole) =>
     setSlices((current) =>
@@ -211,12 +296,16 @@ export function NewFeatureModal() {
       ),
     )
 
-  const selectedProjectIds = useMemo(
-    () => slices.map((role) => sources[role]).filter((id) => id !== ''),
-    [slices, sources],
+  const selectedPaths = useMemo(
+    () =>
+      slices
+        .map((role) => resolvedSources[role]?.path)
+        .filter((path): path is string => Boolean(path))
+        .map(normalizeCwd),
+    [slices, resolvedSources],
   )
-  const hasDuplicateSources =
-    new Set(selectedProjectIds).size !== selectedProjectIds.length
+  const hasDuplicateSources = new Set(selectedPaths).size !== selectedPaths.length
+  const hasMissingSource = slices.some((role) => !resolvedSources[role]?.path)
 
   /**
    * Reachable dead ends the create button alone cannot explain: every slice
@@ -225,32 +314,33 @@ export function NewFeatureModal() {
   const blockingWarning: { key: MessageKey; params?: Record<string, number> } | null =
     slices.length === 0
       ? { key: 'featureWorkspace.slicesRequired' }
-      : availableProjects.length < slices.length
-        ? { key: 'featureWorkspace.needsMoreProjects', params: { count: slices.length } }
+      : hasMissingSource
+        ? { key: 'featureWorkspace.sourceRequired' }
         : hasDuplicateSources
           ? { key: 'featureWorkspace.sameSourceWarning' }
-          : null
+          : !baseRefUsable
+            ? { key: 'featureWorkspace.baseRefRequired' }
+            : null
 
   const request = useMemo<FeatureWorkspaceStoreRequest | null>(() => {
-    if (!categorySlug || !nameSlug || slices.length === 0) return null
-    const selected = slices.map((role) => ({
-      role,
-      project: availableProjects.find((project) => project.id === sources[role]),
-    }))
-    if (selected.some((entry) => !entry.project)) return null
-    const chosenIds = selected.map((entry) => entry.project!.id)
-    if (new Set(chosenIds).size !== chosenIds.length) return null
+    if (!categorySlug || !nameSlug || slices.length === 0 || !baseRefUsable) return null
+    const selected = slices.map((role) => ({ role, source: resolvedSources[role] }))
+    if (selected.some((entry) => !entry.source?.path)) return null
+    const chosenPaths = selected.map((entry) => normalizeCwd(entry.source!.path))
+    if (new Set(chosenPaths).size !== chosenPaths.length) return null
     return {
       slices,
       category: categorySlug,
       name: nameSlug,
-      sources: selected.map((entry) => ({
-        role: entry.role,
-        path: entry.project!.path,
-        projectId: entry.project!.id,
-      })),
+      baseRef: baseRef.trim(),
+      sources: selected.map((entry) => {
+        const source = entry.source!
+        return source.projectId
+          ? { role: entry.role, path: source.path, projectId: source.projectId }
+          : { role: entry.role, path: source.path }
+      }),
     }
-  }, [availableProjects, categorySlug, nameSlug, slices, sources])
+  }, [baseRef, baseRefUsable, categorySlug, nameSlug, resolvedSources, slices])
 
   useEffect(() => {
     setPlan(null)
@@ -286,7 +376,11 @@ export function NewFeatureModal() {
     setSlices(['backend'])
     setCategory('feature')
     setFeatureName('')
-    setSources({ backend: '', frontend: '', scripts: '' })
+    setBaseRefOverride(null)
+    setOverrides(EMPTY_SELECTIONS)
+    setSuggestions(EMPTY_SELECTIONS)
+    setOverriding(NO_OVERRIDING)
+    setRemembered(NO_OVERRIDING)
     setDetections({})
     setPlan(null)
     setPlanError('')
@@ -313,10 +407,66 @@ export function NewFeatureModal() {
     }
   }
 
+  const browse = async (role: FeatureRole) => {
+    const directory = await pickDirectory({
+      defaultPath:
+        resolvedSources[role]?.path ||
+        lastBrowsedPath.current ||
+        availableProjects[0]?.path ||
+        undefined,
+    })
+    if (!directory) return
+    lastBrowsedPath.current = directory
+    setOverrides((current) => ({ ...current, [role]: { path: directory } }))
+    // A role with nothing configured yet adopts the folder as its repository,
+    // so the next feature needs no picking at all.
+    if (!featureRoleRepoPath(preferences, role)) {
+      setPreferences({ [FEATURE_ROLE_REPO_PREFERENCE[role]]: directory })
+      setRemembered((current) => ({ ...current, [role]: true }))
+    }
+  }
+
   const sourceSelector = (role: FeatureRole) => {
+    const configured = configuredSources[role]
+    const source = resolvedSources[role]
+    // The configured repository is the normal path: read-only, nothing to pick.
+    // The picker only appears for a role with nothing configured, or when the
+    // user asks to override the configured repository for this feature.
+    const showPicker = !configured || overriding[role]
+
+    if (!showPicker && source) {
+      return (
+        <div className={controls.field} key={role}>
+          <label className={controls.label}>{t(ROLE_LABEL_KEYS[role])}</label>
+          <div className={styles.resolvedSource}>
+            <FolderGit2 size={13} aria-hidden="true" />
+            <span className={styles.resolvedPath} title={source.path}>
+              {source.path}
+            </span>
+            <button
+              type="button"
+              className={styles.linkButton}
+              onClick={() => setOverriding((current) => ({ ...current, [role]: true }))}
+            >
+              {t('featureWorkspace.overrideSource')}
+            </button>
+          </div>
+          {remembered[role] ? (
+            <small className={styles.hint}>
+              {t('featureWorkspace.rememberedSource', { role: t(ROLE_LABEL_KEYS[role]) })}
+            </small>
+          ) : null}
+        </div>
+      )
+    }
+
     // A repository can back only one slice, so hide it from the other slices.
     const takenElsewhere = new Set(
-      slices.filter((candidate) => candidate !== role).map((candidate) => sources[candidate]),
+      slices
+        .filter((candidate) => candidate !== role)
+        .map((candidate) => resolvedSources[candidate]?.path)
+        .filter((path): path is string => Boolean(path))
+        .map(normalizeCwd),
     )
     const options: DropdownOption[] = availableProjects.map((project) => {
       const detection = detections[project.id]
@@ -325,8 +475,8 @@ export function NewFeatureModal() {
           ? t('featureWorkspace.detectingStack')
           : t(stackLabelKey(detection))
       return {
-        value: project.id,
-        disabled: takenElsewhere.has(project.id),
+        value: `${PROJECT_PREFIX}${project.id}`,
+        disabled: takenElsewhere.has(normalizeCwd(project.path)),
         searchText: `${project.name} ${project.path} ${stackLabel}`,
         label: (
           <span className={styles.projectOption}>
@@ -336,16 +486,62 @@ export function NewFeatureModal() {
         ),
       }
     })
+    if (source && !source.projectId) {
+      options.push({
+        value: `${FOLDER_PREFIX}${source.path}`,
+        searchText: source.path,
+        label: (
+          <span className={styles.projectOption}>
+            <span>{basename(source.path) || source.path}</span>
+            <small>{t('featureWorkspace.pickedFolder')}</small>
+          </span>
+        ),
+      })
+    }
+    options.push({
+      value: BROWSE_VALUE,
+      searchText: t('featureWorkspace.browseFolder'),
+      label: (
+        <span className={styles.browseOption}>
+          <FolderOpen size={13} aria-hidden="true" />
+          <span>{t('featureWorkspace.browseFolder')}</span>
+        </span>
+      ),
+    })
+
+    const value = source
+      ? source.projectId
+        ? `${PROJECT_PREFIX}${source.projectId}`
+        : `${FOLDER_PREFIX}${source.path}`
+      : ''
 
     return (
       <div className={controls.field} key={role}>
         <label className={controls.label}>{t(ROLE_LABEL_KEYS[role])}</label>
         <Dropdown
           className={controls.input}
-          value={sources[role]}
-          onChange={(projectId) =>
-            setSources((current) => ({ ...current, [role]: projectId }))
-          }
+          value={value}
+          onChange={(next) => {
+            if (next === BROWSE_VALUE) {
+              void browse(role)
+              return
+            }
+            if (next.startsWith(PROJECT_PREFIX)) {
+              const project = availableProjects.find(
+                (candidate) => candidate.id === next.slice(PROJECT_PREFIX.length),
+              )
+              if (project) {
+                setOverrides((current) => ({ ...current, [role]: projectSource(project) }))
+              }
+              return
+            }
+            if (next.startsWith(FOLDER_PREFIX)) {
+              setOverrides((current) => ({
+                ...current,
+                [role]: { path: next.slice(FOLDER_PREFIX.length) },
+              }))
+            }
+          }}
           ariaLabel={t(ROLE_LABEL_KEYS[role])}
           options={options}
           placeholder={t('featureWorkspace.chooseSource')}
@@ -353,6 +549,27 @@ export function NewFeatureModal() {
           searchPlaceholder={t('featureWorkspace.searchProjects')}
           emptyLabel={t('featureWorkspace.noMatchingProjects')}
         />
+        {source ? (
+          <small className={styles.pathHint} title={source.path}>
+            {source.path}
+          </small>
+        ) : (
+          <small className={styles.hint}>
+            {t('featureWorkspace.roleNotConfigured', { role: t(ROLE_LABEL_KEYS[role]) })}
+          </small>
+        )}
+        {configured ? (
+          <button
+            type="button"
+            className={styles.linkButton}
+            onClick={() => {
+              setOverrides((current) => ({ ...current, [role]: null }))
+              setOverriding((current) => ({ ...current, [role]: false }))
+            }}
+          >
+            {t('featureWorkspace.useConfiguredSource')}
+          </button>
+        ) : null}
       </div>
     )
   }
@@ -412,10 +629,11 @@ export function NewFeatureModal() {
           <small className={styles.hint}>{t('featureWorkspace.slicesHint')}</small>
         </div>
 
-        {availableProjects.length === 0 ? (
-          <div className={styles.notice}>{t('featureWorkspace.noProjects')}</div>
-        ) : slices.length > 0 ? (
-          <div className={styles.sourceGrid}>{slices.map((role) => sourceSelector(role))}</div>
+        {slices.length > 0 ? (
+          <div>
+            <div className={styles.sourceGrid}>{slices.map((role) => sourceSelector(role))}</div>
+            <small className={styles.hint}>{t('featureWorkspace.sourcesHint')}</small>
+          </div>
         ) : null}
 
         {blockingWarning ? (
@@ -470,6 +688,37 @@ export function NewFeatureModal() {
           </div>
         </div>
 
+        <div className={controls.field}>
+          <label className={controls.label}>{t('featureWorkspace.baseRefLabel')}</label>
+          <input
+            className={controls.input}
+            value={baseRef}
+            onChange={(event) => setBaseRefOverride(event.target.value)}
+            aria-label={t('featureWorkspace.baseRefLabel')}
+            placeholder={configuredBaseRef}
+            spellCheck={false}
+            onKeyDown={(event) => event.key === 'Enter' && void submit()}
+          />
+          {baseRefUsable ? (
+            <small className={styles.hint}>
+              {t('featureWorkspace.baseRefHint', { baseRef: baseRef.trim() })}
+            </small>
+          ) : (
+            <small className={styles.hintInvalid}>
+              {t('featureWorkspace.baseRefUnusable')}
+            </small>
+          )}
+          {baseRefOverride !== null && baseRefOverride !== configuredBaseRef ? (
+            <button
+              type="button"
+              className={styles.linkButton}
+              onClick={() => setBaseRefOverride(null)}
+            >
+              {t('featureWorkspace.useConfiguredBaseRef', { baseRef: configuredBaseRef })}
+            </button>
+          ) : null}
+        </div>
+
         <section className={styles.preview} aria-live="polite">
           <div className={styles.previewHeader}>
             <GitBranch size={15} aria-hidden="true" />
@@ -489,6 +738,10 @@ export function NewFeatureModal() {
                 <code className={styles.branchChip}>{plan.branch}</code>
               </div>
               <div className={styles.previewRow}>
+                <span>{t('featureWorkspace.baseRefPreviewLabel')}</span>
+                <code className={styles.baseChip}>{plan.baseRef}</code>
+              </div>
+              <div className={styles.previewRow}>
                 <span>{t('featureWorkspace.groupLabel')}</span>
                 <span className={styles.groupPath}>
                   <FolderTree size={12} aria-hidden="true" />
@@ -503,6 +756,15 @@ export function NewFeatureModal() {
                 <div className={styles.planItem} key={item.role}>
                   <strong>{t(ROLE_LABEL_KEYS[item.role])}</strong>
                   <span title={item.source}>{item.source}</span>
+                  <code
+                    className={styles.baseChip}
+                    title={t('featureWorkspace.baseRefItemTitle', {
+                      role: t(ROLE_LABEL_KEYS[item.role]),
+                      baseRef: plan.baseRef,
+                    })}
+                  >
+                    {plan.baseRef}
+                  </code>
                   <span aria-hidden="true">→</span>
                   <code title={item.destination}>{item.destination}</code>
                 </div>

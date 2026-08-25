@@ -112,6 +112,11 @@ export type ProjectsState = ProjectsFile & {
   createFeatureWorkspace: (
     request: FeatureWorkspaceStoreRequest,
   ) => Promise<FeatureWorkspaceRegistration>
+  /**
+   * Seeds the common feature slice groups once. Returns the ids it created,
+   * empty when the marker says it already ran.
+   */
+  seedFeatureSliceGroups: () => string[]
   renameProject: (id: string, name: string) => void
   archiveProject: (id: string) => void
   unarchiveProject: (id: string) => void
@@ -693,6 +698,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => {
             activeProfileId: profileState.active_profile_id,
             profiles: profileState.profiles,
           })
+          get().seedFeatureSliceGroups()
           void recordAppEvent('projects.hydrate', 'source=empty')
           return
         }
@@ -704,6 +710,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => {
           activeProfileId: profileState.active_profile_id,
           profiles: profileState.profiles,
         })
+        get().seedFeatureSliceGroups()
         void recordAppEvent(
           'projects.hydrate',
           `source=disk projects=${migrated.projects.length} groups=${migrated.groups.length} tabs=${migrated.workspace.tabs.length} active_tab=${Boolean(migrated.workspace.activeTabId)} left_sidebar=${migrated.preferences.leftSidebarVisible} right_sidebar=${migrated.preferences.rightSidebarVisible}`,

@@ -51,6 +51,21 @@ export function featureWorkspaceReadableError(error: unknown): string {
         })
       : translate(locale, 'featureWorkspace.error.destinationExists', { path: detail })
   }
+  if (code === 'invalid_base_ref') return translate(locale, 'featureWorkspace.error.invalidBaseRef')
+  if (code === 'base_ref_missing') {
+    const match = detail.match(/^(backend|frontend|scripts):\s*(.*)$/s)
+    return translate(locale, 'featureWorkspace.error.baseRefMissing', {
+      role: translatedRole(match ? match[1] : ''),
+      baseRef: match ? match[2] : detail,
+    })
+  }
+  if (code === 'base_fetch_failed') {
+    const match = detail.match(/^(backend|frontend|scripts):\s*(.*)$/s)
+    return translate(locale, 'featureWorkspace.error.baseFetchFailed', {
+      role: translatedRole(match ? match[1] : ''),
+      detail: match ? match[2] : detail,
+    })
+  }
   if (code === 'git_not_found') return translate(locale, 'git.error.notFound')
   if (code === 'not_a_git_repository') return translate(locale, 'git.error.notRepository')
   if (code === 'directory_not_found' || code === 'invalid_repository_root') {

@@ -3,6 +3,7 @@ import {
   featureSliceGroupNameKey,
   planFeatureWorkspace,
   removeFeatureWorkspace,
+  SEEDED_FEATURE_SLICE_COMBINATIONS,
   type FeatureRole,
   type FeatureWorkspaceRemovalResult,
   type FeatureWorkspaceRequest,
@@ -11,9 +12,9 @@ import {
 } from '../lib/featureWorkspace'
 import { featureWorkspaceReadableError } from '../lib/featureWorkspaceError'
 import { getLocale, translate } from '../lib/i18n'
-import { sameCwd } from '../lib/paths'
+import { basename, sameCwd } from '../lib/paths'
 import { getProjectDefaultCwd } from '../lib/terminalFactory'
-import type { Group, Project } from '../lib/types'
+import { GROUP_COLORS, type Group, type Project } from '../lib/types'
 import type { ProjectsState } from './projectsStore'
 import type { SliceCtx } from './projectsStore.slices'
 import { useUiStore } from './uiStore'
@@ -22,7 +23,11 @@ function t(key: Parameters<typeof translate>[1], params?: Record<string, string 
   return translate(getLocale(), key, params)
 }
 export type FeatureWorkspaceStoreSource = FeatureWorkspaceSource & {
-  projectId: string
+  /**
+   * Registered project backing this slice. Absent when the user pointed the
+   * slice straight at a repository folder that is not a project yet.
+   */
+  projectId?: string
 }
 
 export type FeatureWorkspaceStoreRequest = Omit<FeatureWorkspaceRequest, 'sources'> & {
@@ -39,25 +44,49 @@ export type FeatureWorkspaceRegistration = {
   projectIds: string[]
 }
 
-type FeatureWorkspaceSlice = Pick<ProjectsState, 'createFeatureWorkspace'>
+type FeatureWorkspaceSlice = Pick<
+  ProjectsState,
+  'createFeatureWorkspace' | 'seedFeatureSliceGroups'
+>
 
 type RegistrationSnapshot = Pick<
   ProjectsState,
   'projects' | 'groups' | 'ungroupedOrder' | 'activeProjectId' | 'workspace'
 >
 
-function resolveSourceProjects(
+/** How the project created for a slice should look and be named. */
+type SourceIdentity = {
+  name: string
+  color?: string
+  iconUrl?: string
+}
+
+/**
+ * Name and appearance for each slice's project. A registered source lends its
+ * own name/color/icon; a browsed folder is named after its last path segment.
+ */
+function resolveSourceIdentities(
   request: FeatureWorkspaceStoreRequest,
   projects: Project[],
-): Map<FeatureRole, Project> {
-  const byRole = new Map<FeatureRole, Project>()
+): Map<FeatureRole, SourceIdentity> {
+  const byRole = new Map<FeatureRole, SourceIdentity>()
   for (const source of request.sources) {
-    const project = projects.find((candidate) => candidate.id === source.projectId)
-    const cwd = getProjectDefaultCwd(project)
-    if (!project || !cwd || !sameCwd(cwd, source.path)) {
-      throw new Error(`feature_source_project_not_found: ${source.path}`)
+    if (source.projectId) {
+      const project = projects.find((candidate) => candidate.id === source.projectId)
+      const cwd = getProjectDefaultCwd(project)
+      if (!project || !cwd || !sameCwd(cwd, source.path)) {
+        throw new Error(`feature_source_project_not_found: ${source.path}`)
+      }
+      byRole.set(source.role, {
+        name: project.name,
+        color: project.color,
+        iconUrl: project.iconUrl,
+      })
+      continue
     }
-    byRole.set(source.role, project)
+    const name = basename(source.path)
+    if (!name) throw new Error(`feature_source_path_invalid: ${source.path}`)
+    byRole.set(source.role, { name })
   }
   return byRole
 }
@@ -70,6 +99,17 @@ function sameGroupName(left: string, right: string): boolean {
   return left.trim().toLocaleLowerCase() === right.trim().toLocaleLowerCase()
 }
 
+/** Live top-level group with that name, ignoring case. */
+function findSliceGroup(
+  get: Pick<SliceCtx, 'get'>['get'],
+  name: string,
+): Group | undefined {
+  return get().groups.find(
+    (group) =>
+      group.parentGroupId === null && !group.archived && sameGroupName(group.name, name),
+  )
+}
+
 /**
  * Top-level group named after the slice set. Reused when a group with that
  * name already exists (case-insensitive), created on demand otherwise.
@@ -78,11 +118,7 @@ function resolveSliceGroup(
   get: Pick<SliceCtx, 'get'>['get'],
   name: string,
 ): Group {
-  const existing = get().groups.find(
-    (group) =>
-      group.parentGroupId === null && !group.archived && sameGroupName(group.name, name),
-  )
-  return existing ?? get().createGroup(name)
+  return findSliceGroup(get, name) ?? get().createGroup(name)
 }
 
 
@@ -93,6 +129,25 @@ export function createFeatureWorkspaceSlice({
   let pendingCleanup: FeatureWorkspaceResult | null = null
 
   return {
+    /**
+     * Creates the common slice groups so the sidebar shows them before any
+     * feature exists. Runs once, gated on a preference marker rather than on
+     * the group list, so a group the user deleted or renamed stays gone.
+     */
+    seedFeatureSliceGroups: (): string[] => {
+      if (get().preferences.featureSliceGroupsSeeded) return []
+      const created: string[] = []
+      SEEDED_FEATURE_SLICE_COMBINATIONS.forEach((combination, index) => {
+        const nameKey = featureSliceGroupNameKey(combination)
+        if (!nameKey) return
+        const name = t(nameKey)
+        if (findSliceGroup(get, name)) return
+        created.push(get().createGroup(name, GROUP_COLORS[index % GROUP_COLORS.length]).id)
+      })
+      get().setPreferences({ featureSliceGroupsSeeded: true })
+      return created
+    },
+
     createFeatureWorkspace: async (request): Promise<FeatureWorkspaceRegistration> => {
       let createdWorkspace: FeatureWorkspaceResult | null = null
       let registrationSnapshot: RegistrationSnapshot | null = null
@@ -121,11 +176,12 @@ export function createFeatureWorkspaceSlice({
           pendingCleanup = null
         }
 
-        const sourceProjects = resolveSourceProjects(request, get().projects)
+        const sourceIdentities = resolveSourceIdentities(request, get().projects)
         const workspaceRequest: FeatureWorkspaceRequest = {
           slices: request.slices,
           category: request.category,
           name: request.name,
+          baseRef: request.baseRef,
           sources: request.sources.map(({ role, path }) => ({ role, path })),
         }
         await planFeatureWorkspace(workspaceRequest)
@@ -154,15 +210,15 @@ export function createFeatureWorkspaceSlice({
         const projectIds: string[] = []
 
         for (const item of createdWorkspace.items) {
-          const sourceProject = sourceProjects.get(item.role)
-          if (!sourceProject) {
+          const identity = sourceIdentities.get(item.role)
+          if (!identity) {
             throw new Error(`feature_result_role_not_found: ${item.role}`)
           }
 
           const project = get().createProject({
-            name: `${sourceProject.name} · ${createdWorkspace.branch}`,
-            color: sourceProject.color,
-            iconUrl: sourceProject.iconUrl,
+            name: `${identity.name} · ${createdWorkspace.branch}`,
+            color: identity.color,
+            iconUrl: identity.iconUrl,
             groupId: featureGroup.id,
             defaultCwd: item.destination,
           })

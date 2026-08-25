@@ -460,6 +460,26 @@ export type Preferences = {
   enabledFeatures: Record<FeatureId, boolean>
   /** Folder configured as the base location for the global Todo list. */
   todoStoragePath: string
+  /**
+   * Repository each slice of a feature workspace comes from, configured once so
+   * creating a feature only needs a category and a name. Empty means unset, and
+   * the New feature modal falls back to picking a source per slice.
+   */
+  featureBackendRepoPath: string
+  featureFrontendRepoPath: string
+  featureScriptsRepoPath: string
+  /**
+   * Ref every feature branch starts from, shared by all slices because a
+   * feature is one branch name across its repositories. A remote-tracking ref
+   * such as `origin/hml` is refreshed with a read-only fetch before branching;
+   * a purely local ref is used as it is. Never empty after normalization.
+   */
+  featureBaseRef: string
+  /**
+   * True once the default feature slice groups were seeded. A marker instead of
+   * a group-list check, so a group the user deleted is never re-created.
+   */
+  featureSliceGroupsSeeded: boolean
   /** Scope the MCP panel opens on. */
   mcpDefaultScope: McpScope
   /** True once the MCP setup prompt has been shown or dismissed. */
@@ -535,6 +555,12 @@ export type ProjectsFile = {
   cliPaths: Partial<Record<AgentType, string>>
 }
 
+/**
+ * Base ref a feature branch starts from when the user has not chosen another.
+ * `hml` is the integration branch of the repositories this flow was built for.
+ */
+export const DEFAULT_FEATURE_BASE_REF = 'origin/hml'
+
 export const DEFAULT_PREFERENCES: Preferences = {
   language: 'en',
   uiTheme: 'elite-indigo',
@@ -590,6 +616,11 @@ export const DEFAULT_PREFERENCES: Preferences = {
     orchestrator: false,
   },
   todoStoragePath: '',
+  featureBackendRepoPath: '',
+  featureFrontendRepoPath: '',
+  featureScriptsRepoPath: '',
+  featureBaseRef: DEFAULT_FEATURE_BASE_REF,
+  featureSliceGroupsSeeded: false,
   mcpDefaultScope: 'global',
   mcpOnboardingSeen: false,
   leftSidebarVisible: true,

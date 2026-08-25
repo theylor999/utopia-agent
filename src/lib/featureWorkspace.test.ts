@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   canonicalFeatureSlices,
   createFeatureWorkspace,
+  DEFAULT_FEATURE_BASE_REF,
+  featureBaseRef,
+  isUsableFeatureBaseRef,
   featureSliceGroupNameKey,
   planFeatureWorkspace,
   removeFeatureWorkspace,
@@ -20,6 +23,7 @@ const request: FeatureWorkspaceRequest = {
   slices: ['backend', 'frontend'],
   category: 'feature',
   name: 'workspace-wizard',
+  baseRef: 'origin/hml',
   sources: [
     { role: 'backend', path: 'C:/repos/api' },
     { role: 'frontend', path: 'C:/repos/web' },
@@ -28,6 +32,7 @@ const request: FeatureWorkspaceRequest = {
 
 const result: FeatureWorkspaceResult = {
   branch: 'feature/workspace-wizard',
+  baseRef: 'origin/hml',
   workspaceRoot: 'C:/repos/feature-workspace-wizard',
   items: [
     {
@@ -127,5 +132,40 @@ describe('feature slice sets', () => {
 
   it('has no group name for an empty selection', () => {
     expect(featureSliceGroupNameKey([])).toBeNull()
+  })
+})
+
+describe('feature base ref', () => {
+  it('defaults to origin/hml when the preference is absent or blank', () => {
+    expect(DEFAULT_FEATURE_BASE_REF).toBe('origin/hml')
+    expect(featureBaseRef({ featureBaseRef: '' })).toBe('origin/hml')
+    expect(featureBaseRef({ featureBaseRef: '   ' })).toBe('origin/hml')
+    expect(featureBaseRef({} as { featureBaseRef: string })).toBe('origin/hml')
+  })
+
+  it('keeps a configured ref, trimmed', () => {
+    expect(featureBaseRef({ featureBaseRef: '  origin/main  ' })).toBe('origin/main')
+    expect(featureBaseRef({ featureBaseRef: 'hml' })).toBe('hml')
+  })
+
+  it('accepts real ref names and refuses anything Git could misread', () => {
+    for (const usable of ['origin/hml', 'origin/main', 'hml', 'release/1.2-rc', 'HEAD']) {
+      expect(isUsableFeatureBaseRef(usable)).toBe(true)
+    }
+    for (const unusable of [
+      '',
+      '   ',
+      '--force',
+      '-hml',
+      '/hml',
+      'origin//hml',
+      'origin/hml ; rm -rf',
+      'a..b',
+      'origin/hml/',
+      '.hidden',
+      'origin/hml.lock',
+    ]) {
+      expect(isUsableFeatureBaseRef(unusable)).toBe(false)
+    }
   })
 })
