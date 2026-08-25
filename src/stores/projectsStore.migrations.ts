@@ -14,6 +14,7 @@ import {
   type AgentType,
   ALL_AGENT_TYPES,
   DEFAULT_FEATURE_BASE_REF,
+  DEFAULT_FEATURE_LOCAL_AUTH_USER_ID,
   DEFAULT_PREFERENCES,
   EMPTY_PROJECTS_FILE,
   type FeatureRoleRepoPaths,
@@ -220,6 +221,16 @@ function normalizeFeatureScannedRepoPaths(raw: unknown): FeatureRoleRepoPaths {
   }
 }
 
+/**
+ * User id the local backend bypass returns. Anything that is not a positive
+ * whole number falls back to the default instead of writing `return NaN;`.
+ */
+function normalizeLocalAuthUserId(raw: unknown): number {
+  const value = Math.trunc(Number(raw))
+  if (!Number.isFinite(value) || value <= 0) return DEFAULT_FEATURE_LOCAL_AUTH_USER_ID
+  return Math.min(2_147_483_647, value)
+}
+
 export function normalizePreferences(raw: LegacyPreferences | undefined): Preferences {
   const preferences = {
     ...DEFAULT_PREFERENCES,
@@ -288,6 +299,18 @@ export function normalizePreferences(raw: LegacyPreferences | undefined): Prefer
     featureBaseRef:
       (preferences.featureBaseRef ?? '').trim() || DEFAULT_FEATURE_BASE_REF,
     featureSliceGroupsSeeded: Boolean(preferences.featureSliceGroupsSeeded),
+    // Run configuration and the local bypass: absent in every older payload, so
+    // they take the pre-filled defaults through DEFAULT_PREFERENCES above. A
+    // string the user blanked on purpose stays blank and disables its action.
+    featureRunBackendCommand: (preferences.featureRunBackendCommand ?? '').trim(),
+    featureRunBackendSubdir: (preferences.featureRunBackendSubdir ?? '').trim(),
+    featureRunFrontendCommand: (preferences.featureRunFrontendCommand ?? '').trim(),
+    featureRunFrontendSubdir: (preferences.featureRunFrontendSubdir ?? '').trim(),
+    featureSharedNodeModulesPath: (preferences.featureSharedNodeModulesPath ?? '').trim(),
+    featureLocalAuthBypassEnabled: preferences.featureLocalAuthBypassEnabled !== false,
+    featureLocalAuthBypassUserId: normalizeLocalAuthUserId(
+      preferences.featureLocalAuthBypassUserId,
+    ),
     spotifyClientId: preferences.spotifyClientId.trim(),
     spotifyClientSecret: preferences.spotifyClientSecret.trim(),
     uiZoom: clampUiZoom(preferences.uiZoom),

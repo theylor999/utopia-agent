@@ -5,6 +5,7 @@ import {
   FolderGit2,
   FolderTree,
   Monitor,
+  PackageOpen,
   Server,
   Trash2,
 } from 'lucide-react'
@@ -13,21 +14,34 @@ import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } fro
 import { pickDirectory } from '../../../lib/dialog'
 import { readableError } from '../../../lib/errors'
 import {
+  featureRunPlan,
+  localAuthBypassEnabled,
+  RUNNABLE_FEATURE_ROLES,
+  sharedNodeModulesPath,
+} from '../../../lib/featureRun'
+import {
   DEFAULT_FEATURE_BASE_REF,
   FEATURE_ROLE_REPO_PREFERENCE,
   FEATURE_SLICES,
   featureBaseRef,
   featureRepoScanPatch,
   featureRepositoriesRoot,
+  type FeatureRole,
   featureRoleRepoPath,
   featureWorkspacesRoot,
   isUsableFeatureBaseRef,
+  type RepositoryScan,
   scanFeatureRepositories,
   unassignedScanRoles,
-  type FeatureRole,
-  type RepositoryScan,
 } from '../../../lib/featureWorkspace'
 import { type MessageKey, useT } from '../../../lib/i18n'
+import {
+  DEFAULT_FEATURE_LOCAL_AUTH_USER_ID,
+  DEFAULT_FEATURE_RUN_BACKEND_COMMAND,
+  DEFAULT_FEATURE_RUN_BACKEND_SUBDIR,
+  DEFAULT_FEATURE_RUN_FRONTEND_COMMAND,
+  DEFAULT_FEATURE_RUN_FRONTEND_SUBDIR,
+} from '../../../lib/types'
 import { useProjectsStore } from '../../../stores/projectsStore'
 import controls from '../controls.module.css'
 import styles from '../PreferencesModal.module.css'
@@ -44,6 +58,26 @@ const ROLE_ICONS: Record<FeatureRole, ReactNode> = {
   frontend: <Monitor size={18} aria-hidden="true" />,
   scripts: <FileCode2 size={18} aria-hidden="true" />,
 }
+
+/** Preference fields behind the per-role run configuration. */
+const RUN_FIELDS = {
+  backend: { command: 'featureRunBackendCommand', subdir: 'featureRunBackendSubdir' },
+  frontend: { command: 'featureRunFrontendCommand', subdir: 'featureRunFrontendSubdir' },
+} as const
+
+const RUN_DEFAULTS = {
+  backend: {
+    command: DEFAULT_FEATURE_RUN_BACKEND_COMMAND,
+    subdir: DEFAULT_FEATURE_RUN_BACKEND_SUBDIR,
+  },
+  frontend: {
+    command: DEFAULT_FEATURE_RUN_FRONTEND_COMMAND,
+    subdir: DEFAULT_FEATURE_RUN_FRONTEND_SUBDIR,
+  },
+} as const
+
+/** Stand-in worktree, used only to show where a configured command would run. */
+const SAMPLE_WORKTREE = '…'
 
 export function OrganizationPage() {
   const t = useT()
@@ -109,8 +143,10 @@ export function OrganizationPage() {
     void runScan(repositoriesRoot)
   }, [repositoriesRoot, runScan])
 
+  const sharedStore = sharedNodeModulesPath(preferences)
+
   const chooseRoot = async (
-    key: 'featureRepositoriesRoot' | 'featureWorkspacesRoot',
+    key: 'featureRepositoriesRoot' | 'featureWorkspacesRoot' | 'featureSharedNodeModulesPath',
     current: string,
   ) => {
     const directory = await pickDirectory({ defaultPath: current || undefined })
@@ -317,6 +353,141 @@ export function OrganizationPage() {
               </button>
             </span>
           )}
+        </div>
+      </SettingsSection>
+      <SettingsSection
+        id="feature-run"
+        title={t('prefs.featureRun')}
+        description={t('prefs.featureRunDesc')}
+      >
+        <div className={styles.integrationFields}>
+          {RUNNABLE_FEATURE_ROLES.map((role) => {
+            const plan = featureRunPlan(preferences, role, SAMPLE_WORKTREE)
+            return (
+              <div key={role}>
+                <label>
+                  <span>{t('prefs.featureRunCommandLabel', { role: t(ROLE_LABEL_KEYS[role]) })}</span>
+                  <input
+                    className={controls.input}
+                    value={preferences[RUN_FIELDS[role].command] ?? ''}
+                    onChange={(event) =>
+                      setPreferences({ [RUN_FIELDS[role].command]: event.target.value })
+                    }
+                    placeholder={RUN_DEFAULTS[role].command}
+                    spellCheck={false}
+                  />
+                </label>
+                <label>
+                  <span>{t('prefs.featureRunSubdirLabel', { role: t(ROLE_LABEL_KEYS[role]) })}</span>
+                  <input
+                    className={controls.input}
+                    value={preferences[RUN_FIELDS[role].subdir] ?? ''}
+                    onChange={(event) =>
+                      setPreferences({ [RUN_FIELDS[role].subdir]: event.target.value })
+                    }
+                    placeholder={RUN_DEFAULTS[role].subdir}
+                    spellCheck={false}
+                  />
+                </label>
+                {plan ? (
+                  <p>{t('prefs.featureRunPreview', { command: plan.command, path: plan.cwd })}</p>
+                ) : (
+                  <p className={styles.cliPathWarning}>{t('prefs.featureRunDisabled')}</p>
+                )}
+                <small>{t('prefs.featureRunSubdirHint')}</small>
+              </div>
+            )
+          })}
+          <span className={styles.cliPathActions}>
+            <button
+              type="button"
+              onClick={() =>
+                setPreferences({
+                  featureRunBackendCommand: DEFAULT_FEATURE_RUN_BACKEND_COMMAND,
+                  featureRunBackendSubdir: DEFAULT_FEATURE_RUN_BACKEND_SUBDIR,
+                  featureRunFrontendCommand: DEFAULT_FEATURE_RUN_FRONTEND_COMMAND,
+                  featureRunFrontendSubdir: DEFAULT_FEATURE_RUN_FRONTEND_SUBDIR,
+                })
+              }
+            >
+              {t('prefs.featureRunReset')}
+            </button>
+          </span>
+        </div>
+      </SettingsSection>
+      <SettingsSection
+        id="feature-shared-node-modules"
+        title={t('prefs.featureSharedNodeModules')}
+        description={t('prefs.featureSharedNodeModulesDesc')}
+      >
+        <div className={styles.agentList}>
+          <div className={styles.cliPathRow}>
+            <span className={styles.agentIcon}>
+              <PackageOpen size={18} aria-hidden="true" />
+            </span>
+            <span className={styles.agentCopy}>
+              <strong>{t('prefs.featureSharedNodeModulesLabel')}</strong>
+              <span className={styles.cliPathValue} title={sharedStore || undefined}>
+                {sharedStore || t('prefs.featureRepoNotSet')}
+              </span>
+              <span>
+                {sharedStore
+                  ? t('prefs.featureSharedNodeModulesDerived', { path: sharedStore })
+                  : t('prefs.featureSharedNodeModulesUnset')}
+              </span>
+            </span>
+            <span className={styles.cliPathActions}>
+              <button
+                type="button"
+                onClick={() =>
+                  void chooseRoot(
+                    'featureSharedNodeModulesPath',
+                    preferences.featureSharedNodeModulesPath ?? '',
+                  )
+                }
+              >
+                {t('prefs.featureRepoChoose')}
+              </button>
+              {preferences.featureSharedNodeModulesPath ? (
+                <button
+                  type="button"
+                  onClick={() => setPreferences({ featureSharedNodeModulesPath: '' })}
+                >
+                  {t('prefs.featureRepoClear')}
+                </button>
+              ) : null}
+            </span>
+          </div>
+        </div>
+      </SettingsSection>
+      <SettingsSection
+        id="feature-local-auth-bypass"
+        title={t('prefs.featureLocalAuthBypass')}
+        description={t('prefs.featureLocalAuthBypassDesc')}
+      >
+        <div className={styles.integrationFields}>
+          <label>
+            <input
+              type="checkbox"
+              checked={localAuthBypassEnabled(preferences)}
+              onChange={(event) =>
+                setPreferences({ featureLocalAuthBypassEnabled: event.target.checked })
+              }
+            />
+            <span>{t('prefs.featureLocalAuthBypassEnabled')}</span>
+          </label>
+          <label>
+            <span>{t('prefs.featureLocalAuthBypassUserIdLabel')}</span>
+            <input
+              className={controls.input}
+              type="number"
+              min={1}
+              value={preferences.featureLocalAuthBypassUserId ?? DEFAULT_FEATURE_LOCAL_AUTH_USER_ID}
+              onChange={(event) =>
+                setPreferences({ featureLocalAuthBypassUserId: Number(event.target.value) })
+              }
+            />
+          </label>
         </div>
       </SettingsSection>
       <div className={styles.sectionHeading}>

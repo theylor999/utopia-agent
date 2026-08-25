@@ -2,12 +2,13 @@ import {
   Archive,
   FileText,
   FolderOpen,
-  Globe2,
   GitBranch,
+  Globe2,
   Layout,
   MoveRight,
   PanelTopOpen,
   Pencil,
+  Play,
   Plus,
   Power,
   Smartphone,
@@ -16,9 +17,11 @@ import {
 } from 'lucide-react'
 
 import { preparePtyRuntimeLaunch } from '../../lib/agentRuntimeAdapter'
+import { featureRunPlan } from '../../lib/featureRun'
 import { useT } from '../../lib/i18n'
 import { buildAgentLaunch } from '../../lib/sessionLaunch'
 import { getPtyCwd, openInFileExplorer, openInVscode, restartPty } from '../../lib/tauri'
+import { getProjectDefaultCwd } from '../../lib/terminalFactory'
 import { agentCliCommand, type Group, type Project, type Terminal } from '../../lib/types'
 import { useProjectsStore } from '../../stores/projectsStore'
 import { useTerminalsStore } from '../../stores/terminalsStore'
@@ -59,12 +62,15 @@ type MenuActions = Pick<
   | 'deleteTerminal'
   | 'deleteTerminalWithWorktreeCleanup'
   | 'setPreferences'
+  | 'runFeatureSliceProject'
 >
 
 export type SidebarMenuDeps = {
   t: ReturnType<typeof useT>
   graphifyEnabled: boolean
   browserEnabled: boolean
+  /** Per-role run commands, so a feature slice project can offer to run itself. */
+  runPreferences: Parameters<typeof featureRunPlan>[0]
   groups: Group[]
   openPaneSets: Record<string, Set<string>>
   actions: MenuActions
@@ -111,6 +117,7 @@ export function createSidebarMenus(deps: SidebarMenuDeps) {
     t,
     graphifyEnabled,
     browserEnabled,
+    runPreferences,
     groups,
     openPaneSets,
     actions,
@@ -122,7 +129,36 @@ export function createSidebarMenus(deps: SidebarMenuDeps) {
     openMarkdownSidebar,
   } = deps
 
+  /**
+   * Run entry for a feature slice project. Present only when the project came
+   * from a feature workspace with a runnable role and a configured command, so
+   * an ordinary project's menu is unchanged and a scripts slice never gets one.
+   */
+  const runFeatureSliceItem = (project: Project): MenuItem[] => {
+    const plan = featureRunPlan(
+      runPreferences,
+      project.featureRole,
+      getProjectDefaultCwd(project) ?? '',
+    )
+    if (!plan) return []
+    return [
+      {
+        kind: 'item' as const,
+        label: t(
+          plan.role === 'backend'
+            ? 'featureWorkspace.run.backendAction'
+            : 'featureWorkspace.run.frontendAction',
+          { command: plan.command },
+        ),
+        icon: <Play size={14} />,
+        onClick: () => void actions.runFeatureSliceProject(project.id),
+      },
+      { kind: 'separator' as const },
+    ]
+  }
+
   const projectMenu = (project: Project): MenuItem[] => [
+    ...runFeatureSliceItem(project),
     {
       kind: 'item',
       label: t('ui.workspace.openIndividually'),

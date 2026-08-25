@@ -44,6 +44,29 @@ Notable user-facing changes to **Utopia Agent** are documented here. The format 
 
 ### Added
 
+- A **run action per feature slice**, in the project's context menu: "Run backend (dotnet run)" in
+  the slice's `NPlan.Api` subfolder, "Run frontend (npm run dev)" in the slice root. It opens a
+  real terminal pane, so the output is visible and the process can be stopped. Scripts slices get
+  no run action. The command and its subfolder are preferences per role, so nothing is welded to
+  one repository layout; a blank command hides the action and a subfolder containing `..` is
+  refused, so a run cannot escape the worktree.
+- A **shared `node_modules`**, linked into each frontend worktree with a directory junction at
+  creation time and re-checked at first run. A worktree that already has a `node_modules` is never
+  touched or deleted. When the store is missing the run action says so and points at `npm ci`
+  instead of letting `npm run dev` fail. The path derives from the workspaces root and the frontend
+  repository name, and can be overridden.
+- The **local backend auth bypass** is applied to created backend worktrees: the
+  `Microsoft.AspNetCore.Authorization` import plus `[AllowAnonymous]` on `NPlanControllerBase`, and
+  a hard-coded `return <id>;` as the first statement of `GetUserId()`. On by default with id `9`,
+  both preferences. It is idempotent, it only ever runs on a worktree this flow just created, and a
+  file whose shape is not what the patch expects is reported by name and reason rather than written
+  to.
+- A **guard against committing that bypass**. Staging and committing both scan for it — the
+  attribute only counts on `NPlanControllerBase` and the hard-coded return only as the first
+  statement of `GetUserId` — and refuse with an explanation. The commit gate reads the staged diff,
+  so a bypass staged outside the app is still caught. This is deliberately insecure local-only
+  development state and must never reach a branch.
+
 - A **repositories root** preference: point it at the folder holding your repositories once and
   the app scans its immediate children, detects which one is the backend, the frontend and the
   scripts, and fills the three per-role paths for you. Folders that are not Git repositories are

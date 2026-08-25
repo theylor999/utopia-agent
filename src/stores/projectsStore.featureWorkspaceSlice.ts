@@ -1,20 +1,32 @@
 import {
+  featureRunPlan,
+  localAuthBypassEnabled,
+  localAuthBypassUserId,
+  sharedNodeModulesPath,
+} from '../lib/featureRun'
+import {
   createFeatureWorkspace as createFeatureWorkspaceIpc,
-  featureSliceGroupNameKey,
-  planFeatureWorkspace,
-  removeFeatureWorkspace,
-  SEEDED_FEATURE_SLICE_COMBINATIONS,
   type FeatureRole,
+  featureSliceGroupNameKey,
   type FeatureWorkspaceRemovalResult,
   type FeatureWorkspaceRequest,
   type FeatureWorkspaceResult,
   type FeatureWorkspaceSource,
+  planFeatureWorkspace,
+  removeFeatureWorkspace,
+  SEEDED_FEATURE_SLICE_COMBINATIONS,
 } from '../lib/featureWorkspace'
 import { featureWorkspaceReadableError } from '../lib/featureWorkspaceError'
 import { getLocale, translate } from '../lib/i18n'
 import { basename, sameCwd } from '../lib/paths'
+import {
+  applyLocalAuthBypass,
+  linkSharedNodeModules,
+  type LocalAuthBypassReport,
+  type NodeModulesLinkReport,
+} from '../lib/tauri/localDev'
 import { getProjectDefaultCwd } from '../lib/terminalFactory'
-import { GROUP_COLORS, type Group, type Project } from '../lib/types'
+import { type Group, GROUP_COLORS, type Project } from '../lib/types'
 import type { ProjectsState } from './projectsStore'
 import type { SliceCtx } from './projectsStore.slices'
 import { useUiStore } from './uiStore'
@@ -46,7 +58,7 @@ export type FeatureWorkspaceRegistration = {
 
 type FeatureWorkspaceSlice = Pick<
   ProjectsState,
-  'createFeatureWorkspace' | 'seedFeatureSliceGroups'
+  'createFeatureWorkspace' | 'runFeatureSliceProject' | 'seedFeatureSliceGroups'
 >
 
 type RegistrationSnapshot = Pick<
@@ -122,6 +134,65 @@ function resolveSliceGroup(
 }
 
 
+/**
+ * Human-readable summary of a bypass report, listing only the files that did
+ * not end up carrying the bypass. Empty when everything worked.
+ */
+function bypassProblems(report: LocalAuthBypassReport): string {
+  return report.files
+    .filter((file) => !['applied', 'already_applied', 'updated'].includes(file.status))
+    .map((file) =>
+      t(`featureWorkspace.bypass.${file.status}` as Parameters<typeof translate>[1], {
+        file: file.file,
+        detail: file.detail,
+      }),
+    )
+    .join('; ')
+}
+
+/**
+ * Applies the local-only backend bypass to a created worktree and reports the
+ * outcome. Never throws: a failed patch is a missing convenience, not a reason
+ * to tear down a workspace whose Git side is already correct.
+ */
+async function applyBypassToWorktree(
+  get: Pick<SliceCtx, 'get'>['get'],
+  worktree: string,
+): Promise<void> {
+  const preferences = get().preferences
+  if (!localAuthBypassEnabled(preferences)) return
+  try {
+    const report = await applyLocalAuthBypass(worktree, localAuthBypassUserId(preferences))
+    if (report.complete) return
+    useUiStore.getState().pushToast({
+      title: t('featureWorkspace.bypass.partialTitle'),
+      body: bypassProblems(report),
+    })
+  } catch (error) {
+    useUiStore.getState().pushToast({
+      title: t('featureWorkspace.bypass.failedTitle'),
+      body: featureWorkspaceReadableError(error),
+    })
+  }
+}
+
+/**
+ * Links a frontend worktree to the shared dependency store, so the dev server
+ * starts without an install per worktree. Returns the report so the run action
+ * can refuse to start a doomed dev server, and null when the call itself failed.
+ */
+async function linkNodeModules(
+  get: Pick<SliceCtx, 'get'>['get'],
+  worktree: string,
+): Promise<NodeModulesLinkReport | null> {
+  const store = sharedNodeModulesPath(get().preferences)
+  try {
+    return await linkSharedNodeModules(worktree, store)
+  } catch {
+    return null
+  }
+}
+
 export function createFeatureWorkspaceSlice({
   get,
   set,
@@ -146,6 +217,59 @@ export function createFeatureWorkspaceSlice({
       })
       get().setPreferences({ featureSliceGroupsSeeded: true })
       return created
+    },
+
+    /**
+     * Runs the configured command for a feature slice project in a real
+     * terminal pane, so the output is visible and the process can be stopped
+     * the same way any other terminal is.
+     */
+    runFeatureSliceProject: async (projectId): Promise<void> => {
+      const project = get().projects.find((candidate) => candidate.id === projectId)
+      const worktree = getProjectDefaultCwd(project)
+      const plan = featureRunPlan(get().preferences, project?.featureRole, worktree ?? '')
+      if (!project || !plan) return
+
+      if (plan.role === 'frontend') {
+        const link = await linkNodeModules(get, worktree!)
+        if (!link) {
+          useUiStore.getState().pushToast({
+            title: t('featureWorkspace.run.blockedTitle'),
+            body: t('featureWorkspace.nodeModules.linkFailed', { detail: '' }),
+          })
+          return
+        }
+        if (!['created', 'already_present'].includes(link.status)) {
+          // Saying why beats letting `npm run dev` fail on a missing module.
+          useUiStore.getState().pushToast({
+            title: t('featureWorkspace.run.blockedTitle'),
+            body: t(
+              `featureWorkspace.nodeModules.${link.status}` as Parameters<typeof translate>[1],
+              { store: link.store, detail: link.detail },
+            ),
+          })
+          return
+        }
+      }
+
+      get().createTerminal(project.id, {
+        name: t(
+          plan.role === 'backend'
+            ? 'featureWorkspace.run.backendTerminal'
+            : 'featureWorkspace.run.frontendTerminal',
+        ),
+        cwd: plan.cwd,
+        firstTab: {
+          type: 'shell',
+          cwd: plan.cwd,
+          // Typed into the shell, exactly like the merge panel's test run.
+          initialInput: `${plan.command}\r`,
+        },
+      })
+      useUiStore.getState().pushToast({
+        title: t('featureWorkspace.run.startedTitle'),
+        body: t('featureWorkspace.run.startedBody', { command: plan.command, cwd: plan.cwd }),
+      })
     },
 
     createFeatureWorkspace: async (request): Promise<FeatureWorkspaceRegistration> => {
@@ -224,6 +348,8 @@ export function createFeatureWorkspaceSlice({
             iconUrl: identity.iconUrl,
             groupId: featureGroup.id,
             defaultCwd: item.destination,
+            // The role is what makes the run action reachable from the sidebar.
+            featureRole: item.role,
           })
           get().createTerminal(project.id, {
             name: t('featureWorkspace.terminalName'),
@@ -242,6 +368,15 @@ export function createFeatureWorkspaceSlice({
           registeredProjects.some((project) => project.terminals.length === 0)
         ) {
           throw new Error('feature_registration_incomplete')
+        }
+
+        // Local-only development state, applied once per created worktree.
+        // The junction is made here rather than at first run so the editor and
+        // the language server see the dependency tree immediately; the run
+        // action ensures it again, which covers workspaces created earlier.
+        for (const item of createdWorkspace.items) {
+          if (item.role === 'backend') await applyBypassToWorktree(get, item.destination)
+          if (item.role === 'frontend') await linkNodeModules(get, item.destination)
         }
 
         set({

@@ -123,11 +123,11 @@ export const ptBR: Record<MessageKey, string> = {
     'Nenhum repositório de {role} configurado. Escolha um agora, ou defina em Preferências › Organização.',
   'featureWorkspace.rememberedSource': 'Salvo como o repositório de {role}.',
   'featureWorkspace.categoryLabel': 'Categoria',
-  'featureWorkspace.category.feature': 'Funcionalidade',
-  'featureWorkspace.category.fix': 'Correção',
-  'featureWorkspace.category.chore': 'Tarefa',
-  'featureWorkspace.category.refactor': 'Refatoração',
-  'featureWorkspace.category.hotfix': 'Hotfix',
+  'featureWorkspace.category.feature': 'feature',
+  'featureWorkspace.category.fix': 'fix',
+  'featureWorkspace.category.chore': 'chore',
+  'featureWorkspace.category.refactor': 'refactor',
+  'featureWorkspace.category.hotfix': 'hotfix',
   'featureWorkspace.categorySearch': 'Escolha ou digite uma categoria',
   'featureWorkspace.useCategory': 'Usar “{category}”',
   'featureWorkspace.nameLabel': 'Nome da funcionalidade',
@@ -152,6 +152,28 @@ export const ptBR: Record<MessageKey, string> = {
   'featureWorkspace.createdTitle': 'Workspace da funcionalidade criado',
   'featureWorkspace.createdBody':
     '{branch} está pronto com {count} projeto(s) em {group}.',
+  'featureWorkspace.run.backendAction': 'Rodar backend ({command})',
+  'featureWorkspace.run.frontendAction': 'Rodar frontend ({command})',
+  'featureWorkspace.run.backendTerminal': 'Backend',
+  'featureWorkspace.run.frontendTerminal': 'Dev server',
+  'featureWorkspace.run.startedTitle': 'Executando',
+  'featureWorkspace.run.startedBody': '{command} iniciado em {cwd}',
+  'featureWorkspace.run.blockedTitle': 'Não foi possível iniciar',
+  'featureWorkspace.nodeModules.not_configured':
+    'Nenhum node_modules compartilhado está configurado. Defina a pasta de workspaces e o repositório de frontend em Preferências, ou aponte direto para o store.',
+  'featureWorkspace.nodeModules.store_missing':
+    'O node_modules compartilhado não existe: {store}. Instale uma vez com npm ci e rode de novo.',
+  'featureWorkspace.nodeModules.linkFailed':
+    'Não foi possível ligar node_modules ao store compartilhado. {detail}',
+  'featureWorkspace.nodeModules.link_failed':
+    'Não foi possível ligar node_modules ao store compartilhado. {detail}',
+  'featureWorkspace.bypass.partialTitle': 'Bypass local do backend incompleto',
+  'featureWorkspace.bypass.failedTitle': 'Bypass local do backend falhou',
+  'featureWorkspace.bypass.unexpected_shape':
+    '{file} não tem o formato esperado ({detail}); nada foi alterado nele.',
+  'featureWorkspace.bypass.file_missing': '{file} não foi encontrado na worktree.',
+  'featureWorkspace.bypass.read_failed': 'Não foi possível ler {file}: {detail}',
+  'featureWorkspace.bypass.write_failed': 'Não foi possível escrever {file}: {detail}',
   'featureWorkspace.registrationRollbackFailed':
     'O registro falhou — {error}. O rollback do Git ficou incompleto — {rollbackError}',
   'featureWorkspace.rollbackIncomplete': 'Não foi possível remover algumas worktrees ou branches.',
@@ -2486,6 +2508,32 @@ export const ptBR: Record<MessageKey, string> = {
   'prefs.featureBaseRefInvalid':
     'Não é um nome de ref utilizável. Até corrigir, novas funcionalidades usam origin/hml.',
   'prefs.featureBaseRefReset': 'Voltar para {baseRef}',
+  'prefs.featureRun': 'Rodar um slice da feature',
+  'prefs.featureRunDesc':
+    'Comando que cada slice executa pelo menu do projeto e a pasta da worktree onde ele roda. Deixe o comando vazio para esconder a ação. O slice de scripts não tem ação de rodar.',
+  'prefs.featureRunCommandLabel': 'Comando de {role}',
+  'prefs.featureRunSubdirLabel': 'Pasta de {role}',
+  'prefs.featureRunSubdirHint': 'Relativa à worktree. Use . para a raiz da worktree.',
+  'prefs.featureRunPreview': 'Executa {command} em {path}',
+  'prefs.featureRunDisabled': 'Sem comando — a ação de rodar fica escondida neste slice.',
+  'prefs.featureRunReset': 'Voltar aos padrões',
+  'prefs.featureSharedNodeModules': 'node_modules compartilhado',
+  'prefs.featureSharedNodeModulesDesc':
+    'Uma worktree de frontend liga o node_modules a esta árvore já instalada em vez de instalar de novo. A ligação é uma junction, criada só quando a worktree não tem node_modules próprio.',
+  'prefs.featureSharedNodeModulesLabel': 'Store de dependências',
+  'prefs.featureSharedNodeModulesDerived': 'Derivado das suas pastas: {path}',
+  'prefs.featureSharedNodeModulesUnset':
+    'Defina a pasta de workspaces e o repositório de frontend acima, ou escolha o store direto.',
+  'prefs.featureLocalAuthBypass': 'Bypass local de autenticação do backend',
+  'prefs.featureLocalAuthBypassDesc':
+    'Aplica duas edições só de desenvolvimento em uma worktree de backend criada por este app: [AllowAnonymous] em NPlanControllerBase e um GetUserId() fixo. Nunca é aplicado nos seus repositórios originais, e o painel Git recusa dar stage ou commit nessas edições.',
+  'prefs.featureLocalAuthBypassEnabled': 'Aplicar em novas worktrees de backend',
+  'prefs.featureLocalAuthBypassUserIdLabel': 'User id devolvido localmente',
+  'git.error.bypassBlockedTitle': 'Bloqueado: bypass local de autenticação',
+  'git.error.bypassAllowAnonymous':
+    'Esta mudança traz [AllowAnonymous] em NPlanControllerBase. É estado local de desenvolvimento e nunca pode entrar no stage nem no commit. Desmarque o arquivo e dê stage no resto.',
+  'git.error.bypassUserId':
+    'Esta mudança traz o return fixo em GetUserId(). É estado local de desenvolvimento e nunca pode entrar no stage nem no commit. Desmarque o arquivo e dê stage no resto.',
   'prefs.featureReposRoot': 'Pasta dos repositórios',
   'prefs.featureReposRootDesc':
     'Pasta que guarda seus clones. A varredura encontra os repositórios Git diretamente dentro dela e atribui uma camada a cada um, preenchendo os três campos abaixo. Pastas que não são repositórios Git são ignoradas.',

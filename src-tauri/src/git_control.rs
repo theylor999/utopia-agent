@@ -507,6 +507,12 @@ pub async fn git_status(path: String) -> Result<GitRepositoryStatus, String> {
 
 fn git_stage_inner(repo_root: String, paths: Vec<String>) -> Result<(), String> {
     let root = validated_root(&repo_root)?;
+    // The local-only auth bypass must never reach the index. Refuse the whole
+    // stage and name what was found, so the user deselects that file instead of
+    // discovering the bypass in a pushed commit.
+    if let Some(marker) = crate::local_dev::bypass_in_paths(&root, &paths) {
+        return Err(crate::local_dev::bypass_blocked_error(marker));
+    }
     run_path_command(&root, &["add"], &paths)
 }
 
@@ -562,6 +568,13 @@ fn git_commit_inner(repo_root: String, message: String) -> Result<String, String
     let trimmed = message.trim();
     if trimmed.is_empty() {
         return Err("empty_commit_message".to_string());
+    }
+    // Second gate, on the authoritative cached diff: a bypass staged outside
+    // this app, or before the stage guard existed, is still refused here.
+    let cached = checked_output(&root, &["diff", "--cached", "--no-color", "-U3"])?;
+    let cached_diff = String::from_utf8_lossy(&cached.stdout);
+    if let Some(marker) = crate::local_dev::bypass_in_diff(&cached_diff) {
+        return Err(crate::local_dev::bypass_blocked_error(marker));
     }
     let output = checked_output(&root, &["commit", "-m", trimmed])?;
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
@@ -1319,6 +1332,67 @@ mod tests {
         git_discard(root_string, vec!["untracked.txt".to_string()], true).unwrap();
         assert!(!root.join("untracked.txt").exists());
         fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn refuses_to_stage_or_commit_the_local_auth_bypass() {
+        let root = temp_dir("bypass-guard");
+        let root_string = root.to_string_lossy().into_owned();
+        let run = |args: &[&str]| checked_output(&root, args).unwrap();
+        run(&["init"]);
+        run(&["config", "user.name", "Alethe Test"]);
+        run(&["config", "user.email", "alethe@example.invalid"]);
+
+        let controllers = root.join("NPlan.Api/Controllers");
+        fs::create_dir_all(&controllers).unwrap();
+        let controller = controllers.join("NPlanControllerBase.cs");
+        fs::write(
+            &controller,
+            "using Microsoft.AspNetCore.Mvc;\npublic abstract class NPlanControllerBase { }\n",
+        )
+        .unwrap();
+        fs::write(root.join("feature.cs"), "public class Feature { }\n").unwrap();
+
+        // Clean state stages and commits normally.
+        git_stage(root_string.clone(), vec![".".to_string()]).unwrap();
+        git_commit(root_string.clone(), "initial".to_string()).unwrap();
+
+        // Now the bypass lands in the worktree.
+        let patched = match crate::local_dev::patch_controller_base(
+            &fs::read_to_string(&controller).unwrap(),
+        ) {
+            crate::local_dev::PatchOutcome::Applied(text) => text,
+            other => panic!("the fixture must be patchable, got {other:?}"),
+        };
+        fs::write(&controller, patched).unwrap();
+        fs::write(root.join("feature.cs"), "public class Feature { int X; }\n").unwrap();
+
+        // Staging that file, or the whole tree, is refused with the marker.
+        let blocked = git_stage(
+            root_string.clone(),
+            vec!["NPlan.Api/Controllers/NPlanControllerBase.cs".to_string()],
+        )
+        .expect_err("staging the bypass must be refused");
+        assert_eq!(
+            blocked,
+            "local_auth_bypass_blocked:allow_anonymous_on_controller_base"
+        );
+        assert!(git_stage(root_string.clone(), vec![".".to_string()]).is_err());
+        assert_eq!(git_status(root_string.clone()).unwrap().staged.len(), 0);
+
+        // The unrelated file still stages and commits, so the guard is narrow.
+        git_stage(root_string.clone(), vec!["feature.cs".to_string()]).unwrap();
+        git_commit(root_string.clone(), "feature only".to_string()).unwrap();
+
+        // A bypass staged outside this app is still refused at commit time.
+        run(&["add", "--", "NPlan.Api/Controllers/NPlanControllerBase.cs"]);
+        let refused = git_commit(root_string.clone(), "sneaky".to_string())
+            .expect_err("committing the bypass must be refused");
+        assert_eq!(
+            refused,
+            "local_auth_bypass_blocked:allow_anonymous_on_controller_base"
+        );
+        fs::remove_dir_all(root).ok();
     }
 
     #[test]

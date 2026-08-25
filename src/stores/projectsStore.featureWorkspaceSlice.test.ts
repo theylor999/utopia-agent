@@ -17,6 +17,16 @@ const ui = vi.hoisted(() => ({
   setActiveView: vi.fn(),
 }))
 
+const localDev = vi.hoisted(() => ({
+  bypass: vi.fn(),
+  link: vi.fn(),
+}))
+
+vi.mock('../lib/tauri/localDev', () => ({
+  applyLocalAuthBypass: localDev.bypass,
+  linkSharedNodeModules: localDev.link,
+}))
+
 vi.mock('../lib/featureWorkspace', async () => {
   const actual =
     await vi.importActual<typeof import('../lib/featureWorkspace')>('../lib/featureWorkspace')
@@ -108,7 +118,12 @@ function combinationFixture(slices: Array<'backend' | 'frontend' | 'scripts'>) {
   }
 }
 
-function sourceProject(id: string, name: string, defaultCwd: string): Project {
+function sourceProject(
+  id: string,
+  name: string,
+  defaultCwd: string,
+  featureRole?: Project['featureRole'],
+): Project {
   return {
     id,
     name,
@@ -118,7 +133,22 @@ function sourceProject(id: string, name: string, defaultCwd: string): Project {
     layoutMode: 'auto',
     collapsed: false,
     createdAt: 1,
+    ...(featureRole ? { featureRole } : {}),
   }
+}
+
+/** Preferences as the run action and the local bypass read them. */
+const RUN_PREFERENCES = {
+  featureSliceGroupsSeeded: false,
+  featureRunBackendCommand: 'dotnet run',
+  featureRunBackendSubdir: 'NPlan.Api',
+  featureRunFrontendCommand: 'npm run dev',
+  featureRunFrontendSubdir: '.',
+  featureSharedNodeModulesPath: 'C:/utopia_repos/.shared/nplan-forecast/node_modules',
+  featureWorkspacesRoot: 'C:/utopia_repos',
+  featureFrontendRepoPath: 'C:/repos/web',
+  featureLocalAuthBypassEnabled: true,
+  featureLocalAuthBypassUserId: 9,
 }
 
 function createHarness(
@@ -132,6 +162,7 @@ function createHarness(
     sourceProject('tools', 'Tools', 'C:/repos/tools'),
   ]
   let terminalCalls = 0
+  const terminalArgs: Array<Record<string, unknown>> = []
   let nextProjectId = 0
   let nextGroupId = 0
   let state = {
@@ -140,7 +171,7 @@ function createHarness(
     ungroupedOrder: initialProjects.map((project) => project.id),
     activeProjectId: null,
     workspace: { containers: [], tabs: [], history: [], historyIndex: -1 },
-    preferences: { featureSliceGroupsSeeded: false },
+    preferences: { ...RUN_PREFERENCES },
   } as unknown as ProjectsState
 
   state.setPreferences = (patch) => {
@@ -167,7 +198,12 @@ function createHarness(
   }
   state.createProject = (args) => {
     events.push('project')
-    const project = sourceProject(`new-${++nextProjectId}`, args.name, args.defaultCwd ?? '')
+    const project = sourceProject(
+      `new-${++nextProjectId}`,
+      args.name,
+      args.defaultCwd ?? '',
+      args.featureRole,
+    )
     project.groupId = args.groupId ?? null
     const groups = state.groups.map((group) =>
       group.id === project.groupId
@@ -179,6 +215,7 @@ function createHarness(
   }
   state.createTerminal = (projectId, args) => {
     terminalCalls += 1
+    terminalArgs.push({ projectId, ...args })
     events.push('terminal')
     if (terminalCalls === failTerminalAt) throw new Error('register failed')
     const terminal = {
@@ -219,6 +256,7 @@ function createHarness(
 
   return {
     events,
+    terminalArgs,
     getState: () => state,
   }
 }
@@ -288,6 +326,23 @@ describe('seedFeatureSliceGroups', () => {
   })
 
   it('lets a later feature reuse the seeded group instead of creating another', async () => {
+    localDev.bypass.mockReset()
+    localDev.link.mockReset()
+    localDev.bypass.mockResolvedValue({
+      worktree: 'C:/worktrees/feature-orders/backend',
+      userId: 9,
+      files: [
+        { file: 'NPlan.Api/Controllers/NPlanControllerBase.cs', status: 'applied', detail: '' },
+        { file: 'NPlan.Core/Extensions/HttpContextExtensions.cs', status: 'applied', detail: '' },
+      ],
+      complete: true,
+    })
+    localDev.link.mockResolvedValue({
+      worktree: 'C:/worktrees/feature-orders/frontend',
+      store: 'C:/utopia_repos/.shared/nplan-forecast/node_modules',
+      status: 'created',
+      detail: '',
+    })
     ipc.plan.mockResolvedValue(RESULT)
     ipc.create.mockResolvedValue(RESULT)
     const harness = createHarness()
@@ -552,5 +607,206 @@ describe('createFeatureWorkspace store action', () => {
     expect(ui.pushToast).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'featureWorkspace.createFailedTitle' }),
     )
+  })
+})
+
+describe('local development state applied to a created worktree', () => {
+  beforeEach(() => {
+    ipc.create.mockReset()
+    ipc.plan.mockReset()
+    ipc.remove.mockReset()
+    ui.pushToast.mockReset()
+    ui.setActiveView.mockReset()
+    localDev.bypass.mockReset()
+    localDev.link.mockReset()
+    ipc.plan.mockResolvedValue(RESULT)
+    ipc.create.mockResolvedValue(RESULT)
+    localDev.bypass.mockResolvedValue({
+      worktree: 'C:/worktrees/feature-orders/backend',
+      userId: 9,
+      files: [],
+      complete: true,
+    })
+    localDev.link.mockResolvedValue({
+      worktree: 'C:/worktrees/feature-orders/frontend',
+      store: 'C:/utopia_repos/.shared/nplan-forecast/node_modules',
+      status: 'created',
+      detail: '',
+    })
+  })
+
+  it('patches the backend worktree and links the frontend one, each exactly once', async () => {
+    const harness = createHarness()
+
+    await harness.getState().createFeatureWorkspace(REQUEST)
+
+    expect(localDev.bypass).toHaveBeenCalledTimes(1)
+    expect(localDev.bypass).toHaveBeenCalledWith('C:/worktrees/feature-orders/backend', 9)
+    expect(localDev.link).toHaveBeenCalledTimes(1)
+    expect(localDev.link).toHaveBeenCalledWith(
+      'C:/worktrees/feature-orders/frontend',
+      'C:/utopia_repos/.shared/nplan-forecast/node_modules',
+    )
+    // Each project remembers the slice it was created for.
+    const created = harness.getState().projects.filter((project) => project.id.startsWith('new-'))
+    expect(created.map((project) => project.featureRole)).toEqual(['backend', 'frontend'])
+  })
+
+  it('never touches the backend when the bypass preference is off', async () => {
+    const harness = createHarness()
+    harness.getState().setPreferences({ featureLocalAuthBypassEnabled: false })
+
+    await harness.getState().createFeatureWorkspace(REQUEST)
+
+    expect(localDev.bypass).not.toHaveBeenCalled()
+  })
+
+  it('reports a backend whose files are not what the patch expects', async () => {
+    localDev.bypass.mockResolvedValue({
+      worktree: 'C:/worktrees/feature-orders/backend',
+      userId: 9,
+      files: [
+        {
+          file: 'NPlan.Api/Controllers/NPlanControllerBase.cs',
+          status: 'unexpected_shape',
+          detail: 'controller_base_declaration_not_found',
+        },
+        {
+          file: 'NPlan.Core/Extensions/HttpContextExtensions.cs',
+          status: 'already_applied',
+          detail: '',
+        },
+      ],
+      complete: false,
+    })
+    const harness = createHarness()
+
+    const registration = await harness.getState().createFeatureWorkspace(REQUEST)
+
+    // The workspace itself is fine, so it is kept — only the bypass is reported.
+    expect(registration.projectIds).toHaveLength(2)
+    expect(ipc.remove).not.toHaveBeenCalled()
+    expect(ui.pushToast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'featureWorkspace.bypass.partialTitle' }),
+    )
+  })
+
+  it('keeps the workspace when the bypass call itself fails', async () => {
+    localDev.bypass.mockRejectedValue(new Error('directory_not_found:'))
+    const harness = createHarness()
+
+    const registration = await harness.getState().createFeatureWorkspace(REQUEST)
+
+    expect(registration.projectIds).toHaveLength(2)
+    expect(ui.pushToast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'featureWorkspace.bypass.failedTitle' }),
+    )
+  })
+})
+
+describe('runFeatureSliceProject', () => {
+  beforeEach(() => {
+    ipc.create.mockReset()
+    ipc.plan.mockReset()
+    ui.pushToast.mockReset()
+    localDev.link.mockReset()
+    localDev.link.mockResolvedValue({
+      worktree: 'C:/worktrees/feature-orders/frontend',
+      store: 'C:/utopia_repos/.shared/nplan-forecast/node_modules',
+      status: 'already_present',
+      detail: '',
+    })
+  })
+
+  /** Harness whose project list already holds one feature slice project. */
+  function withSliceProject(role: 'backend' | 'frontend' | 'scripts', cwd: string) {
+    const harness = createHarness()
+    const project = harness.getState().createProject({
+      name: `slice-${role}`,
+      defaultCwd: cwd,
+      featureRole: role,
+    })
+    return { harness, projectId: project.id }
+  }
+
+  it('opens a terminal that types the backend command in the configured subfolder', async () => {
+    const { harness, projectId } = withSliceProject('backend', 'C:/w/back')
+
+    await harness.getState().runFeatureSliceProject(projectId)
+
+    expect(harness.terminalArgs).toEqual([
+      expect.objectContaining({
+        projectId,
+        cwd: 'C:/w/back/NPlan.Api',
+        firstTab: expect.objectContaining({
+          type: 'shell',
+          cwd: 'C:/w/back/NPlan.Api',
+          initialInput: 'dotnet run\r',
+        }),
+      }),
+    ])
+    // The backend never asks for the shared dependency store.
+    expect(localDev.link).not.toHaveBeenCalled()
+  })
+
+  it('ensures the shared node_modules before starting the dev server', async () => {
+    const { harness, projectId } = withSliceProject('frontend', 'C:/w/front')
+
+    await harness.getState().runFeatureSliceProject(projectId)
+
+    expect(localDev.link).toHaveBeenCalledWith(
+      'C:/w/front',
+      'C:/utopia_repos/.shared/nplan-forecast/node_modules',
+    )
+    expect(harness.terminalArgs[0]).toMatchObject({
+      cwd: 'C:/w/front',
+      firstTab: { initialInput: 'npm run dev\r' },
+    })
+  })
+
+  it('refuses to start the dev server when the shared store is missing', async () => {
+    localDev.link.mockResolvedValue({
+      worktree: 'C:/w/front',
+      store: 'C:/utopia_repos/.shared/nplan-forecast/node_modules',
+      status: 'store_missing',
+      detail: 'C:/utopia_repos/.shared/nplan-forecast/node_modules',
+    })
+    const { harness, projectId } = withSliceProject('frontend', 'C:/w/front')
+
+    await harness.getState().runFeatureSliceProject(projectId)
+
+    expect(harness.terminalArgs).toEqual([])
+    expect(ui.pushToast).toHaveBeenCalledWith({
+      title: 'featureWorkspace.run.blockedTitle',
+      body: 'featureWorkspace.nodeModules.store_missing',
+    })
+  })
+
+  it('says so when the link cannot be created instead of running into a failure', async () => {
+    localDev.link.mockResolvedValue({
+      worktree: 'C:/w/front',
+      store: 'D:/store',
+      status: 'link_failed',
+      detail: 'access denied',
+    })
+    const { harness, projectId } = withSliceProject('frontend', 'C:/w/front')
+
+    await harness.getState().runFeatureSliceProject(projectId)
+
+    expect(harness.terminalArgs).toEqual([])
+    expect(ui.pushToast).toHaveBeenCalledWith({
+      title: 'featureWorkspace.run.blockedTitle',
+      body: 'featureWorkspace.nodeModules.link_failed',
+    })
+  })
+
+  it('does nothing for a scripts slice or an unknown project', async () => {
+    const { harness, projectId } = withSliceProject('scripts', 'C:/w/scripts')
+
+    await harness.getState().runFeatureSliceProject(projectId)
+    await harness.getState().runFeatureSliceProject('nope')
+
+    expect(harness.terminalArgs).toEqual([])
+    expect(ui.pushToast).not.toHaveBeenCalled()
   })
 })

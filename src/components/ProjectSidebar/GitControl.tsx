@@ -16,6 +16,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { readableError } from '../../lib/errors'
+import { gitActionReadableError, isBypassBlockedError } from '../../lib/gitActionError'
 import { type MessageKey,useT } from '../../lib/i18n'
 import {
   getPtyCwd,
@@ -134,7 +135,10 @@ export function GitControl({ projectId, cwd, ptyId, terminalName }: GitControlPr
       if (success) pushToast({ title: success, body: '' })
       await refresh(true)
     } catch (cause) {
-      pushToast({ title: t('git.error.action'), body: readableError(cause) })
+      pushToast({
+        title: isBypassBlockedError(cause) ? t('git.error.bypassBlockedTitle') : t('git.error.action'),
+        body: gitActionReadableError(cause),
+      })
     } finally {
       setBusy(false)
     }

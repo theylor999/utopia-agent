@@ -293,7 +293,16 @@ export type Project = {
   mergePostAction?: 'relocateToNewBranch' | 'relocateKeepSession' | 'closeTerminal'
 
   orphanWorktrees?: OrphanWorktree[]
+  /**
+   * Feature slice this project's worktree was created for. Set only by the
+   * feature workspace flow, so the sidebar can offer the run action for that
+   * role. Absent on every project created any other way.
+   */
+  featureRole?: FeatureSliceRole
 }
+
+/** Slice a feature workspace can span. Mirrored by `FEATURE_SLICES`. */
+export type FeatureSliceRole = 'backend' | 'frontend' | 'scripts'
 
 export type MarkdownComment = {
   id: string
@@ -498,6 +507,31 @@ export type Preferences = {
    * a group-list check, so a group the user deleted is never re-created.
    */
   featureSliceGroupsSeeded: boolean
+  /**
+   * Command the sidebar runs for a slice, and the subfolder of the worktree it
+   * runs in. Preferences rather than constants, so the flow is not welded to one
+   * company's repository layout. A blank command hides the run action for that
+   * role; a blank or `.` subdirectory means the worktree root. Scripts have no
+   * run action at all, by design.
+   */
+  featureRunBackendCommand: string
+  featureRunBackendSubdir: string
+  featureRunFrontendCommand: string
+  featureRunFrontendSubdir: string
+  /**
+   * Installed dependency tree a frontend worktree links to instead of running
+   * its own install. Empty falls back to
+   * `<featureWorkspacesRoot>/.shared/<frontend repository folder>/node_modules`.
+   */
+  featureSharedNodeModulesPath: string
+  /**
+   * Applies the backend's local-only authentication bypass to a worktree this
+   * flow creates. Deliberately insecure development state, never staged or
+   * committed — the Git panel refuses both.
+   */
+  featureLocalAuthBypassEnabled: boolean
+  /** User id the bypassed `GetUserId()` returns locally. */
+  featureLocalAuthBypassUserId: number
   /** Scope the MCP panel opens on. */
   mcpDefaultScope: McpScope
   /** True once the MCP setup prompt has been shown or dismissed. */
@@ -592,6 +626,20 @@ export const EMPTY_FEATURE_ROLE_REPO_PATHS: FeatureRoleRepoPaths = {
   scripts: '',
 }
 
+/**
+ * Run command and working subdirectory pre-filled per role, so the owner never
+ * types anything for the layout this flow was built for, while a different
+ * layout is one Preferences edit away.
+ */
+export const DEFAULT_FEATURE_RUN_BACKEND_COMMAND = 'dotnet run'
+export const DEFAULT_FEATURE_RUN_BACKEND_SUBDIR = 'NPlan.Api'
+export const DEFAULT_FEATURE_RUN_FRONTEND_COMMAND = 'npm run dev'
+export const DEFAULT_FEATURE_RUN_FRONTEND_SUBDIR = '.'
+/** Folder the shared dependency store lives under, inside the workspaces root. */
+export const FEATURE_SHARED_STORE_FOLDER = '.shared'
+/** User id the local backend bypass returns when the preference is unset. */
+export const DEFAULT_FEATURE_LOCAL_AUTH_USER_ID = 9
+
 export const DEFAULT_PREFERENCES: Preferences = {
   language: 'en',
   uiTheme: 'elite-indigo',
@@ -655,6 +703,13 @@ export const DEFAULT_PREFERENCES: Preferences = {
   featureWorkspacesRoot: '',
   featureBaseRef: DEFAULT_FEATURE_BASE_REF,
   featureSliceGroupsSeeded: false,
+  featureRunBackendCommand: DEFAULT_FEATURE_RUN_BACKEND_COMMAND,
+  featureRunBackendSubdir: DEFAULT_FEATURE_RUN_BACKEND_SUBDIR,
+  featureRunFrontendCommand: DEFAULT_FEATURE_RUN_FRONTEND_COMMAND,
+  featureRunFrontendSubdir: DEFAULT_FEATURE_RUN_FRONTEND_SUBDIR,
+  featureSharedNodeModulesPath: '',
+  featureLocalAuthBypassEnabled: true,
+  featureLocalAuthBypassUserId: DEFAULT_FEATURE_LOCAL_AUTH_USER_ID,
   mcpDefaultScope: 'global',
   mcpOnboardingSeen: false,
   leftSidebarVisible: true,

@@ -33,6 +33,7 @@ mod github_sync;
 mod graphify;
 mod handoff;
 mod health_probe;
+mod local_dev;
 mod logging;
 mod mcp_agents;
 mod mcp_catalog;
@@ -400,6 +401,8 @@ pub fn run() {
             feature_workspace::feature_workspace_create,
             feature_workspace::feature_workspace_remove,
             repository_scan::feature_repository_scan,
+            local_dev::local_auth_bypass_apply,
+            local_dev::shared_node_modules_link,
             worktrees::worktree_provision,
             worktrees::worktree_list,
             worktrees::worktree_remove,

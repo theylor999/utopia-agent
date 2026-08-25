@@ -15,6 +15,13 @@ const NO_ROOTS = {
   featureWorkspacesRoot: '',
   featureScannedRepoPaths: { backend: '', frontend: '', scripts: '' },
   featureBaseRef: 'origin/hml',
+  featureRunBackendCommand: 'dotnet run',
+  featureRunBackendSubdir: 'NPlan.Api',
+  featureRunFrontendCommand: 'npm run dev',
+  featureRunFrontendSubdir: '.',
+  featureSharedNodeModulesPath: '',
+  featureLocalAuthBypassEnabled: true,
+  featureLocalAuthBypassUserId: 9,
 }
 
 const store = vi.hoisted(() => ({
@@ -163,13 +170,47 @@ describe('OrganizationPage feature roots', () => {
     render(<OrganizationPage />)
 
     const chooseButtons = screen.getAllByRole('button', { name: 'prefs.featureRepoChoose' })
-    // Repositories root, then the three roles, then the workspaces root.
-    fireEvent.click(chooseButtons[chooseButtons.length - 1])
+    // Repositories root, the three roles, the workspaces root, then the shared
+    // dependency store.
+    fireEvent.click(chooseButtons[4])
 
     await waitFor(() =>
       expect(organization.setPreferences).toHaveBeenCalledWith({
         featureWorkspacesRoot: 'C:/utopia_repos',
       }),
     )
+  })
+
+  it('stores the shared dependency store the picker returns', async () => {
+    organization.pick.mockResolvedValue('D:/store/node_modules')
+    render(<OrganizationPage />)
+
+    const chooseButtons = screen.getAllByRole('button', { name: 'prefs.featureRepoChoose' })
+    fireEvent.click(chooseButtons[5])
+
+    await waitFor(() =>
+      expect(organization.setPreferences).toHaveBeenCalledWith({
+        featureSharedNodeModulesPath: 'D:/store/node_modules',
+      }),
+    )
+  })
+
+  it('offers a run command per runnable role and none for scripts', () => {
+    store.state.preferences = { ...NO_ROOTS }
+    render(<OrganizationPage />)
+
+    expect(screen.getByDisplayValue('dotnet run')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('NPlan.Api')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('npm run dev')).toBeInTheDocument()
+    // Two roles get a command field; scripts never does.
+    expect(screen.getAllByText('prefs.featureRunCommandLabel')).toHaveLength(2)
+    expect(screen.getAllByText('prefs.featureRunPreview')).toHaveLength(2)
+  })
+
+  it('warns instead of pretending a slice runs when its command is blank', () => {
+    store.state.preferences = { ...NO_ROOTS, featureRunBackendCommand: '' }
+    render(<OrganizationPage />)
+
+    expect(screen.getAllByText('prefs.featureRunDisabled')).toHaveLength(1)
   })
 })

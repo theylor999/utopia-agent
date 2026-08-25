@@ -399,6 +399,7 @@ export function createProjectsSlice({ set, get, update, updateProject }: SliceCt
       defaultCwd,
       githubUrl,
       firstBootPending,
+      featureRole,
     }) => {
       const project: Project = {
         id: nanoid(),
@@ -410,6 +411,7 @@ export function createProjectsSlice({ set, get, update, updateProject }: SliceCt
         ...(defaultCwd?.trim() ? { defaultCwd: defaultCwd.trim() } : {}),
         githubUrl,
         firstBootPending,
+        ...(featureRole ? { featureRole } : {}),
         terminals: [],
         layoutMode: 'auto',
         collapsed: false,

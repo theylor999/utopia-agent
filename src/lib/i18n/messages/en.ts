@@ -125,11 +125,11 @@ export const en = {
     'No {role} repository configured yet. Pick one, or set it in Preferences › Organization.',
   'featureWorkspace.rememberedSource': 'Saved as the {role} repository.',
   'featureWorkspace.categoryLabel': 'Category',
-  'featureWorkspace.category.feature': 'Feature',
-  'featureWorkspace.category.fix': 'Fix',
-  'featureWorkspace.category.chore': 'Chore',
-  'featureWorkspace.category.refactor': 'Refactor',
-  'featureWorkspace.category.hotfix': 'Hotfix',
+  'featureWorkspace.category.feature': 'feature',
+  'featureWorkspace.category.fix': 'fix',
+  'featureWorkspace.category.chore': 'chore',
+  'featureWorkspace.category.refactor': 'refactor',
+  'featureWorkspace.category.hotfix': 'hotfix',
   'featureWorkspace.categorySearch': 'Choose or enter a category',
   'featureWorkspace.useCategory': 'Use “{category}”',
   'featureWorkspace.nameLabel': 'Feature name',
@@ -154,6 +154,28 @@ export const en = {
   'featureWorkspace.createdTitle': 'Feature workspace created',
   'featureWorkspace.createdBody':
     '{branch} is ready with {count} project(s) in {group}.',
+  'featureWorkspace.run.backendAction': 'Run backend ({command})',
+  'featureWorkspace.run.frontendAction': 'Run frontend ({command})',
+  'featureWorkspace.run.backendTerminal': 'Backend',
+  'featureWorkspace.run.frontendTerminal': 'Dev server',
+  'featureWorkspace.run.startedTitle': 'Running',
+  'featureWorkspace.run.startedBody': '{command} started in {cwd}',
+  'featureWorkspace.run.blockedTitle': 'Could not start',
+  'featureWorkspace.nodeModules.not_configured':
+    'No shared node_modules is configured. Set a workspaces folder and a frontend repository in Preferences, or point at the store directly.',
+  'featureWorkspace.nodeModules.store_missing':
+    'The shared node_modules store is missing: {store}. Install it once with npm ci, then run again.',
+  'featureWorkspace.nodeModules.linkFailed':
+    'Could not link node_modules to the shared store. {detail}',
+  'featureWorkspace.nodeModules.link_failed':
+    'Could not link node_modules to the shared store. {detail}',
+  'featureWorkspace.bypass.partialTitle': 'Local backend bypass incomplete',
+  'featureWorkspace.bypass.failedTitle': 'Local backend bypass failed',
+  'featureWorkspace.bypass.unexpected_shape':
+    '{file} does not have the expected shape ({detail}); nothing was changed there.',
+  'featureWorkspace.bypass.file_missing': '{file} was not found in the worktree.',
+  'featureWorkspace.bypass.read_failed': '{file} could not be read: {detail}',
+  'featureWorkspace.bypass.write_failed': '{file} could not be written: {detail}',
   'featureWorkspace.registrationRollbackFailed':
     'Registration failed — {error}. Git rollback was incomplete — {rollbackError}',
   'featureWorkspace.rollbackIncomplete': 'Some worktrees or branches could not be removed.',
@@ -2467,6 +2489,32 @@ export const en = {
   'prefs.featureBaseRefInvalid':
     'Not a usable ref name. Until it is fixed, new features fall back to origin/hml.',
   'prefs.featureBaseRefReset': 'Reset to {baseRef}',
+  'prefs.featureRun': 'Running a feature slice',
+  'prefs.featureRunDesc':
+    'Command each slice runs from its project menu, and the folder of the worktree it runs in. Leave a command empty to hide its run action. Scripts slices have no run action.',
+  'prefs.featureRunCommandLabel': '{role} command',
+  'prefs.featureRunSubdirLabel': '{role} folder',
+  'prefs.featureRunSubdirHint': 'Relative to the worktree. Use . for the worktree root.',
+  'prefs.featureRunPreview': 'Runs {command} in {path}',
+  'prefs.featureRunDisabled': 'No command set — the run action stays hidden for this slice.',
+  'prefs.featureRunReset': 'Reset to defaults',
+  'prefs.featureSharedNodeModules': 'Shared node_modules',
+  'prefs.featureSharedNodeModulesDesc':
+    'A frontend worktree links its node_modules to this installed tree instead of running its own install. The link is a junction, created only when the worktree has none of its own.',
+  'prefs.featureSharedNodeModulesLabel': 'Dependency store',
+  'prefs.featureSharedNodeModulesDerived': 'Derived from your roots: {path}',
+  'prefs.featureSharedNodeModulesUnset':
+    'Set a workspaces folder and a frontend repository above, or choose the store directly.',
+  'prefs.featureLocalAuthBypass': 'Local backend auth bypass',
+  'prefs.featureLocalAuthBypassDesc':
+    'Applies two development-only edits to a backend worktree this app creates: [AllowAnonymous] on NPlanControllerBase and a fixed GetUserId(). Never applied to your original repositories, and the Git panel refuses to stage or commit either edit.',
+  'prefs.featureLocalAuthBypassEnabled': 'Apply to new backend worktrees',
+  'prefs.featureLocalAuthBypassUserIdLabel': 'User id returned locally',
+  'git.error.bypassBlockedTitle': 'Blocked: local auth bypass',
+  'git.error.bypassAllowAnonymous':
+    'This change carries [AllowAnonymous] on NPlanControllerBase. That is local-only development state and must never be staged or committed. Deselect the file and stage the rest.',
+  'git.error.bypassUserId':
+    'This change carries the hard-coded return in GetUserId(). That is local-only development state and must never be staged or committed. Deselect the file and stage the rest.',
   'prefs.featureReposRoot': 'Repositories root',
   'prefs.featureReposRootDesc':
     'Folder that holds your clones. Scanning it finds the Git repositories directly inside and assigns each one a slice, filling the three fields below. Folders that are not Git repositories are skipped.',

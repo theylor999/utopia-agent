@@ -151,6 +151,7 @@ export function NormalProjectSidebar() {
       setSubTabCompletionUnread: s.setSubTabCompletionUnread,
       createFilePane: s.createFilePane,
       createGraphifyPane: s.createGraphifyPane,
+      runFeatureSliceProject: s.runFeatureSliceProject,
       setFullscreenPane: s.setFullscreenPane,
     })),
   )
@@ -340,6 +341,7 @@ export function NormalProjectSidebar() {
   const { projectMenu, groupMenu, terminalMenu } = createSidebarMenus({
     t,
     graphifyEnabled: preferences.enabledFeatures.graphify,
+    runPreferences: preferences,
     browserEnabled: preferences.enabledFeatures.browser,
     groups: groups.filter((group) => !group.archived),
     openPaneSets,

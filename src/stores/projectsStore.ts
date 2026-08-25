@@ -108,10 +108,17 @@ export type ProjectsState = ProjectsFile & {
     defaultCwd?: string
     githubUrl?: string
     firstBootPending?: boolean
+    featureRole?: Project['featureRole']
   }) => Project
   createFeatureWorkspace: (
     request: FeatureWorkspaceStoreRequest,
   ) => Promise<FeatureWorkspaceRegistration>
+  /**
+   * Runs the command configured for this project's feature slice in a new
+   * terminal pane. A no-op for a project without a runnable slice role or
+   * without a configured command.
+   */
+  runFeatureSliceProject: (projectId: string) => Promise<void>
   /**
    * Seeds the common feature slice groups once. Returns the ids it created,
    * empty when the marker says it already ran.

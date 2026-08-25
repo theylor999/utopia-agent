@@ -344,6 +344,41 @@ describe('identity survives partial persisted payloads', () => {
     })
   })
 
+  it('defaults the run configuration and the local bypass, keeping the identity', () => {
+    // A payload written before the run commands, the shared store, and the
+    // bypass existed. Every new field must fall back to its pre-filled default
+    // while the identity comes back byte for byte.
+    const preferences = normalizePreferences({ ...identity, accountCreated: true })
+
+    expect(preferences).toMatchObject({ ...identity, accountCreated: true })
+    expect(preferences.featureRunBackendCommand).toBe('dotnet run')
+    expect(preferences.featureRunBackendSubdir).toBe('NPlan.Api')
+    expect(preferences.featureRunFrontendCommand).toBe('npm run dev')
+    expect(preferences.featureRunFrontendSubdir).toBe('.')
+    expect(preferences.featureSharedNodeModulesPath).toBe('')
+    expect(preferences.featureLocalAuthBypassEnabled).toBe(true)
+    expect(preferences.featureLocalAuthBypassUserId).toBe(9)
+  })
+
+  it('keeps a cleared run command and repairs an unusable bypass id', () => {
+    const preferences = normalizePreferences({
+      ...identity,
+      featureRunBackendCommand: '   ',
+      featureRunFrontendSubdir: '  apps/web  ',
+      featureSharedNodeModulesPath: '  D:/store/node_modules  ',
+      featureLocalAuthBypassEnabled: false,
+      featureLocalAuthBypassUserId: -3,
+    } as unknown as Parameters<typeof normalizePreferences>[0])
+
+    expect(preferences).toMatchObject({ ...identity })
+    // A command the user cleared stays cleared: the run action stays hidden.
+    expect(preferences.featureRunBackendCommand).toBe('')
+    expect(preferences.featureRunFrontendSubdir).toBe('apps/web')
+    expect(preferences.featureSharedNodeModulesPath).toBe('D:/store/node_modules')
+    expect(preferences.featureLocalAuthBypassEnabled).toBe(false)
+    expect(preferences.featureLocalAuthBypassUserId).toBe(9)
+  })
+
   it('derives accountCreated from a legacy onboarding flag', () => {
     expect(normalizePreferences({ ...identity, onboardingDone: true }).accountCreated).toBe(true)
   })
