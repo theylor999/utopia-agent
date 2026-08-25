@@ -37,7 +37,6 @@ export const CHANGELOG_RELEASES: ChangelogRelease[] = [
       'whatsNew.v140.note7',
       'whatsNew.v140.note8',
       'whatsNew.v140.note9',
-      'whatsNew.v140.note10',
       'whatsNew.v140.note11',
       'whatsNew.v140.note12',
       'whatsNew.v140.note13',
@@ -48,7 +47,6 @@ export const CHANGELOG_RELEASES: ChangelogRelease[] = [
     date: '2026-07-27',
     noteKeys: [
       'whatsNew.v130.note1',
-      'whatsNew.v130.note2',
       'whatsNew.v130.note3',
       'whatsNew.v130.note4',
       'whatsNew.v130.note5',

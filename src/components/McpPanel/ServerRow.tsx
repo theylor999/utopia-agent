@@ -14,7 +14,6 @@ type Props = {
 export function ServerRow({ group, theme, onOpen }: Props) {
   const t = useT()
   const primary = group.records[0]
-  const importedFrom = group.records.find((record) => record.managedByImport)?.managedByImport
   const present = group.agents.map((agent) => AGENT_TYPE_LABELS[agent]).join(', ')
   const missing = group.missingAgents.map((agent) => AGENT_TYPE_LABELS[agent]).join(', ')
 
@@ -23,14 +22,6 @@ export function ServerRow({ group, theme, onOpen }: Props) {
       <span className={styles.rowTop}>
         <span className={styles.name}>{group.name}</span>
         {group.hasDisabled ? <span className={styles.badge}>{t('mcp.badgeDisabled')}</span> : null}
-        {importedFrom ? (
-          <span
-            className={`${styles.badge} ${styles.badgeWarn}`}
-            title={t('mcp.managedByImportHint', { plugin: importedFrom })}
-          >
-            {t('mcp.badgeImported')}
-          </span>
-        ) : null}
         <span
           className={styles.agentIcons}
           title={

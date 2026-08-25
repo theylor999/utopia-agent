@@ -24,6 +24,7 @@ import { FindJumpModal } from './components/modals/FindJumpModal'
 import { HandoffModal } from './components/modals/HandoffModal'
 import { McpIntroModal } from './components/modals/McpIntroModal'
 import { McpManagerModal } from './components/modals/McpManagerModal'
+import { NewFeatureModal } from './components/modals/NewFeatureModal'
 import { NewGroupModal } from './components/modals/NewGroupModal'
 import { NewProjectModal } from './components/modals/NewProjectModal'
 import { NewSubTabModal } from './components/modals/NewSubTabModal'
@@ -111,7 +112,7 @@ function LoadingScreen({ reducedMotion = false }: { reducedMotion?: boolean }) {
           mouseStrength={16}
           scale={1}
           fit="cover"
-          colors={['var(--fg-muted)', 'var(--fg)']}
+          colors={['var(--agent-omp)', 'var(--accent)']}
           backgroundColor="transparent"
         />
       </div>
@@ -696,6 +697,7 @@ export default function App() {
       <MainMenu />
       <ErrorBoundary label="modals">
         <NewProjectModal />
+        <NewFeatureModal />
         <NewGroupModal />
         <EditGroupModal />
         <EditProjectModal />

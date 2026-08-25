@@ -3,8 +3,6 @@ mod agent_cost;
 mod agent_events;
 mod agent_library;
 mod ai_memory;
-mod antigravity_sessions;
-mod antigravity_usage;
 mod backup;
 mod browser_pane;
 mod browser_session;
@@ -24,6 +22,7 @@ mod diagnostics;
 mod discord_presence;
 mod economy_agents;
 mod event_bus;
+mod feature_workspace;
 mod filesystem;
 mod ghostty_bridge;
 #[cfg(all(target_os = "macos", ghostty_linked))]
@@ -173,7 +172,7 @@ pub fn run() {
         .setup(move |app| {
             #[cfg(debug_assertions)]
             if let Some(window) = app.get_webview_window("main") {
-                let _ = window.set_title("(DEV) Alethe");
+                let _ = window.set_title("Utopia Agent Dev");
             }
 
             #[cfg(target_os = "linux")]
@@ -194,7 +193,7 @@ pub fn run() {
             // Keep the terminal launcher available after installation.
             #[cfg(not(debug_assertions))]
             let _ = cli_shim::cli_shim_install();
-            // `alethe <path>` com o app fechado: guarda o alvo agora, o
+            // `utopia-agent <path>` com o app fechado: guarda o alvo agora, o
 
             cli_launch::capture_cold_start(app.handle());
             event_bus::set_app_handle(app.handle().clone());
@@ -212,7 +211,7 @@ pub fn run() {
             pty::cleanup_orphan_scrollback(app.handle());
             agent_events::start_listener(app.handle().clone());
 
-            // reporta working/idle real de volta pro Alethe (ver opencode_bridge.rs).
+            // reporta working/idle real de volta pro Utopia Agent (ver opencode_bridge.rs).
             opencode_bridge::ensure_installed();
             session_watcher::start_watcher(app.handle().clone());
 
@@ -383,10 +382,8 @@ pub fn run() {
             handoff::prepare_agent_handoff,
             handoff::materialize_agent_handoff,
             handoff::complete_agent_handoff,
-            antigravity_sessions::snapshot_antigravity_sessions,
             claude_usage::get_claude_usage,
             codex_usage::get_codex_usage,
-            antigravity_usage::get_antigravity_usage,
             agent_cost::get_session_cost,
             agent_cost::get_transcript_cost,
             agent_cost::get_model_pricing,
@@ -395,6 +392,9 @@ pub fn run() {
             crash_watch::get_job_guard_status,
             set_window_opacity,
             quit_app,
+            feature_workspace::feature_workspace_plan,
+            feature_workspace::feature_workspace_create,
+            feature_workspace::feature_workspace_remove,
             worktrees::worktree_provision,
             worktrees::worktree_list,
             worktrees::worktree_remove,
@@ -473,7 +473,7 @@ pub fn run() {
             ping,
         ])
         .build(tauri::generate_context!())
-        .expect("error while building alethe")
+        .expect("error while building Utopia Agent")
         .run(move |_app_handle, event| {
             // emitir `Exit`; esperar esse evento deixa shells/agentes vivos
 

@@ -30,12 +30,14 @@ const OVERSCAN = 8
  *  single-color "zigzag" that looked like one line writhing around instead
  *  of distinct lanes converging. */
 const LANE_COLOR_VARS = [
+  '--agent-omp',
+  '--agent-cursor',
+  '--agent-grok',
   '--agent-claude',
   '--agent-codex',
   '--agent-opencode',
   '--agent-freebuff',
   '--agent-mimo',
-  '--agent-antigravity',
 ]
 
 /** Lane 0 is always the main lane (the first one allocated, in practice the

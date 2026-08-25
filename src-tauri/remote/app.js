@@ -129,24 +129,28 @@ const icons = {
 }
 
 const agentLetters = {
+  omp: 'O',
+  cursor: 'C',
+  grok: 'G',
   claude: 'C',
   codex: 'X',
   copilot: 'P',
   opencode: 'O',
-  shell: '>_',
-  antigravity: 'A',
   freebuff: 'F',
   mimo: 'M',
+  shell: '>_',
 }
 const agentLabels = {
+  omp: 'OMP',
+  cursor: 'Cursor',
+  grok: 'Grok',
   claude: 'Claude Code',
   codex: 'Codex',
   copilot: 'GitHub Copilot',
   opencode: 'OpenCode',
-  shell: 'Shell',
-  antigravity: 'Antigravity',
   freebuff: 'Freebuff',
   mimo: 'Mimo',
+  shell: 'Shell',
 }
 const knownAgents = new Set(Object.keys(agentLetters))
 const groupColorNames = {

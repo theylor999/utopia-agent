@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Alethe",
+  "productName": "Utopia Agent",
   "version": "1.6.0",
-  "identifier": "com.kc1t.alethe",
+  "identifier": "com.theylor.utopiaagent",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1422",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Alethe",
+        "title": "Utopia Agent",
         "width": 1280,
         "height": 800,
         "minWidth": 800,
@@ -48,11 +48,11 @@
   },
   "bundle": {
     "active": true,
-    "createUpdaterArtifacts": true,
+    "createUpdaterArtifacts": false,
     "targets": "all",
-    "publisher": "Kauã Miguel",
-    "shortDescription": "Terminal multiplexer GUI",
-    "longDescription": "Alethe is a Windows-first terminal multiplexer GUI: projects on the left, split-pane terminals on the right, with sub-tabs per pane.",
+    "publisher": "theylor999",
+    "shortDescription": "Multi-agent coding workspace",
+    "longDescription": "Utopia Agent is a multi-agent coding workspace for Oh My Pi, Grok Build, Claude Code, and shell sessions.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -71,13 +71,5 @@
       }
     }
   },
-  "plugins": {
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDdERjQwQTVDMDJFMDY3QzQKUldURVorQUNYQXIwZlpTZjNhc1dNamhiSERnalducjJCdDdiR0NFYy8ydnJqcU52VG05cFNqcHUK",
-      "endpoints": ["https://github.com/Kc1t/alethe-agents/releases/latest/download/latest.json"],
-      "windows": {
-        "installMode": "passive"
-      }
-    }
-  }
+  "plugins": {}
 }

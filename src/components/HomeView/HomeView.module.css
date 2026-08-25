@@ -955,10 +955,20 @@
   background: color-mix(in srgb, var(--agent-codex) 14%, transparent);
   border-color: color-mix(in srgb, var(--agent-codex) 28%, transparent);
 }
-.notifAntigravity {
-  color: var(--agent-antigravity);
-  background: color-mix(in srgb, var(--agent-antigravity) 14%, transparent);
-  border-color: color-mix(in srgb, var(--agent-antigravity) 28%, transparent);
+.notifOmp {
+  color: var(--agent-omp);
+  background: color-mix(in srgb, var(--agent-omp) 14%, transparent);
+  border-color: color-mix(in srgb, var(--agent-omp) 28%, transparent);
+}
+.notifCursor {
+  color: var(--agent-cursor);
+  background: color-mix(in srgb, var(--agent-cursor) 14%, transparent);
+  border-color: color-mix(in srgb, var(--agent-cursor) 28%, transparent);
+}
+.notifGrok {
+  color: var(--agent-grok);
+  background: color-mix(in srgb, var(--agent-grok) 14%, transparent);
+  border-color: color-mix(in srgb, var(--agent-grok) 28%, transparent);
 }
 .notifShell {
   color: var(--agent-shell);
@@ -1115,11 +1125,6 @@
   color: var(--agent-codex);
   background: color-mix(in srgb, var(--agent-codex) 14%, transparent);
   border-color: color-mix(in srgb, var(--agent-codex) 28%, transparent);
-}
-.badgeAntigravity {
-  color: var(--agent-antigravity);
-  background: var(--agent-antigravity-soft);
-  border-color: color-mix(in srgb, var(--agent-antigravity) 28%, transparent);
 }
 .badgeActivity {
   color: var(--status-working);

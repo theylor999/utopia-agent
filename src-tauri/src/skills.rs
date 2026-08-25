@@ -17,7 +17,7 @@ const ROOTS: [(&str, &[&str]); 5] = [
     ("claude", &[".claude", "skills"]),
     ("codex", &[".codex", "skills"]),
     ("opencode", &[".config", "opencode", "skill"]),
-    ("antigravity", &[".gemini", "skills"]),
+    ("omp", &[".omp", "skills"]),
     ("shared", &[".agents", "skills"]),
 ];
 

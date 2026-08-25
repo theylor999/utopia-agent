@@ -8,6 +8,7 @@ import {
   FolderOpen,
   FolderPlus,
   Github,
+  GitBranch,
   Layers,
   PackageOpen,
   Send,
@@ -25,7 +26,13 @@ import { getFirstName, getProfileImageUrl, getProfileInitial } from '../../lib/p
 import { openInBrowser } from '../../lib/tauri'
 import { getProjectDefaultCwd, useProjectsStore } from '../../stores/projectsStore'
 import { useUiStore } from '../../stores/uiStore'
-import { UNRESTRICTED_FLAG, type AgentType, type Project } from '../../lib/types'
+import {
+  AGENT_TYPE_LABELS,
+  ALL_AGENT_TYPES,
+  UNRESTRICTED_FLAG,
+  type AgentType,
+  type Project,
+} from '../../lib/types'
 import { AgentIcon } from '../icons/AgentIcons'
 import { AsciiEffect } from '../ui/ascii-effect'
 import { Avatar } from '../ui/Avatar'
@@ -40,16 +47,10 @@ import styles from './HomeView.module.css'
 
 const RECENT_PROJECTS_LIMIT = 6
 const NOTIFICATIONS_LIMIT = 5
-const REPOSITORY_URL = 'https://github.com/Kc1t/alethe-agents'
+const REPOSITORY_URL = 'https://github.com/theylor999/utopia-agent'
 const ISSUES_URL = `${REPOSITORY_URL}/issues`
 const RELEASES_URL = `${REPOSITORY_URL}/releases`
-const QUICK_AGENTS: Array<{ type: AgentType; label: string }> = [
-  { type: 'claude', label: 'Claude' },
-  { type: 'codex', label: 'Codex' },
-  { type: 'copilot', label: 'GitHub Copilot' },
-  { type: 'antigravity', label: 'Antigravity' },
-  { type: 'opencode', label: 'OpenCode' },
-]
+const QUICK_AGENTS: AgentType[] = [...ALL_AGENT_TYPES]
 
 function compactWorkspacePath(path: string): string {
   const homeCollapsed = path.replace(/^[A-Za-z]:[\\/]Users[\\/][^\\/]+/i, '~')
@@ -60,14 +61,12 @@ function compactWorkspacePath(path: string): string {
 }
 
 const NOTIF_AGENT_CLASS: Record<AgentType, string> = {
+  omp: styles.notifOmp,
+  grok: styles.notifGrok,
   claude: styles.notifClaude,
-  codex: styles.notifCodex,
-  copilot: styles.notifCodex,
-  antigravity: styles.notifAntigravity,
   shell: styles.notifShell,
-  opencode: styles.notifOpencode,
-  freebuff: styles.notifFreebuff,
-  mimo: styles.notifMimo,
+  codex: styles.notifClaude,
+  opencode: styles.notifGrok,
 }
 
 export function HomeView() {
@@ -177,12 +176,12 @@ export function HomeView() {
   const firstNameLower = firstName.toLowerCase()
   const avatarUrl = getProfileImageUrl(preferences)
   const initial = getProfileInitial(displayName)
-  const quickAgents = QUICK_AGENTS.filter((agent) => preferences.enabledAgents[agent.type])
+  const quickAgents = QUICK_AGENTS.filter((agent) => preferences.enabledAgents[agent])
   const fallbackQuickTarget = recentProjects[0] ?? projects[0] ?? null
   const [quickProjectId, setQuickProjectId] = useState(() => fallbackQuickTarget?.id ?? '')
   const quickTarget =
     projects.find((project) => project.id === quickProjectId) ?? fallbackQuickTarget
-  const [quickAgentRaw, setQuickAgent] = useState<AgentType>('claude')
+  const [quickAgentRaw, setQuickAgent] = useState<AgentType>('omp')
   const quickAgentMenuRef = useRef<HTMLDetailsElement>(null)
   const quickModeMenuRef = useRef<HTMLDetailsElement>(null)
   const [quickUnrestricted, setQuickUnrestricted] = useState(false)
@@ -190,11 +189,10 @@ export function HomeView() {
   const [quickCwd, setQuickCwd] = useState('')
                                                                                 
                                                                            
-  const quickAgent = quickAgents.some((agent) => agent.type === quickAgentRaw)
+  const quickAgent = quickAgents.includes(quickAgentRaw)
     ? quickAgentRaw
-    : (quickAgents[0]?.type ?? 'claude')
-  const quickAgentLabel =
-    QUICK_AGENTS.find((agent) => agent.type === quickAgent)?.label ?? quickAgent
+    : (quickAgents[0] ?? 'omp')
+  const quickAgentLabel = AGENT_TYPE_LABELS[quickAgent]
 
   useEffect(() => {
     if (quickTarget && quickTarget.id !== quickProjectId) setQuickProjectId(quickTarget.id)
@@ -215,7 +213,7 @@ export function HomeView() {
     if (!quickTarget || !prompt) return
     const cwd = quickCwd.trim() || getProjectDefaultCwd(quickTarget, projects)
     const flag = quickUnrestricted ? UNRESTRICTED_FLAG[quickAgent] : null
-    const label = QUICK_AGENTS.find((agent) => agent.type === quickAgent)?.label ?? quickAgent
+    const label = AGENT_TYPE_LABELS[quickAgent]
     const terminal = await createAgentTerminal(quickTarget.id, {
       name: label,
       cwd,
@@ -267,7 +265,7 @@ export function HomeView() {
           mouseStrength={16}
           scale={1}
           fit="cover"
-          colors={['var(--fg-muted)', 'var(--fg)']}
+          colors={['var(--agent-omp)', 'var(--accent)']}
           backgroundColor="transparent"
         />
       </div>
@@ -334,23 +332,26 @@ export function HomeView() {
                 <ChevronDown size={10} />
               </summary>
               <div className={styles.quickAgentOptions}>
-                {quickAgents.map((agent) => (
-                  <button
-                    key={agent.type}
-                    type="button"
-                    className={quickAgent === agent.type ? styles.quickAgentActive : ''}
-                    title={agent.label}
-                    aria-label={agent.label}
-                    onClick={() => {
-                      setQuickAgent(agent.type)
-                      quickAgentMenuRef.current?.removeAttribute('open')
-                    }}
-                  >
-                    <AgentIcon type={agent.type} size={19} theme={preferences.uiTheme} />
-                    <span>{agent.label}</span>
-                    {quickAgent === agent.type ? <CheckCircle2 size={13} /> : null}
-                  </button>
-                ))}
+                {quickAgents.map((agent) => {
+                  const label = AGENT_TYPE_LABELS[agent]
+                  return (
+                    <button
+                      key={agent}
+                      type="button"
+                      className={quickAgent === agent ? styles.quickAgentActive : ''}
+                      title={label}
+                      aria-label={label}
+                      onClick={() => {
+                        setQuickAgent(agent)
+                        quickAgentMenuRef.current?.removeAttribute('open')
+                      }}
+                    >
+                      <AgentIcon type={agent} size={19} theme={preferences.uiTheme} />
+                      <span>{label}</span>
+                      {quickAgent === agent ? <CheckCircle2 size={13} /> : null}
+                    </button>
+                  )
+                })}
               </div>
             </details>
             <button
@@ -433,6 +434,14 @@ export function HomeView() {
             <button
               type="button"
               className={styles.heroSecondaryAction}
+              onClick={() => openModal('newFeature')}
+            >
+              <GitBranch size={14} />
+              {t('home.newFeature')}
+            </button>
+            <button
+              type="button"
+              className={styles.heroSecondaryAction}
               onClick={() => openModal('newProject')}
             >
               <FolderPlus size={14} />
@@ -493,6 +502,11 @@ export function HomeView() {
               label={t('home.newTerminal')}
               shortcut={formatShortcut('Ctrl+T')}
               onClick={handleNewTerminal}
+            />
+            <ActionCard
+              icon={<GitBranch size={14} />}
+              label={t('home.newFeature')}
+              onClick={() => openModal('newFeature')}
             />
             <ActionCard
               icon={<FolderPlus size={14} />}
@@ -665,7 +679,7 @@ function ActionCard({
 }: {
   icon: React.ReactNode
   label: string
-  shortcut: string
+  shortcut?: string
   onClick: () => void
 }) {
   return (
@@ -673,7 +687,7 @@ function ActionCard({
       <span className={styles.actionIcon}>{icon}</span>
       <span className={styles.actionLabel}>{label}</span>
       <span className={styles.actionSpacer} />
-      <kbd className={styles.kbd}>{shortcut}</kbd>
+      {shortcut ? <kbd className={styles.kbd}>{shortcut}</kbd> : null}
     </button>
   )
 }

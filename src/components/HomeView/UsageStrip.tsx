@@ -2,11 +2,10 @@ import { Clock, RefreshCw } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { getCachedClaudeUsage } from '../../lib/claudeUsageCache'
 import { getCachedCodexUsage } from '../../lib/codexUsageCache'
-import { getCachedAntigravityUsage } from '../../lib/antigravityUsageCache'
 import { translate, getLocale, useT } from '../../lib/i18n'
-import type { AntigravityUsage, ClaudeUsage, CodexUsage } from '../../lib/tauri'
+import type { ClaudeUsage, CodexUsage } from '../../lib/tauri'
 import { useUiStore } from '../../stores/uiStore'
-import { AntigravityIcon, ClaudeIcon, CodexIcon } from '../icons/AgentIcons'
+import { ClaudeIcon, CodexIcon } from '../icons/AgentIcons'
 import { ActivityGraph } from './ActivityGraph'
 import styles from './HomeView.module.css'
 
@@ -392,118 +391,15 @@ function CodexCard({ usage }: { usage: CodexUsage | null }) {
   )
 }
 
-function AntigravityCard({ usage }: { usage: AntigravityUsage | null }) {
-  const t = useT()
-  const setAntigravityUsage = useUiStore((s) => s.setAntigravityUsage)
-  const accent = 'var(--agent-antigravity)'
-
-  const refresh = async () => {
-    try {
-      setAntigravityUsage(await getCachedAntigravityUsage(true))
-    } catch {
-      setAntigravityUsage(null)
-    }
-  }
-
-  const hasData = usage?.status === 'ready' && usage.buckets.length > 0
-  const head = (
-    <CardHead
-      badgeClass={styles.badgeAntigravity}
-      icon={<AntigravityIcon size={16} />}
-      name="antigravity"
-      plan={hasData ? `${usage.buckets.length} ${t('widget.quotaBucketsShort')}` : undefined}
-      accent={accent}
-      hasData={hasData}
-      onRefresh={refresh}
-    />
-  )
-
-  if (!usage || !hasData) {
-    const emptyTitle =
-      usage?.status === 'no_cli'
-        ? t('widget.antigravityNotInstalled')
-        : usage?.status === 'no_auth'
-          ? t('widget.antigravityNotSignedIn')
-          : t('widget.usageUnavailable')
-    return (
-      <div className={styles.usageCard}>
-        {head}
-        <div className={styles.usageEmpty}>
-          <span className={styles.usageEmptyTitle}>{emptyTitle}</span>
-          <span className={styles.usageEmptyHint}>{t('widget.antigravityUsageHint')}</span>
-        </div>
-      </div>
-    )
-  }
-
-  const primary = usage.buckets[0]
-  return (
-    <div className={styles.usageCard}>
-      {head}
-      <Hero
-        percent={usage.used_percent}
-        reset={formatResetTime(primary.resets_at)}
-        critical={usage.rate_limited || usage.used_percent >= 80}
-        sub={
-          usage.rate_limited
-            ? t('widget.limitReached')
-            : t('widget.mostUsedBucket', { name: primary.label })
-        }
-      />
-      <div className={styles.cardBody}>
-        <div className={styles.meterList}>
-          {usage.buckets.map((bucket) => (
-            <Meter
-              key={`${bucket.label}:${bucket.resets_at}`}
-              label={bucket.label}
-              reset={formatResetTime(bucket.resets_at)}
-              value={`${pctNum(bucket.used_percent)}%`}
-              util={bucket.used_percent}
-              base={accent}
-            />
-          ))}
-        </div>
-        <div className={styles.statGrid}>
-          <StatCell
-            label={t('widget.statusLabel')}
-            value={usage.rate_limited ? t('widget.statusLimited') : t('widget.statusOk')}
-            crit={usage.rate_limited}
-          />
-          <StatCell
-            label={t('widget.remainingLabel')}
-            value={`${pctNum(primary.remaining_percent)}%`}
-            crit={primary.remaining_percent <= 1}
-          />
-          <StatCell
-            label={t('widget.modelsLabel')}
-            value={String(usage.buckets.reduce((sum, bucket) => sum + bucket.models.length, 0))}
-          />
-          <StatCell
-            label={t('widget.peakLabel')}
-            value={`${pctNum(usage.used_percent)}%`}
-            crit={usage.used_percent >= 80}
-          />
-        </div>
-      </div>
-      <CardFoot
-        accent={accent}
-        left={usage.buckets.map((bucket) => bucket.label).join(' · ')}
-        right={t('widget.quotaBuckets', { n: usage.buckets.length })}
-      />
-    </div>
-  )
-}
 
 export function UsageStrip({ showActivity = true }: { showActivity?: boolean }) {
   const claudeUsage = useUiStore((s) => s.claudeUsage)
   const codexUsage = useUiStore((s) => s.codexUsage)
-  const antigravityUsage = useUiStore((s) => s.antigravityUsage)
 
   return (
     <div className={`${styles.usageStrip} ${showActivity ? '' : styles.usageStripTwo}`}>
       <ClaudeCard usage={claudeUsage} />
       <CodexCard usage={codexUsage} />
-      {!showActivity ? <AntigravityCard usage={antigravityUsage} /> : null}
       {showActivity ? <ActivityGraph /> : null}
     </div>
   )

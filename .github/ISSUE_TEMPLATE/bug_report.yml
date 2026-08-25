@@ -29,7 +29,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Alethe version
+      label: Utopia Agent version
       description: Shown in the app menu, or the release tag you installed.
       placeholder: v1.3.0
     validations:
@@ -59,7 +59,7 @@ body:
     attributes:
       label: Agent or shell involved
       description: If the bug involves a terminal session.
-      placeholder: Claude Code · Codex · OpenCode · pwsh · zsh
+      placeholder: Oh My Pi · Grok Build · Claude Code · pwsh · zsh
     validations:
       required: false
 
@@ -68,7 +68,7 @@ body:
     attributes:
       label: Logs or screenshots
       description: |
-        Screenshots help a lot for UI bugs. Local data lives in `%APPDATA%/Alethe/`
+        Screenshots help a lot for UI bugs. Local data lives in `%LOCALAPPDATA%/Utopia Agent/`
         (Windows) — `spawn.log` is often the relevant one for terminal issues.
       render: text
     validations:

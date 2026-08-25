@@ -2,33 +2,33 @@
 
 <br />
 <div align="center">
-  <a href="https://github.com/Kc1t/alethe-agents">
-    <img src="./src/assets/theme-icons/elite-indigo.png" alt="Alethe Logo" width="160">
+  <a href="https://github.com/theylor999/utopia-agent">
+    <img src="./src/assets/utopia-hero.png" alt="Utopia Agent" width="220">
   </a>
 
-  <h1 align="center">Alethe</h1>
+  <h1 align="center">Utopia Agent</h1>
 
   <p align="center">
     <b>The multi-agent coding workspace.</b>
     <br />
-    Run Claude Code, Codex, Copilot and your shells side by side — in one local-first desktop app.
+    Run Oh My Pi, Grok Build and Claude Code side by side — in one local-first desktop app.
   </p>
 
   <p align="center">
-    <a href="https://github.com/Kc1t/alethe-agents/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Kc1t/alethe-agents/ci.yml?branch=main&label=ci&style=flat-square"></a>
-    <a href="https://github.com/Kc1t/alethe-agents/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/Kc1t/alethe-agents?style=flat-square"></a>
-    <a href="https://github.com/Kc1t/alethe-agents/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/Kc1t/alethe-agents?style=flat-square"></a>
-    <a href="https://github.com/Kc1t/alethe-agents/graphs/contributors"><img alt="Contributors" src="https://img.shields.io/github/contributors/Kc1t/alethe-agents?style=flat-square"></a>
-    <a href="https://github.com/Kc1t/alethe-agents/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/Kc1t/alethe-agents?style=flat-square"></a>
-    <a href="https://github.com/Kc1t/alethe-agents/issues"><img alt="Open issues" src="https://img.shields.io/github/issues/Kc1t/alethe-agents?style=flat-square"></a>
+    <a href="https://github.com/theylor999/utopia-agent/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/theylor999/utopia-agent/ci.yml?branch=main&label=ci&style=flat-square"></a>
+    <a href="https://github.com/theylor999/utopia-agent/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/theylor999/utopia-agent?style=flat-square"></a>
+    <a href="https://github.com/theylor999/utopia-agent/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/theylor999/utopia-agent?style=flat-square"></a>
+    <a href="https://github.com/theylor999/utopia-agent/graphs/contributors"><img alt="Contributors" src="https://img.shields.io/github/contributors/theylor999/utopia-agent?style=flat-square"></a>
+    <a href="https://github.com/theylor999/utopia-agent/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/theylor999/utopia-agent?style=flat-square"></a>
+    <a href="https://github.com/theylor999/utopia-agent/issues"><img alt="Open issues" src="https://img.shields.io/github/issues/theylor999/utopia-agent?style=flat-square"></a>
   </p>
 
   <p align="center">
-    <a href="https://github.com/Kc1t/alethe-agents/releases">Download</a>
+    <a href="https://github.com/theylor999/utopia-agent/releases">Download</a>
     ·
-    <a href="https://github.com/Kc1t/alethe-agents/issues/new?labels=bug">Report Bug</a>
+    <a href="https://github.com/theylor999/utopia-agent/issues/new?labels=bug">Report Bug</a>
     ·
-    <a href="https://github.com/Kc1t/alethe-agents/issues/new?labels=enhancement">Request Feature</a>
+    <a href="https://github.com/theylor999/utopia-agent/issues/new?labels=enhancement">Request Feature</a>
     ·
     <a href="./SECURITY.md">Security</a>
     ·
@@ -39,28 +39,23 @@
 </div>
 
 > [!IMPORTANT]
-> Alethe is an early public release. The desktop app is free, open source, and local-first, not
-> local-only: update checks and provider usage polling are on by default, while other network features
-> are optional or action-triggered. Manual GitHub Gist Sync is already available; first-party hosted
-> sync or cloud backup may be offered separately later. See the
-> [privacy and data-flow guide](./docs/PRIVACY.md).
+> Utopia Agent is a local-first desktop workspace. Update checks are off in this fork until a signed release pipeline exists. Provider usage polling can still contact Claude. Manual GitHub Gist Sync is already available. See [privacy and data-flow](./docs/PRIVACY.md).
 
 <div align="center">
-  <img src="./docs/assets/alethe-preview.gif" alt="Alethe multi-agent coding workspace preview" width="760">
+  <img src="./src/assets/utopia-hero.png" alt="Utopia Agent mark" width="420">
 </div>
 
-## What Alethe Is
+## What Utopia Agent Is
 
-One agent in one terminal is easy. Five agents across three repositories is the actual job — and
-that is where terminal tabs stop working: sessions get lost, MCP servers drift out of sync between
-agents, and nobody knows which agent is doing what, where.
+Utopia Agent is a desktop workspace for running coding agents in real terminals, with projects,
+splits, MCP, and Git in one window.
 
-**Alethe is a desktop workspace built for that.** Every agent runs in a real PTY inside a persistent
-project layout, keeps its own session and history, and stays alive when you rearrange the UI. On top
-of that, Alethe manages the things agents share: their CLIs, their MCP servers, their skills, and the
-conversations you move between them.
+This repository is a maintained fork of [Alethe](https://github.com/Kc1t/alethe-agents) by Kauã Miguel,
+released under AGPL-3.0-or-later. The product name, icon, default providers, and GitHub destination
+are specific to this fork.
 
-Cross-platform (Windows, macOS, Linux), local-first, built with Tauri, Rust, React, and `xterm.js`.
+Cross-platform (Windows, macOS, Linux), built with Tauri, Rust, React, and `xterm.js`.
+
 “Local-first” describes workspace persistence, not an internet-free guarantee; see
 [`docs/PRIVACY.md`](./docs/PRIVACY.md) for current network defaults, credentials, and retention.
 
@@ -94,19 +89,13 @@ Cross-platform (Windows, macOS, Linux), local-first, built with Tauri, Rust, Rea
 
 | Agent | CLI | |
 |---|---|---|
+| **OMP** | `omp` | Primary provider |
+| **Grok Build** | `grok` | |
 | **Claude Code** | `claude` | Session resume, usage cards, local history |
-| **Codex** | `codex` | Session resume, usage cards |
-| **GitHub Copilot CLI** | `copilot` | |
-| **Antigravity** | `agy` | Usage cards |
-| **OpenCode** | `opencode` | Session resume |
-| **Mimo** | `mimo` | |
-| **Freebuff** | `freebuff` | |
 | **Shell** | pwsh / bash / zsh | The plain terminal, same pane model |
 
-Missing CLIs can be installed, updated, and uninstalled from inside Alethe — it probes the machine
-for Node, npm, WinGet, Scoop, and Chocolatey and offers only the methods that actually work there,
-preferring each vendor's official installer. Already-installed CLIs are discovered across PATH,
-registry, npm/pnpm/Volta/fnm/nvm/Bun/Cargo/Scoop/Chocolatey, and can be pointed at a custom path.
+Missing CLIs can be installed, updated, and uninstalled from inside Utopia Agent. Already-installed
+CLIs are discovered across PATH and common Windows install locations.
 
 ## What It Does
 
@@ -131,9 +120,9 @@ registry, npm/pnpm/Volta/fnm/nvm/Bun/Cargo/Scoop/Chocolatey, and can be pointed 
 **Manage what the agents share**
 
 - **MCP tab**: every MCP server configured on the machine, grouped by server and showing which agents
-  have it — read from Claude Code, Codex, OpenCode, and Antigravity configs. Add, remove, copy a
-  server from one agent to another, search the official registry, and ask each agent to verify it can
-  really reach a server. Every write is backed up, re-parsed, and committed atomically.
+  have it — read from Claude Code, Codex, and OpenCode configs. Add, remove, copy a server from one
+  agent to another, search the official registry, and ask each agent to verify it can really reach a
+  server. Every write is backed up, re-parsed, and committed atomically.
 - **Skills tab**: the skills installed for each agent, with links and shared stores resolved so a
   shared skill shows up once.
 - **Graphify**: a code graph of the project, served to the agents as an MCP server.

@@ -161,6 +161,18 @@ pub fn find_windows_cli_launcher(command: &str) -> Option<PathBuf> {
     Some(resolved)
 }
 
+fn windows_launcher_extensions(command: &str) -> &'static [&'static str] {
+    const STANDARD: &[&str] = &["cmd", "exe", "bat", "ps1"];
+    const CURSOR_WRAPPER: &[&str] = &["cmd", "bat", "ps1"];
+
+    // Cursor.exe is the desktop editor. The command-line wrapper exposes `cursor agent`.
+    if command.eq_ignore_ascii_case("cursor") {
+        CURSOR_WRAPPER
+    } else {
+        STANDARD
+    }
+}
+
 fn resolve_cli_launcher(command: &str) -> Option<PathBuf> {
     #[cfg(not(windows))]
     {
@@ -197,19 +209,11 @@ fn resolve_cli_launcher(command: &str) -> Option<PathBuf> {
         dirs.extend(split_windows_path_expanded(&rebuilt_path()));
         dirs.extend(agent_search_dirs());
 
-        // exclusivamente `agy`. Nunca use o desktop como fallback para o CLI.
-        let candidates_to_try = match command {
-            "antigravity" | "agy" => vec!["agy"],
-            other => vec![other],
-        };
-
-        for cmd_name in candidates_to_try {
-            for dir in &dirs {
-                for extension in ["cmd", "exe", "bat", "ps1"] {
-                    let candidate = dir.join(format!("{cmd_name}.{extension}"));
-                    if candidate.is_file() {
-                        return Some(candidate);
-                    }
+        for dir in &dirs {
+            for extension in windows_launcher_extensions(command) {
+                let candidate = dir.join(format!("{command}.{extension}"));
+                if candidate.is_file() {
+                    return Some(candidate);
                 }
             }
         }
@@ -434,18 +438,16 @@ pub fn agent_search_dirs() -> Vec<PathBuf> {
         dirs.push(profile.join(".cargo").join("bin"));
         dirs.push(profile.join(".bun").join("bin"));
         dirs.push(profile.join("scoop").join("shims"));
+        dirs.push(profile.join(".grok").join("bin"));
+    }
+    if let Some(local_app_data) = env::var_os("LOCALAPPDATA").map(PathBuf::from) {
+        dirs.push(local_app_data.join("omp"));
         dirs.push(
-            profile
-                .join("AppData")
-                .join("Local")
-                .join("agy")
-                .join("bin"),
-        );
-        dirs.push(
-            profile
-                .join("AppData")
-                .join("Local")
-                .join("antigravity")
+            local_app_data
+                .join("Programs")
+                .join("cursor")
+                .join("resources")
+                .join("app")
                 .join("bin"),
         );
     }
@@ -705,53 +707,13 @@ fn discover_provider_models_inner(provider: String) -> Result<Vec<ModelOption>, 
     let mut models = Vec::new();
     let provider_lower = provider.to_lowercase();
 
-    let cmd_name = match provider_lower.as_str() {
-        "antigravity" | "agy" => "agy",
-        other => other,
-    };
+    let cmd_name = provider_lower.as_str();
 
     let bin_path = find_windows_cli_launcher(cmd_name)
         .map(|p| p.to_string_lossy().to_string())
         .unwrap_or_else(|| cmd_name.to_string());
 
     match provider_lower.as_str() {
-        "antigravity" | "agy" => {
-            if let Ok(output) = std::process::Command::new(&bin_path).arg("models").output() {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                for line in stdout.lines() {
-                    let trimmed = line.trim();
-                    let id = trimmed
-                        .split_whitespace()
-                        .next()
-                        .unwrap_or(trimmed)
-                        .to_string();
-                    if is_valid_model_id(&id) {
-                        models.push(ModelOption {
-                            label: format!("{id} (Antigravity agy)"),
-                            id,
-                        });
-                    }
-                }
-            }
-            if models.is_empty() {
-                models.push(ModelOption {
-                    id: "gemini-2.5-pro".into(),
-                    label: "Gemini 2.5 Pro (Google DeepMind)".into(),
-                });
-                models.push(ModelOption {
-                    id: "gemini-2.5-flash".into(),
-                    label: "Gemini 2.5 Flash (Google DeepMind)".into(),
-                });
-                models.push(ModelOption {
-                    id: "claude-3.7-sonnet".into(),
-                    label: "Claude 3.7 Sonnet (Anthropic)".into(),
-                });
-                models.push(ModelOption {
-                    id: "deepseek-r1".into(),
-                    label: "DeepSeek R1 (Reasoning)".into(),
-                });
-            }
-        }
         "opencode" => {
             if let Ok(output) = std::process::Command::new(&bin_path).arg("models").output() {
                 let stdout = String::from_utf8_lossy(&output.stdout);
@@ -947,6 +909,17 @@ mod tests {
         ] {
             assert!(!is_valid_model_id(id), "expected invalid model id: {id}");
         }
+    }
+
+    #[test]
+    fn launcher_extensions_keep_cursor_on_its_cli_wrapper() {
+        assert_eq!(
+            windows_launcher_extensions("cursor"),
+            &["cmd", "bat", "ps1"]
+        );
+        assert!(!windows_launcher_extensions("cursor").contains(&"exe"));
+        assert!(windows_launcher_extensions("omp").contains(&"exe"));
+        assert!(windows_launcher_extensions("grok").contains(&"exe"));
     }
 
     #[test]

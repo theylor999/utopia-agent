@@ -121,20 +121,16 @@ fn parse_opencode(stdout: &str) -> Vec<McpHealth> {
         .collect()
 }
 
-fn cli_for(agent: McpAgent) -> Option<(&'static str, Vec<&'static str>)> {
+fn cli_for(agent: McpAgent) -> (&'static str, Vec<&'static str>) {
     match agent {
-        McpAgent::Claude => Some(("claude", vec!["mcp", "list"])),
-        McpAgent::Codex => Some(("codex", vec!["mcp", "list", "--json"])),
-        McpAgent::Opencode => Some(("opencode", vec!["mcp", "list"])),
-        // `agy` has no mcp subcommand at all.
-        McpAgent::Antigravity => None,
+        McpAgent::Claude => ("claude", vec!["mcp", "list"]),
+        McpAgent::Codex => ("codex", vec!["mcp", "list", "--json"]),
+        McpAgent::Opencode => ("opencode", vec!["mcp", "list"]),
     }
 }
 
 fn probe(agent: McpAgent) -> Result<Vec<McpHealth>, String> {
-    let Some((binary, args)) = cli_for(agent) else {
-        return Err("unsupported_agent".to_string());
-    };
+    let (binary, args) = cli_for(agent);
     let launcher = crate::cli_resolver::find_windows_cli_launcher(binary)
         .ok_or_else(|| "cli_not_found".to_string())?;
 
@@ -150,7 +146,6 @@ fn probe(agent: McpAgent) -> Result<Vec<McpHealth>, String> {
         McpAgent::Claude => parse_claude(&stdout),
         McpAgent::Codex => parse_codex(&stdout),
         McpAgent::Opencode => parse_opencode(&stdout),
-        McpAgent::Antigravity => Vec::new(),
     })
 }
 
@@ -224,10 +219,6 @@ mod tests {
         assert_eq!(health[1].status, McpHealthStatus::Failed);
     }
 
-    #[test]
-    fn antigravity_has_no_probe() {
-        assert!(cli_for(McpAgent::Antigravity).is_none());
-    }
 
     #[test]
     fn health_payloads_carry_no_command_or_url() {

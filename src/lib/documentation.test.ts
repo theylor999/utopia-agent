@@ -70,7 +70,7 @@ describe('security and privacy documentation', () => {
     expect(readmeText).toContain(
       '“Local-first” describes workspace persistence, not an internet-free guarantee',
     )
-    expect(readmeText).toContain('update checks and provider usage polling are on by default')
+    expect(readmeText).toContain('Update checks are off in this fork until a signed release pipeline exists')
     expect(readmeText).toContain('Manual GitHub Gist Sync is already available')
     expect(readmeText).toContain('Redaction is best effort')
     expect(readmeText).toContain('unencrypted HTTP/WebSocket transport')

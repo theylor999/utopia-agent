@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 const ROOT = fileURLToPath(new URL('../..', import.meta.url))
 
 function realBinaryPath(): string {
-  const name = process.platform === 'win32' ? 'alethe.exe' : 'alethe'
+  const name = process.platform === 'win32' ? 'utopia-agent.exe' : 'utopia-agent'
   // target-e2e, not target/: an isolated build that never shares the binary or the
   // build lock with the owner's interactive `tauri dev` session (see
   // CARGO_TARGET_DIR in the `test:e2e:build` script in package.json).
@@ -15,7 +15,7 @@ function realBinaryPath(): string {
 
 /**
  * Isolates the data dir in a temporary folder, to guarantee ZERO contact with the
- * owner's real profile (`%LOCALAPPDATA%\Alethe` on Windows, `~/.local/share`
+ * owner's real profile (`%LOCALAPPDATA%\Utopia Agent` on Windows, `~/.local/share`
  * on Linux, etc.).
  *
  * REAL BUG CONFIRMED IN THIS SESSION (found by the owner, running live): the
@@ -24,12 +24,12 @@ function realBinaryPath(): string {
  * `%LOCALAPPDATA%` (the Local folder) — a DIFFERENT variable, never touched. The
  * isolation never actually worked on Windows: every e2e run opened
  * against the owner's real profile, with real projects/repositories. Confirmed
- * empirically (`%APPDATA%\Alethe` doesn't even exist; `%LOCALAPPDATA%\Alethe` is
- * where the real data lives).
+ * empirically (`%APPDATA%\Utopia Agent` doesn't even exist;
+ * `%LOCALAPPDATA%\Utopia Agent` is where the real data lives).
  *
- * Fix: uses `ALETHE_APP_DATA_DIR`, the explicit override that BOTH
+ * Fix: uses `UTOPIA_AGENT_APP_DATA_DIR`, the explicit override that BOTH
  * `resolve_tauri_data_root` (desktop) AND `resolve_standalone_data_root`
- * (`alethe-server`) check BEFORE any OS-specific resolution
+ * (`utopia-agent-server`) check BEFORE any OS-specific resolution
  * (`src-tauri/src/profiles.rs`) — doesn't depend on guessing which environment
  * variable the OS/Tauri actually consults on each platform. Keeps
  * `HOME`/`APPDATA`/`XDG_DATA_HOME` as reinforcement isolation (they never do
@@ -45,15 +45,15 @@ function realBinaryPath(): string {
  * arrives intact at the final spawn — `mergeOptions` does a simple spread, with no
  * whitelist), not through a wrapper.
  */
-export function prepareIsolatedLaunch(dataDir = mkdtempSync(join(tmpdir(), 'alethe-e2e-'))): {
+export function prepareIsolatedLaunch(dataDir = mkdtempSync(join(tmpdir(), 'utopia-agent-e2e-'))): {
   applicationPath: string
   dataDir: string
   env: Record<string, string>
   cleanup: () => void
 } {
   const env: Record<string, string> = {
-    ALETHE_E2E: '1',
-    ALETHE_APP_DATA_DIR: dataDir,
+    UTOPIA_AGENT_E2E: '1',
+    UTOPIA_AGENT_APP_DATA_DIR: dataDir,
     ...(process.platform === 'win32'
       ? { APPDATA: dataDir, LOCALAPPDATA: dataDir }
       : { HOME: dataDir, XDG_DATA_HOME: join(dataDir, '.local', 'share') }),
@@ -67,7 +67,7 @@ export function prepareIsolatedLaunch(dataDir = mkdtempSync(join(tmpdir(), 'alet
       // Only deletes the temporary folder. Killing the process is the
       // @wdio/tauri-service's responsibility (it owns the lifecycle of the app it
       // spawned itself) — a pkill by name/path here would risk hitting the
-      // owner's interactive `tauri dev` `target/debug/alethe`, which uses the
+      // owner's interactive `tauri dev` `target/debug/utopia-agent`, which uses the
       // SAME binary. Never worth that risk just for test cleanup.
       rmSync(dataDir, { recursive: true, force: true })
     },

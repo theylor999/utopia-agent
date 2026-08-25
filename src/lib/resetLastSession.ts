@@ -11,19 +11,11 @@
 
 import { getActiveSessions, saveSession } from './sessionResume'
 import { acquireSpawnSlot, releaseSpawnSlot } from './spawnQueue'
-import {
-  getPtyCwd,
-  restartPty,
-  snapshotAntigravitySessions,
-  snapshotClaudeSessions,
-  snapshotCodexSessions,
-  snapshotOpenCodeSessions,
-} from './tauri'
+import { getPtyCwd, restartPty, snapshotClaudeSessions } from './tauri'
 import type { AgentType } from './types'
 import { useProjectsStore } from '../stores/projectsStore'
 import { useTerminalsStore } from '../stores/terminalsStore'
 
-const RESUMABLE: AgentType[] = ['claude', 'codex', 'opencode', 'antigravity']
 
 export type ResetLastSessionResult = { resumed: number; total: number }
 
@@ -64,66 +56,22 @@ function pickSessionId(
   return pool.reduce((a, b) => (b.modified_at_ms > a.modified_at_ms ? b : a)).id
 }
 
-/** Acha o ID da conversa a retomar no disco para o cwd, por agente. */
+/** Finds the latest Claude conversation on disk for the working directory. */
 async function latestSessionId(
-  agent: AgentType,
   cwd: string,
   exclude: SessionExclude,
-  savedOpenCodeId?: string,
 ): Promise<string | null> {
   if (!cwd) return null
   try {
-    if (agent === 'codex') return pickSessionId(await snapshotCodexSessions(cwd), exclude)
-    if (agent === 'claude') return pickSessionId(await snapshotClaudeSessions(cwd), exclude)
-    if (agent === 'opencode') {
-                                                                          
-                                                         
-                                                                               
-                                                  
-      if (savedOpenCodeId) return savedOpenCodeId
-      const sessions = await snapshotOpenCodeSessions(cwd)
-      if (sessions.length > 0) {
-        return pickSessionId(sessions, exclude) ?? sessions[0].id
-      }
-      return null
-    }
-    if (agent === 'antigravity')
-      return pickSessionId(await snapshotAntigravitySessions(cwd), exclude)
+    return pickSessionId(await snapshotClaudeSessions(cwd), exclude)
   } catch {
     return null
   }
-  return null
 }
 
-                                                                             
-function buildResumeArgs(agent: AgentType, baseArgs: string[], sessionId: string | null): string[] {
-  if (agent === 'claude') {
-    // Tira qualquer --resume <id> / --continue antigos e reinjeta o novo.
-    const clean = stripFlagWithValue(baseArgs, '--resume').filter((a) => a !== '--continue')
-    return sessionId ? ['--resume', sessionId, ...clean] : ['--continue', ...clean]
-  }
-  if (agent === 'codex') {
-    // codex usa `resume <id>` / `resume --last` como subcomando (1º arg).
-    let clean = baseArgs
-    if (baseArgs[0] === 'resume') {
-      const rest = baseArgs.slice(1)
-      if (rest[0] && (rest[0] === '--last' || !rest[0].startsWith('-'))) rest.shift()
-      clean = rest
-    }
-    return sessionId ? ['resume', sessionId, ...clean] : ['resume', '--last', ...clean]
-  }
-  if (agent === 'antigravity') {
-    const clean = stripFlagWithValue(baseArgs, '--conversation').filter(
-      (a) => a !== '--continue' && a !== '-c',
-    )
-    return sessionId ? ['--conversation', sessionId, ...clean] : ['--continue', ...clean]
-  }
-                                                                          
-                            
-  const clean = stripFlagWithValue(baseArgs, '--session').filter(
-    (a) => a !== '--resume' && a !== '--continue',
-  )
-  return sessionId ? ['--session', sessionId, ...clean] : ['--continue', ...clean]
+function buildResumeArgs(baseArgs: string[], sessionId: string | null): string[] {
+  const clean = stripFlagWithValue(baseArgs, '--resume').filter((arg) => arg !== '--continue')
+  return sessionId ? ['--resume', sessionId, ...clean] : ['--continue', ...clean]
 }
 
 type ResumeTarget = {
@@ -131,7 +79,7 @@ type ResumeTarget = {
   terminalId: string
   tabId: string
   ptyId: string
-  agent: AgentType
+  agent: Extract<AgentType, 'claude'>
   cwd: string
   extraArgs: string[]
 }
@@ -144,7 +92,7 @@ function collectLivePanes(): ResumeTarget[] {
   for (const project of projects) {
     for (const terminal of project.terminals) {
       for (const tab of terminal.tabs) {
-        if (!RESUMABLE.includes(tab.type)) continue
+        if (tab.type !== 'claude') continue
         const ptyId = tab.ptyId
         if (!ptyId || !byPtyId[ptyId]?.alive) continue
         targets.push({
@@ -197,17 +145,11 @@ export async function resetLastSession(): Promise<ResetLastSessionResult> {
                                                                          
       const active = getActiveSessions()[target.ptyId]
       const exclude: SessionExclude = {
-        id:
-          target.agent === 'codex'
-            ? active?.codexSessionId
-            : target.agent === 'opencode'
-              ? active?.opencodeSessionId
-              : active?.claudeSessionId,
+        id: active?.claudeSessionId,
         before: active?.timestamp,
       }
-      const savedOpenCodeId = target.agent === 'opencode' ? active?.opencodeSessionId : undefined
-      const sessionId = await latestSessionId(target.agent, cwd, exclude, savedOpenCodeId)
-      const extraArgs = buildResumeArgs(target.agent, target.extraArgs, sessionId)
+      const sessionId = await latestSessionId(cwd, exclude)
+      const extraArgs = buildResumeArgs(target.extraArgs, sessionId)
 
                                                                         
       useTerminalsStore.getState().beginRestart(target.ptyId)
@@ -226,9 +168,7 @@ export async function resetLastSession(): Promise<ResetLastSessionResult> {
                                                                           
       saveSession(target.ptyId, {
         sessionId: target.ptyId,
-        claudeSessionId: target.agent === 'claude' ? (sessionId ?? undefined) : undefined,
-        codexSessionId: target.agent === 'codex' ? (sessionId ?? undefined) : undefined,
-        opencodeSessionId: target.agent === 'opencode' ? (sessionId ?? undefined) : undefined,
+        claudeSessionId: sessionId ?? undefined,
         cwd,
         agent: target.agent,
         timestamp: Date.now(),

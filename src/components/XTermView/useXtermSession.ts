@@ -52,7 +52,6 @@ import {
   readGsdChildSession,
   resizePty,
   setPtyVisible,
-  snapshotAntigravitySessions,
   snapshotClaudeSessions,
   snapshotCodexSessions,
   snapshotOpenCodeSessions,
@@ -834,7 +833,7 @@ export function useXtermSession(params: {
       }
     })
 
-    const RESUMABLE_AGENTS = ['claude', 'codex', 'opencode', 'antigravity']
+    const RESUMABLE_AGENTS = ['claude', 'codex', 'opencode']
 
     async function start() {
       try {
@@ -925,7 +924,6 @@ export function useXtermSession(params: {
           !trustSessionId &&
           (command === 'claude' ||
             command === 'codex' ||
-            command === 'antigravity' ||
             command === 'opencode') &&
           resumeId &&
           cwd
@@ -936,9 +934,7 @@ export function useXtermSession(params: {
                 ? await snapshotClaudeSessions(cwd)
                 : command === 'codex'
                   ? await snapshotCodexSessions(cwd)
-                  : command === 'antigravity'
-                    ? await snapshotAntigravitySessions(cwd)
-                    : await snapshotOpenCodeSessions(cwd)
+                  : await snapshotOpenCodeSessions(cwd)
             const notListed = !existing.some((session) => session.id === resumeId)
 
             if (notListed && command !== 'opencode') {
@@ -1070,13 +1066,11 @@ export function useXtermSession(params: {
           cwd && (!launch.sessionId || command === 'claude')
             ? command === 'codex'
               ? snapshotCodexSessions(cwd).catch(() => [])
-              : command === 'antigravity'
-                ? snapshotAntigravitySessions(cwd).catch(() => [])
-                : command === 'opencode'
-                  ? snapshotOpenCodeSessions(cwd).catch(() => [])
-                  : command === 'claude'
-                    ? snapshotClaudeSessions(cwd).catch(() => [])
-                    : null
+              : command === 'opencode'
+                ? snapshotOpenCodeSessions(cwd).catch(() => [])
+                : command === 'claude'
+                  ? snapshotClaudeSessions(cwd).catch(() => [])
+                  : null
             : null
 
         // Too many parallel PTY spawns can stall the app.
@@ -1141,17 +1135,13 @@ export function useXtermSession(params: {
             claudeSessionId: command === 'claude' ? launch.sessionId : undefined,
             codexSessionId: command === 'codex' ? launch.sessionId : undefined,
             opencodeSessionId: command === 'opencode' ? launch.sessionId : undefined,
-            antigravitySessionId: command === 'antigravity' ? launch.sessionId : undefined,
             cwd: cwd ?? '',
             agent: command,
             timestamp: Date.now(),
           })
 
           if (
-            (command === 'codex' ||
-              command === 'antigravity' ||
-              command === 'opencode' ||
-              command === 'claude') &&
+            (command === 'codex' || command === 'opencode' || command === 'claude') &&
             cwd &&
             discoveredSessionsBeforePromise
           ) {
@@ -1164,10 +1154,10 @@ export function useXtermSession(params: {
               let attempt = 0
               while (!disposed) {
                 const delayMs = attempt < 10 ? 3000 : 15000
-                if (command === 'codex' || command === 'claude') {
+                if (command === 'claude') {
                   await Promise.race([
                     new Promise((resolve) => setTimeout(resolve, delayMs)),
-                    waitForSessionHint(command),
+                    waitForSessionHint('claude'),
                   ])
                 } else {
                   await new Promise((resolve) => setTimeout(resolve, delayMs))
@@ -1176,11 +1166,9 @@ export function useXtermSession(params: {
                 const sessions =
                   command === 'codex'
                     ? await snapshotCodexSessions(cwd).catch(() => [])
-                    : command === 'antigravity'
-                      ? await snapshotAntigravitySessions(cwd).catch(() => [])
-                      : command === 'claude'
-                        ? await snapshotClaudeSessions(cwd).catch(() => [])
-                        : await snapshotOpenCodeSessions(cwd).catch(() => [])
+                    : command === 'claude'
+                      ? await snapshotClaudeSessions(cwd).catch(() => [])
+                      : await snapshotOpenCodeSessions(cwd).catch(() => [])
 
                 // equivalente no bloco de resume acima.
                 let filteredSessions = sessions
@@ -1200,7 +1188,6 @@ export function useXtermSession(params: {
                     sessionId: response.id,
                     claudeSessionId: command === 'claude' ? newSession.id : undefined,
                     codexSessionId: command === 'codex' ? newSession.id : undefined,
-                    antigravitySessionId: command === 'antigravity' ? newSession.id : undefined,
                     opencodeSessionId: command === 'opencode' ? newSession.id : undefined,
                     cwd: cwd ?? '',
                     agent: command,
@@ -1292,10 +1279,7 @@ export function useXtermSession(params: {
             return
           }
           const isAgent =
-            command === 'claude' ||
-            command === 'codex' ||
-            command === 'opencode' ||
-            command === 'antigravity'
+            command === 'claude' || command === 'codex' || command === 'opencode'
           const elapsed = Date.now() - spawnedAtRef.current
 
           if (

@@ -175,11 +175,8 @@ export async function waitForScrollbackStable(
   throw new Error(`waitForScrollbackStable: PTY ${id} never settled within ${timeoutMs}ms`)
 }
 
-/** Trust/permission dialog patterns seen live in this session
- *  (Antigravity: "Do you trust the contents of this project?") — they block
- *  the CLI until someone answers. Deliberately broad heuristic (several
- *  agent CLIs have variations of this same type of prompt on their first
- *  run in a new folder). */
+/** Trust/permission dialogs block an agent CLI until someone answers. The deliberately broad
+ * heuristic covers variations shown by several CLIs on their first run in a new folder. */
 const TRUST_OR_PERMISSION_PATTERNS = [
   /do you trust/i,
   /trust the contents/i,

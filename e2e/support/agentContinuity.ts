@@ -42,10 +42,9 @@ export async function verifyAgentSessionContinuity(
 ): Promise<ContinuityResult> {
   const timeoutMs = opts.timeoutMs ?? 120_000
 
-  // Defensive pre-check: answers any trust/permission dialog
-  // (seen live in Antigravity — "Do you trust the contents of
-  // this project?") BEFORE sending any work prompt. The actual prompt
-  // delivery (`sendOpenCodePrompt`, below) already reuses the app's real
+  // Defensive pre-check: answers any trust/permission dialog before sending a work prompt. Some
+  // agent CLIs show this screen before their prompt box.
+  // Prompt delivery (`sendOpenCodePrompt`, below) already reuses the app's real
   // typing/confirmation logic (`agentPromptDelivery.ts`), which
   // already tolerates the CLI still loading on its own — this here only covers the
   // screen BEFORE the prompt box, which that logic doesn't know about.

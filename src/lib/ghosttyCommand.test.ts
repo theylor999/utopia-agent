@@ -9,24 +9,21 @@ describe('buildGhosttyCommand', () => {
   })
 
   it('agente vira a linha de comando', () => {
+    expect(buildGhosttyCommand('omp')).toBe('omp')
+    expect(buildGhosttyCommand('grok')).toBe('grok')
     expect(buildGhosttyCommand('claude')).toBe('claude')
-    expect(buildGhosttyCommand('codex')).toBe('codex')
-    expect(buildGhosttyCommand('opencode')).toBe('opencode')
-    expect(buildGhosttyCommand('antigravity')).toBe('agy')
   })
 
   it('inclui extraArgs simples sem aspas', () => {
     expect(buildGhosttyCommand('claude', ['--dangerously-skip-permissions'])).toBe(
       'claude --dangerously-skip-permissions',
     )
-    expect(buildGhosttyCommand('antigravity', ['--dangerously-skip-permissions'])).toBe(
-      'agy --dangerously-skip-permissions',
-    )
+    expect(buildGhosttyCommand('grok', ['--model', 'fast'])).toBe('grok --model fast')
   })
 
   it('cita args com espaços ou caracteres perigosos', () => {
-    expect(buildGhosttyCommand('codex', ['--prompt', 'hello world'])).toBe(
-      "codex --prompt 'hello world'",
+    expect(buildGhosttyCommand('omp', ['--prompt', 'hello world'])).toBe(
+      "omp --prompt 'hello world'",
     )
   })
 

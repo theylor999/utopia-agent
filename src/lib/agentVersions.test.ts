@@ -3,14 +3,13 @@ import { describe, expect, it } from 'vitest'
 import { isOutdated, npmPackageFor } from './agentVersions'
 
 describe('npmPackageFor', () => {
-  it('reads the package out of the documented install command', () => {
-    expect(npmPackageFor('freebuff')).toBe('freebuff')
-    expect(npmPackageFor('mimo')).toBe('@mimo-ai/cli')
+  it('reads the Claude package out of its documented install command', () => {
     expect(npmPackageFor('claude')).toBe('@anthropic-ai/claude-code')
   })
 
-  it('returns nothing for agents that ship no npm installer', () => {
-    expect(npmPackageFor('antigravity')).toBeUndefined()
+  it('returns nothing for current agents that ship no npm installer', () => {
+    expect(npmPackageFor('omp')).toBeUndefined()
+    expect(npmPackageFor('grok')).toBeUndefined()
     expect(npmPackageFor('shell')).toBeUndefined()
   })
 })

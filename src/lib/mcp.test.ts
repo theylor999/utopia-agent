@@ -39,7 +39,6 @@ function record(agent: McpAgent, name: string, enabled = true): McpServerRecord 
     scope: 'global',
     sourceKind: 'user',
     sourcePath: `C:/${agent}/config`,
-    managedByImport: null,
   }
 }
 
@@ -70,51 +69,24 @@ function snapshot(
 }
 
 describe('groupServersByName', () => {
-  it('merges the same server across agents and reports the gaps', () => {
+  it('groups Claude servers by name without cross-provider gaps', () => {
     const groups = groupServersByName([
-      snapshot('claude', [record('claude', 'figma')]),
-      snapshot('codex', [record('codex', 'figma'), record('codex', 'swarm')]),
-      snapshot('opencode', []),
-      snapshot('antigravity', []),
+      snapshot('claude', [record('claude', 'figma'), record('claude', 'swarm')]),
     ])
 
     expect(groups.map((group) => group.name)).toEqual(['figma', 'swarm'])
-    const figma = groups[0]
-    expect(figma.agents).toEqual(['claude', 'codex'])
-    expect(figma.missingAgents).toEqual(['opencode', 'antigravity'])
+    expect(groups[0].agents).toEqual(['claude'])
+    expect(groups[0].missingAgents).toEqual([])
   })
 
-  it('does not report a gap for an agent whose config could not be read', () => {
+  it('flags a disabled Claude server', () => {
     const groups = groupServersByName([
-      snapshot('claude', [record('claude', 'figma')]),
-      snapshot('codex', [], {
-        sources: [source('codex', { parseError: 'unparsable:toml line 4' })],
-      }),
-      snapshot('opencode', [], { sources: [] }),
-      snapshot('antigravity', []),
-    ])
-
-    expect(groups[0].missingAgents).toEqual(['antigravity'])
-  })
-
-  it('treats an agent whose config file simply does not exist as a real gap', () => {
-    const groups = groupServersByName([
-      snapshot('claude', [record('claude', 'figma')]),
-      snapshot('codex', [], { sources: [source('codex', { exists: false })] }),
-    ])
-
-    expect(groups[0].missingAgents).toEqual(['codex'])
-  })
-
-  it('flags a group where any agent has the server disabled', () => {
-    const groups = groupServersByName([
-      snapshot('claude', [record('claude', 'figma')]),
-      snapshot('codex', [record('codex', 'figma', false)]),
+      snapshot('claude', [record('claude', 'figma', false)]),
     ])
     expect(groups[0].hasDisabled).toBe(true)
   })
 
-  it('returns nothing when no agent has a server', () => {
+  it('returns nothing when Claude has no servers', () => {
     expect(groupServersByName([snapshot('claude', [])])).toEqual([])
     expect(countServers([snapshot('claude', [])])).toBe(0)
   })
@@ -149,7 +121,7 @@ describe('parsePastedServer', () => {
     })
   })
 
-  it('reads an OpenCode block, splitting the packed command and its interpolation', () => {
+  it('reads a packed command block and its environment interpolation', () => {
     const result = parsePastedServer(
       '{"mcp":{"swarm":{"type":"local","command":["node","a.js"],"environment":{"Q":"{env:Q}","M":"prod"}}}}',
     )
@@ -199,7 +171,7 @@ describe('parsePastedServer', () => {
     })
   })
 
-  it('carries Codex timeouts through', () => {
+  it('carries server timeouts through', () => {
     const result = parsePastedServer(
       '{"a":{"command":"node","startup_timeout_sec":30,"tool_timeout_sec":120}}',
     )
@@ -219,7 +191,11 @@ describe('unsupportedFor', () => {
     headers: true,
     remote: true,
   }
-  const codex: McpCapability = { ...claude, agent: 'codex', envPassthrough: true, timeouts: true }
+  const completeClaude: McpCapability = {
+    ...claude,
+    envPassthrough: true,
+    timeouts: true,
+  }
 
   const server: McpServerInput = {
     name: 'a',
@@ -232,8 +208,8 @@ describe('unsupportedFor', () => {
     expect(unsupportedFor(claude, server)).toEqual(['env.TOKEN', 'timeouts'])
   })
 
-  it('stays quiet when the agent can express everything', () => {
-    expect(unsupportedFor(codex, server)).toEqual([])
+  it('stays quiet when Claude can express everything', () => {
+    expect(unsupportedFor(completeClaude, server)).toEqual([])
   })
 
   it('returns nothing for an unknown capability rather than guessing', () => {
@@ -242,7 +218,7 @@ describe('unsupportedFor', () => {
 })
 
 describe('matchesQuery', () => {
-  const groups = groupServersByName([snapshot('codex', [record('codex', 'figma')])])
+  const groups = groupServersByName([snapshot('claude', [record('claude', 'figma')])])
 
   it('matches on the server name', () => {
     expect(matchesQuery(groups[0], 'FIG')).toBe(true)

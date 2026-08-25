@@ -345,7 +345,7 @@ pub fn playwright_mcp_config_path(state: State<'_, BrowserSessionState>) -> Resu
         .as_ref()
         .map(|info| info.port.to_string())
         .unwrap_or_else(|| "standalone".to_string());
-    let path = std::env::temp_dir().join(format!("alethe-playwright-mcp-{suffix}.json"));
+    let path = std::env::temp_dir().join(format!("utopia-agent-playwright-mcp-{suffix}.json"));
     let body = serde_json::to_string_pretty(&config).map_err(|error| error.to_string())?;
     std::fs::write(&path, body).map_err(|error| format!("write_failed:{error}"))?;
     Ok(path.to_string_lossy().into_owned())
@@ -439,7 +439,7 @@ mod tests {
             "cmd.exe",
             "node.exe",
             "claude.exe",
-            "alethe.exe",
+            "utopia-agent.exe",
             "code.exe",
         ] {
             assert!(

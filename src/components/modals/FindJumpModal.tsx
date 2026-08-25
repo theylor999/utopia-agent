@@ -1,4 +1,4 @@
-import { Bot, Boxes, Code2, Gift, Sparkles, Terminal, type LucideIcon } from 'lucide-react'
+import { Bot, Sparkles, Terminal, type LucideIcon } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useProjectsStore } from '../../stores/projectsStore'
@@ -9,14 +9,12 @@ import { Modal } from './Modal'
 import controls from './controls.module.css'
 
 const ICONS: Record<AgentType, LucideIcon> = {
-  shell: Terminal,
+  omp: Sparkles,
+  grok: Bot,
   claude: Sparkles,
-  codex: Code2,
-  copilot: Bot,
-  antigravity: Sparkles,
-  opencode: Boxes,
-  freebuff: Gift,
-  mimo: Bot,
+  shell: Terminal,
+  codex: Bot,
+  opencode: Sparkles,
 }
 
 type Hit = {

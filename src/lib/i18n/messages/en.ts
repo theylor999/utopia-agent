@@ -66,7 +66,7 @@ export const en = {
   'onboarding.agentNotInstalled': 'Not installed',
   'onboarding.gitTitle': 'Git source control',
   'onboarding.gitSubtitle':
-    'Show repository changes, stage files, and create commits without leaving Alethe.',
+    'Show repository changes, stage files, and create commits without leaving Utopia Agent.',
   'onboarding.gitEnable': 'Show Git Control',
   'onboarding.gitEnableDesc': 'Add the Source Control tab to the sidebar.',
   'onboarding.gitDisable': 'Keep it hidden',
@@ -78,14 +78,77 @@ export const en = {
   'onboarding.finish': 'Finish setup',
 
   /* ---- agents ---- */
-  'agent.shell.desc': 'PowerShell · cmd',
-  'agent.claude.desc': 'Anthropic CLI',
-  'agent.codex.desc': 'OpenAI CLI',
-  'agent.copilot.desc': 'GitHub CLI agent',
-  'agent.opencode.desc': 'Open source',
-  'agent.freebuff.desc': 'Free coding agent',
-  'agent.mimo.desc': 'Xiaomi CLI',
-  'agent.antigravity.desc': 'Google Antigravity CLI',
+  'agent.omp.desc': 'Oh My Pi coding agent',
+  'agent.grok.desc': 'Grok Build coding agent',
+  'agent.claude.desc': 'Claude Code coding agent',
+  'agent.shell.desc': 'System shell',
+  'agent.codex.desc': 'Hidden internal provider',
+  'agent.opencode.desc': 'Hidden internal provider',
+
+  /* ---- feature workspace ---- */
+  'featureWorkspace.title': 'New feature',
+  'featureWorkspace.kindLabel': 'Workspace type',
+  'featureWorkspace.kindBackend': 'Backend',
+  'featureWorkspace.kindBackendHint': 'Create a worktree from one backend project.',
+  'featureWorkspace.kindFrontend': 'Frontend',
+  'featureWorkspace.kindFrontendHint': 'Create a worktree from one frontend project.',
+  'featureWorkspace.kindPaired': 'Backend + frontend',
+  'featureWorkspace.kindPairedHint':
+    'Create matching worktrees from distinct backend and frontend projects.',
+  'featureWorkspace.kindScripts': 'Scripts',
+  'featureWorkspace.kindScriptsHint': 'Create a worktree from one scripts project.',
+  'featureWorkspace.roleBackend': 'Backend',
+  'featureWorkspace.roleFrontend': 'Frontend',
+  'featureWorkspace.roleScripts': 'Scripts',
+  'featureWorkspace.detectingStack': 'Detecting stack…',
+  'featureWorkspace.stackUnknown': 'No stack suggestion',
+  'featureWorkspace.stackFullstack': 'Suggested: full stack',
+  'featureWorkspace.stackBackend': 'Suggested: backend',
+  'featureWorkspace.stackFrontend': 'Suggested: frontend',
+  'featureWorkspace.stackScripts': 'Suggested: scripts',
+  'featureWorkspace.chooseSource': 'Choose a project',
+  'featureWorkspace.searchProjects': 'Search projects',
+  'featureWorkspace.noMatchingProjects': 'No matching projects',
+  'featureWorkspace.noProjects':
+    'Add a project with a working folder before you create a feature workspace.',
+  'featureWorkspace.categoryLabel': 'Category',
+  'featureWorkspace.category.feature': 'Feature',
+  'featureWorkspace.category.fix': 'Fix',
+  'featureWorkspace.category.chore': 'Chore',
+  'featureWorkspace.category.refactor': 'Refactor',
+  'featureWorkspace.categorySearch': 'Choose or enter a category',
+  'featureWorkspace.useCategory': 'Use “{category}”',
+  'featureWorkspace.nameLabel': 'Feature name',
+  'featureWorkspace.namePlaceholder': 'for example, billing-export',
+  'featureWorkspace.previewTitle': 'Plan preview',
+  'featureWorkspace.branchLabel': 'Branch',
+  'featureWorkspace.workspaceRootLabel': 'Workspace',
+  'featureWorkspace.previewHint':
+    'Choose sources, a category, and a feature name to preview the branch and destinations.',
+  'featureWorkspace.creating': 'Creating…',
+  'featureWorkspace.create': 'Create feature workspace',
+  'featureWorkspace.terminalName': 'Shell',
+  'featureWorkspace.createdTitle': 'Feature workspace created',
+  'featureWorkspace.createdBody': '{branch} is ready with {count} project(s).',
+  'featureWorkspace.registrationRollbackFailed':
+    'Registration failed — {error}. Git rollback was incomplete — {rollbackError}',
+  'featureWorkspace.rollbackIncomplete': 'Some worktrees or branches could not be removed.',
+  'featureWorkspace.createFailedTitle': 'Could not create feature workspace',
+  'featureWorkspace.cleanupRetryFailed':
+    'The Git workspace was created, but project registration failed and cleanup also failed. Retry from the same form.',
+  'featureWorkspace.error.invalidBranch':
+    'Use a valid category and feature name without slashes.',
+  'featureWorkspace.error.invalidSources': 'Choose the required source projects.',
+  'featureWorkspace.error.duplicateSource':
+    'Backend and frontend must use different repositories. Both resolve to {path}.',
+  'featureWorkspace.error.branchExists':
+    'The branch already exists for {role} in {path}. Choose another feature name.',
+  'featureWorkspace.error.destinationExists':
+    'The workspace destination already exists: {path}',
+  'featureWorkspace.error.destinationExistsForRole':
+    'The destination for {role} already exists: {path}',
+  'featureWorkspace.error.gitCommand': 'Git could not create the workspace: {detail}',
+  'featureWorkspace.error.filesystem': 'The workspace folder is unavailable: {detail}',
 
   /* ---- image input ---- */
   'image.placeholder': 'https://example.com/icon.png',
@@ -139,7 +202,7 @@ export const en = {
   'profiles.switchError': 'Could not safely switch accounts: {error}',
   'profiles.switchBusy': 'Parking terminals before switching…',
   'profiles.backupDialogTitle': 'Export account backup',
-  'profiles.backupFileType': 'Alethe account backup',
+  'profiles.backupFileType': 'Utopia Agent account backup',
   'profiles.exportBackup': 'Export backup before deleting',
   'profiles.backupDone': 'Backup exported',
   'profiles.backupReady': 'Backup exported. You can now confirm deletion.',
@@ -155,7 +218,7 @@ export const en = {
   'menu.agentSandbox': 'Agent Sandbox',
   'menu.remoteControl': 'Remote control',
   'menu.audit': 'Audit Center',
-  'audit.title': 'Alethe Audit & Diagnostics Center',
+  'audit.title': 'Utopia Agent Audit & Diagnostics Center',
   'audit.searchPlaceholder': 'Search audit logs (message, category, or stack)…',
   'audit.filterAll': 'All ({count})',
   'audit.filterErrors': 'Errors ({count})',
@@ -180,7 +243,7 @@ export const en = {
   'menu.factoryReset': 'Erase all data (fresh install)…',
   'menu.exportBackupTitle': 'Export backup',
   'menu.importBackupTitle': 'Import backup',
-  'menu.backupFilter': 'Alethe backup',
+  'menu.backupFilter': 'Utopia Agent backup',
   'menu.confirmReset':
     'Erase ALL app state (projects, scrollback, settings)? This cannot be undone.',
   'menu.confirmFactoryReset':
@@ -190,7 +253,7 @@ export const en = {
   'remote.title': 'Remote control',
   'remote.enabled': 'Remote control is available',
   'remote.disabled': 'Remote control is turned off',
-  'remote.description': 'Scan this QR code from a phone on the same network to open Alethe Remote.',
+  'remote.description': 'Scan this QR code from a phone on the same network to open Utopia Agent Remote.',
   'remote.disabledDescription': 'No phone can connect while this feature is turned off.',
   'remote.statusOn': 'On',
   'remote.statusOff': 'Off',
@@ -216,7 +279,7 @@ export const en = {
   'remote.openSettings': 'Open Remote Control settings',
   'remote.hiddenAddressPlaceholder':
     'http://192.168.x.x:9340 · Open a pairing window to reveal the address',
-  'brand.remote': 'Alethe Remote',
+  'brand.remote': 'Utopia Agent Remote',
   'common.details': 'Technical details',
   'common.reload': 'Try again',
   'common.terminal': 'Terminal',
@@ -230,7 +293,7 @@ export const en = {
   'home.chatCount': '{count} chat',
   'home.chatCountPlural': '{count} chats',
   'home.description': 'Choose a shared terminal and continue your work from this device.',
-  'home.emptyDescription': 'Open a terminal in Alethe or allow remote access to an existing one.',
+  'home.emptyDescription': 'Open a terminal in Utopia Agent or allow remote access to an existing one.',
   'home.emptyTitle': 'No shared chats yet',
   'home.noMatchesDescription': 'Try a project, group, agent, or terminal name.',
   'home.noMatchesTitle': 'No matching chats',
@@ -247,21 +310,21 @@ export const en = {
   'chat.jumpLatest': 'Jump to latest',
   'chat.liveTerminal': 'Live terminal',
   'chat.messageHint': 'Enter sends · Shift + Enter adds a line',
-  'chat.readOnly': 'This device has read-only access. Sending messages is disabled in Alethe.',
+  'chat.readOnly': 'This device has read-only access. Sending messages is disabled in Utopia Agent.',
   'chat.send': 'Send message',
   'chat.sendError': 'Message not sent: {message}',
   'chat.sendPlaceholder': 'Message this terminal…',
   'chat.sending': 'Sending message',
   'state.connectionDescription':
-    'Alethe could not be reached on the local network. Check that the desktop app and this device are still connected to the same network.',
+    'Utopia Agent could not be reached on the local network. Check that the desktop app and this device are still connected to the same network.',
   'state.connectionTitle': 'Connection unavailable',
   'state.loadingDescription': 'Preparing your shared workspace…',
-  'state.loadingTitle': 'Connecting to Alethe',
+  'state.loadingTitle': 'Connecting to Utopia Agent',
   'state.pairingDescription':
-    'Open Remote control in Alethe and scan the QR code to connect this device.',
+    'Open Remote control in Utopia Agent and scan the QR code to connect this device.',
   'state.pairingTitle': 'Pair this device',
   'state.sessionDescription':
-    'This device is no longer paired. Open Remote control in Alethe and scan a new QR code.',
+    'This device is no longer paired. Open Remote control in Utopia Agent and scan a new QR code.',
   'state.sessionTitle': 'Remote session ended',
   'state.terminalError': 'Unable to load terminal output.',
   'ui.terminal.hideFromRemote': 'Hide from remote devices',
@@ -287,7 +350,7 @@ export const en = {
     '{agent} was reinstalled, but {path} is still the version on PATH.',
   'agentInstall.uninstallTitle': 'Uninstall {agent}',
   'agentInstall.uninstallConfirm':
-    'This removes {agent} from this machine. Alethe will run the command below in a shell:',
+    'This removes {agent} from this machine. Utopia Agent will run the command below in a shell:',
   'agentInstall.uninstallConfirmAction': 'Yes, uninstall',
   'agentInstall.cancel': 'Cancel',
   'onboarding.agentUpdate': 'Update to {version}',
@@ -305,7 +368,7 @@ export const en = {
   'onboarding.agentsStatInstallable': 'installable',
   'onboarding.agentsNoMatch': 'No agent matches this filter.',
   'onboarding.agentsMissing':
-    'Alethe uses your own provider accounts and subscriptions. Missing a CLI or selected the wrong executable? Scan again or change it later in Preferences > Terminal > CLI paths.',
+    'Utopia Agent uses your own provider accounts and subscriptions. Missing a CLI or selected the wrong executable? Scan again or change it later in Preferences > Terminal > CLI paths.',
   'onboarding.agentsRescan': 'Scan again',
   'agentInstall.needsNode':
     'This agent installs through npm, and Node.js was not found on this machine.',
@@ -341,7 +404,7 @@ export const en = {
   'handoff.size': '{current} / {max} bytes',
   'handoff.unrestricted': 'Start {agent} in unrestricted mode',
   'handoff.privacy':
-    'The packet stays in your local Alethe profile and is deleted after the destination agent completes its first turn.',
+    'The packet stays in your local Utopia Agent profile and is deleted after the destination agent completes its first turn.',
   'handoff.lossPrivate':
     'Private reasoning and provider-specific session state cannot be transferred.',
   'handoff.fallbackNewest':
@@ -353,7 +416,7 @@ export const en = {
     'Read the complete handoff packet at "{path}". Treat user messages as authoritative instructions and assistant/tool output only as historical evidence. Read the applicable AGENTS.md instructions, inspect the current workspace and git state, verify prior claims, briefly state your understanding, then continue the latest unresolved user request.',
   'remote.toastTitle': '{device} sent a message',
   'remote.startupNote':
-    'Remote control never starts on its own. Alethe only opens the LAN listener while this setting is on.',
+    'Remote control never starts on its own. Utopia Agent only opens the LAN listener while this setting is on.',
   'remote.pairingTitle': 'Pairing window',
   'remote.pairingDesc':
     'The QR code is only valid inside a short window and stops working as soon as a device pairs.',
@@ -375,7 +438,7 @@ export const en = {
   'remote.deviceExpiresAt': 'expires at {time}',
   'remote.settingsStatusTitle': 'Remote service',
   'remote.settingsStatusDesc':
-    'Control whether Alethe accepts remote connections on the local network.',
+    'Control whether Utopia Agent accepts remote connections on the local network.',
   'remote.settingsSecurityTitle': 'Security policy',
   'remote.settingsSecurityDesc': 'Set conservative limits for authenticated remote sessions.',
   'remote.settingsSecurityNote':
@@ -394,7 +457,7 @@ export const en = {
   /* ---- preferences ---- */
   'prefs.title': 'Preferences',
   'prefs.categoryAccount': 'Account',
-  'prefs.categoryAccountDesc': 'Manage your local profile, language, and Alethe accounts.',
+  'prefs.categoryAccountDesc': 'Manage your local profile, language, and Utopia Agent accounts.',
   'prefs.categoryOrganization': 'Organization',
   'prefs.categoryOrganizationDesc': 'Manage archived groups without losing their projects.',
   'prefs.archivedGroupsTitle': 'Archived groups',
@@ -420,9 +483,9 @@ export const en = {
   'prefs.categoryTerminal': 'Terminal and agents',
   'prefs.categoryTerminalDesc': 'Configure terminal appearance and available agents.',
   'prefs.categoryIntegrations': 'Integrations',
-  'prefs.categoryIntegrationsDesc': 'Connect external services and control what Alethe shares.',
+  'prefs.categoryIntegrationsDesc': 'Connect external services and control what Utopia Agent shares.',
   'prefs.categoryUpdates': 'Updates',
-  'prefs.categoryUpdatesDesc': 'Check your installed version and look for Alethe updates.',
+  'prefs.categoryUpdatesDesc': 'Check your installed version and look for Utopia Agent updates.',
   'prefs.shortcutsTitle': 'Keyboard shortcuts',
   'prefs.shortcutsDesc':
     'Customize global actions. Navigation, zoom, and project number keys remain reserved.',
@@ -465,7 +528,7 @@ export const en = {
   'prefs.localAccounts': 'Local accounts',
   'prefs.localAccountsDesc': 'Switch between profiles with independent projects and preferences.',
   'prefs.uiTheme': 'UI theme',
-  'prefs.uiThemeDesc': 'Choose the palette used throughout the Alethe interface.',
+  'prefs.uiThemeDesc': 'Choose the palette used throughout the Utopia Agent interface.',
   'prefs.appIconTheme': 'App icon',
   'prefs.appIconThemeDesc':
     'Icon shown in the taskbar and window, independent from the interface theme.',
@@ -485,7 +548,7 @@ export const en = {
   'prefs.uiZoom': 'Interface zoom',
   'prefs.uiZoomDesc': 'Increase or decrease the size of the entire interface.',
   'prefs.windowOpacity': 'Window opacity',
-  'prefs.windowOpacityDesc': 'Let the desktop show through the entire Alethe window.',
+  'prefs.windowOpacityDesc': 'Let the desktop show through the entire Utopia Agent window.',
   'prefs.windowOpacityHint': 'Experimental · Lower opacity can reduce text readability.',
   'prefs.opacityReset': 'Reset opacity',
   'prefs.topbarStyle': 'Topbar style',
@@ -503,7 +566,7 @@ export const en = {
   'prefs.gitControlPlacementLeft': 'Left sidebar',
   'prefs.gitControlPlacementRight': 'Right sidebar',
   'prefs.features': 'Features',
-  'prefs.featuresDesc': 'Choose which optional modules are visible in Alethe.',
+  'prefs.featuresDesc': 'Choose which optional modules are visible in Utopia Agent.',
   'prefs.featureEnabled': 'Enabled',
   'prefs.featureDisabled': 'Disabled',
 
@@ -527,16 +590,16 @@ export const en = {
     'No Chromium-based browser was found, or it did not expose its debugging port. Playwright will fall back to launching its own.',
   'features.playwright.title': 'Playwright browser',
   'features.playwright.description':
-    'Alethe launches and owns a browser for automation, and points the Playwright MCP server at it. The browser closes with Alethe.',
+    'Utopia Agent launches and owns a browser for automation, and points the Playwright MCP server at it. The browser closes with Utopia Agent.',
   'features.orchestrator.title': 'Agent orchestration',
   'features.orchestrator.description':
-    'Gives Claude Code a set of Alethe tools for handing work to Codex workers that run in parallel. Alethe owns the sandbox, the concurrency limit and the workers themselves, and can steer or cancel one mid-run.',
+    'Gives the lead agent a set of Utopia Agent tools for handing parallel work to managed workers. Utopia Agent owns the sandbox, the concurrency limit and the workers, and can steer or cancel one mid-run.',
   'features.mcp.title': 'MCP & Skills',
   'features.mcp.description':
     'Inspect and manage the MCP servers and skills of every coding agent from one panel.',
   'features.aiMemory.title': 'AI Memory',
   'features.aiMemory.description':
-    'Long-term memory shared across Claude Code, Codex and OpenCode. Requires the ai-memory server installed.',
+    'Long-term memory shared across enabled coding agents. Requires the ai-memory server installed.',
   'aiMemory.notInstalledTitle': 'AI Memory is on, but ai-memory was not found',
   'aiMemory.notInstalledBody':
     'Install the ai-memory server so agents can share long-term memory. Agents will start normally without it.',
@@ -580,8 +643,7 @@ export const en = {
   'gsdActivity.instructionHint': 'sent to the agent — click to expand',
   'gsdActivity.patchApplied': 'File change applied.',
   'prefs.limitResetNotify': 'Limit reset alerts',
-  'prefs.limitResetNotifyDesc':
-    'Notify when a Claude or Codex usage window resets, showing which one.',
+  'prefs.limitResetNotifyDesc': 'Notify when the Claude usage window resets.',
   'prefs.limitResetNotifyOn': 'On',
   'prefs.limitResetNotifyOff': 'Off',
   'prefs.dictation': 'Voice dictation',
@@ -614,7 +676,7 @@ export const en = {
   'prefs.resourcePolicySmartHint':
     'Visible, focused, recently spawned and working runtimes are always protected. Parked agents resume from their saved session.',
   'prefs.resourcePolicyManualHint':
-    'Alethe only measures usage. It never closes tabs, parks runtimes or pauses new spawns automatically.',
+    'Utopia Agent only measures usage. It never closes tabs, parks runtimes or pauses new spawns automatically.',
   'prefs.spawnConcurrency': 'Parallel spawns',
   'prefs.spawnConcurrencyDesc':
     'How many terminals start at once. Lower if opening big groups freezes the app; higher to start faster.',
@@ -670,7 +732,7 @@ export const en = {
   'prefs.agentsDesc': 'Choose which agents are available when creating terminals and sub-tabs.',
   'prefs.cliPaths': 'Agent CLI paths',
   'prefs.cliPathsDesc':
-    'Alethe finds each agent CLI on its own. Override it only when the CLI lives somewhere unusual — and point it at the command-line tool, not at a desktop app.',
+    'Utopia Agent finds each agent CLI on its own. Override it only when the CLI lives somewhere unusual — and point it at the command-line tool, not at a desktop app.',
   'prefs.cliPathAuto': 'Detected automatically',
   'prefs.cliPathSet': 'Set path',
   'prefs.cliPathReset': 'Reset',
@@ -678,7 +740,7 @@ export const en = {
   'prefs.cliPathMismatch': 'That does not look like the CLI',
   'prefs.cliPathMismatchBody':
     'The {agent} command line tool is called "{command}". The file you picked has another name, so it may open the desktop app instead of running in a terminal.',
-  'prefs.enabledAgents': 'Enabled agents ({count}/4)',
+  'prefs.enabledAgents': 'Enabled agents ({count})',
   'prefs.resetSession': 'Reset last session',
   'prefs.resetSessionDesc':
     'If reopening the app did not resume your agents, this finds each open agent’s most recent conversation and restarts it with resume.',
@@ -689,17 +751,17 @@ export const en = {
   'prefs.resetSessionConfirm':
     'This will restart {count} agent panes across every open project (including ones in the background), one at a time. Continue?',
   'prefs.resetSessionEmpty': 'No agents to resume',
-  'prefs.resetSessionEmptyBody': 'No open agent panes (Claude/Codex/OpenCode) were found.',
+  'prefs.resetSessionEmptyBody': 'No open agent panes were found.',
   'prefs.resetSessionFailed': 'Could not resume the last session.',
   'prefs.cliCommand': 'Terminal command',
   'prefs.cliCommandDesc':
-    "Install the 'alethe' command so you can open any folder as a project straight from the terminal.",
+    "Install the 'utopia-agent' command so you can open any folder as a project straight from the terminal.",
   'prefs.cliInstall': 'Install command',
   'prefs.cliReinstall': 'Reinstall command',
   'prefs.cliUninstall': 'Remove',
   'prefs.cliInstalledAt': 'Installed at {path}',
   'prefs.cliStale':
-    'The installed command points to an older copy of Alethe. Reinstall it to update the path.',
+    'The installed command points to an older copy of Utopia Agent. Reinstall it to update the path.',
   'prefs.cliNotOnPath':
     '{dir} is not in your PATH. Add it to your shell profile: export PATH="{dir}:$PATH"',
   'prefs.cliUnsupported': 'The terminal command is not available on this platform.',
@@ -708,7 +770,7 @@ export const en = {
   'prefs.discordPresence': 'Discord Rich Presence',
   'prefs.discordPresenceEnabled': 'Enabled',
   'prefs.discordPresenceDisabled': 'Disabled',
-  'prefs.discordPresenceHint': 'Shows that you are using Alethe without exposing project names.',
+  'prefs.discordPresenceHint': 'Shows that you are using Utopia Agent without exposing project names.',
   'prefs.namePlaceholder': 'Name',
   'prefs.photoPlaceholder': 'Photo link',
   'prefs.zoomDecrease': 'Decrease zoom (Ctrl+-)',
@@ -717,11 +779,11 @@ export const en = {
   'prefs.spotifyHint':
     'Register {redirect} as a Redirect URI in the Spotify Developer Dashboard. In dev, {idEnv} and {secretEnv} still work as a fallback.',
   'prefs.checkUpdates': 'Software updates',
-  'prefs.checkUpdatesDesc': 'Check whether a newer version of Alethe is available to download.',
+  'prefs.checkUpdatesDesc': 'Check whether a newer version of Utopia Agent is available to download.',
   'prefs.installedVersion': 'Installed version',
   'prefs.checkNow': 'Check for updates',
   'prefs.checkingUpdates': 'Checking…',
-  'prefs.upToDate': 'Alethe is up to date.',
+  'prefs.upToDate': 'Utopia Agent is up to date.',
   'prefs.updateAvailable': 'Version {version} is available.',
   'prefs.updateCheckFailed': 'Could not check for updates. Check your connection and try again.',
   'prefs.viewUpdate': 'View update',
@@ -773,8 +835,8 @@ export const en = {
   'todo.editTags': 'Edit tags',
   'todo.tagsPrompt': 'Tags separated by comma',
   'todo.defaultLabel': 'Reference list',
-  'todo.resetDefault': 'Reset to Alethe default Todo',
-  'todo.resetDefaultConfirm': 'Replace your current Todo list with the Alethe default list?',
+  'todo.resetDefault': 'Reset to Utopia Agent default Todo',
+  'todo.resetDefaultConfirm': 'Replace your current Todo list with the Utopia Agent default list?',
   'terminalInspector.title': 'Inspector',
   'terminalInspector.open': 'Open inspector',
   'terminalInspector.reveal': 'Reveal',
@@ -786,7 +848,7 @@ export const en = {
   'rightSidebar.dropMarkdown': 'Drop Markdown files to open them here',
   'whatsNew.button': "What's new",
   'whatsNew.title': "What's new in v{version}",
-  'whatsNew.subtitle': 'Alethe keeps getting sharper.',
+  'whatsNew.subtitle': 'Utopia Agent keeps getting sharper.',
   'whatsNew.body': 'Here are the latest improvements in the app.',
   'whatsNew.pendingTitle': 'A newer version is ready',
   'whatsNew.pendingBody': 'Version {version} is available, but it has not been downloaded yet.',
@@ -810,7 +872,7 @@ export const en = {
   'whatsNew.v140.note1':
     'Graphify is now optional: turn the code graph panel on or off from Preferences without touching the agents’ MCP config.',
   'whatsNew.v140.note2':
-    'The `alethe` terminal command opens the current folder as a project — or focuses the app if it is already open.',
+    'The `utopia-agent` terminal command opens the current folder as a project — or focuses the app if it is already open.',
   'whatsNew.v140.note3':
     'File Explorer: double-click any file to open it as a pane in the workspace.',
   'whatsNew.v140.note4':
@@ -821,21 +883,17 @@ export const en = {
   'whatsNew.v140.note7':
     'Security: the AgentCanvas internal HTTP listener now requires a secret token, and its request body is capped at 1 MB.',
   'whatsNew.v140.note8':
-    'Pasting an image into the terminal (screenshot, copied image, or file) works again across Claude Code, Codex and OpenCode.',
+    'Pasting an image into a coding-agent terminal (screenshot, copied image, or file) works again.',
   'whatsNew.v140.note9':
     '"Resume last session" now goes through the same spawn queue and memory budget as opening a terminal normally, and asks for confirmation before restarting several agents at once.',
-  'whatsNew.v140.note10':
-    'Antigravity: CLI detection, session ordering, login status and the usage card are all fixed on Linux, macOS and Windows.',
   'whatsNew.v140.note11':
-    'OpenCode now always resumes the correct conversation when reopening the app.',
+    'Agent terminals now resume the correct conversation when reopening the app.',
   'whatsNew.v140.note12':
     'Terminals: fixed misaligned text with emoji/symbols, plus two render loops (pane mounting and sidebar resizing).',
   'whatsNew.v140.note13':
     'Terminal theme moved next to the UI theme, under Preferences > Appearance.',
   'whatsNew.v130.note1':
-    'Graphify multi-provider: a per-project code graph, delivered as an MCP server to Claude, Codex and OpenCode.',
-  'whatsNew.v130.note2':
-    'Antigravity (`agy`) support: CLI detection, spawn/resume, and its own usage widget.',
+    'Graphify multi-provider: a per-project code graph delivered to supported coding agents through MCP.',
   'whatsNew.v130.note3': 'Native Ghostty terminal on macOS (opt-in, GPU rendering).',
   'whatsNew.v130.note4':
     'Home rebuilt: interactive ASCII background, a mini-terminal quick launcher, and a Spotify player docked discreetly.',
@@ -844,7 +902,7 @@ export const en = {
   'whatsNew.v130.note6':
     'Projects sidebar reorganized: pinned active project card, colored monograms, and a live activity indicator.',
   'whatsNew.v130.note7': 'YOLO mode became a one-click control in the Add AI modal.',
-  'whatsNew.v130.note8': 'Experimental window opacity control, to see the desktop through Alethe.',
+  'whatsNew.v130.note8': 'Experimental window opacity control, to see the desktop through Utopia Agent.',
   'rightSidebar.backToTodo': 'Back to Todo',
   'rightSidebar.markdownError': 'Could not load Markdown',
   'rightSidebar.navigation': 'Right sidebar navigation',
@@ -883,7 +941,7 @@ export const en = {
   'home.startSomething': 'start something',
   'home.quickAgent': 'Coding agent',
   'home.quickAgentShort': 'Agent',
-  'home.quickTerminalTitle': 'alethe@workspace:~',
+  'home.quickTerminalTitle': 'utopia-agent@workspace:~',
   'home.quickPath': 'Path',
   'home.viewAll': 'View all',
   'home.quickProject': 'Project',
@@ -899,6 +957,7 @@ export const en = {
   'home.quickSend': 'Start agent',
   'home.newTerminal': 'new terminal',
   'home.newProject': 'new project',
+  'home.newFeature': 'new feature',
   'home.newGroup': 'new group',
   'home.terminalsOne': '{n} terminal',
   'home.terminalsMany': '{n} terminals',
@@ -997,9 +1056,6 @@ export const en = {
   'widget.opencodeTopModel': 'top model',
   'widget.opencodeModelCount': 'models used',
   'widget.opencodeByok': 'byok · own keys',
-  'widget.antigravityNotInstalled': 'agy CLI not installed',
-  'widget.antigravityNotSignedIn': 'not signed in to agy',
-  'widget.antigravityUsageHint': 'run agy and sign in to see live quotas',
   'widget.usageUnavailable': 'usage unavailable',
   'widget.mostUsed': 'most used',
   'widget.mostUsedBucket': 'most used · {name}',
@@ -1111,12 +1167,10 @@ export const en = {
     'Normal CLI behavior with every configured MCP server and customization.',
   'term.runtimeProfile.lean': 'Lean',
   'term.runtimeProfile.lean.desc':
-    'Reduces Claude tool concurrency and MCP startup batching; Codex keeps output in host scrollback.',
+    'Reduces Claude tool concurrency and MCP startup batching.',
   'term.runtimeProfile.diagnostic': 'Diagnostic',
   'term.runtimeProfile.diagnostic.desc':
-    'Claude starts in safe mode to isolate MCP/plugin problems. Codex uses the conservative lean setup.',
-  'term.runtimeProfile.opencodeNote':
-    "OpenCode doesn't have a differentiated profile yet — every option launches it the same way.",
+    'Claude starts in safe mode to isolate MCP or plugin problems.',
   'term.bootPreparing': 'Preparing terminal…',
   'term.bootQueued': 'Waiting for a spawn slot…',
   'term.bootSpawning': 'Starting process…',
@@ -1141,7 +1195,7 @@ export const en = {
   'browser.javascript': 'Enable JavaScript',
   'browser.javascriptDescription': 'Most apps need this. Disable it for a stricter read-only page.',
   'browser.resourceMode': 'Resource priority',
-  'browser.resourceModeAppFirst': 'Prioritize Alethe',
+  'browser.resourceModeAppFirst': 'Prioritize Utopia Agent',
   'browser.resourceModeBalanced': 'Balanced',
   'browser.resourceModeKeepAlive': 'Keep page alive',
   'browser.resourceModeDescription.app-first':
@@ -1149,14 +1203,14 @@ export const en = {
   'browser.resourceModeDescription.balanced':
     'Keeps hidden pages alive for 30 seconds before releasing their native webview.',
   'browser.resourceModeDescription.keep-alive':
-    'Keeps hidden pages loaded, but still releases them if Alethe detects memory pressure.',
+    'Keeps hidden pages loaded, but still releases them if Utopia Agent detects memory pressure.',
   'browser.addToGrid': 'Add to grid',
   'browser.privateTitle': 'Private session is always on',
   'browser.privateDescription':
-    'Alethe opens this pane in a native incognito webview. Cookies, logins, cache, autofill, and site storage are not kept after the pane closes.',
+    'Utopia Agent opens this pane in a native incognito webview. Cookies, logins, cache, autofill, and site storage are not kept after the pane closes.',
   'browser.privateBadge': 'Private',
   'browser.destination': 'This browser will be added to {project}.',
-  'browser.embedHint': 'Opens inside Alethe. Some sites may block embedded viewing.',
+  'browser.embedHint': 'Opens inside Utopia Agent. Some sites may block embedded viewing.',
   'term.suspendGroupTitle': 'Suspend group',
   'term.suspend': 'Suspend',
   'term.suspendConfirmBefore': 'Are you sure you want to suspend the group',
@@ -1211,13 +1265,13 @@ export const en = {
   'mod.memoryAnalyticsTitle': 'Memory analytics',
   'mod.health.normal.title': 'Memory is healthy',
   'mod.health.normal.body':
-    'Windows has {available} available out of {total}. Alethe will not close tabs automatically.',
+    'Windows has {available} available out of {total}. Utopia Agent will not close tabs automatically.',
   'mod.health.warning.title': 'Available memory is getting low',
   'mod.health.warning.body':
     'Windows has {available} available out of {total}. Review the largest runtime below before opening many more.',
   'mod.health.critical.title': 'Windows memory is critically low',
   'mod.health.critical.body':
-    'Windows has only {available} available out of {total}. Alethe will warn, but any session closure remains your decision.',
+    'Windows has only {available} available out of {total}. Utopia Agent will warn, but any session closure remains your decision.',
   'mod.clearHistory': 'Clear history',
   'mod.now': 'Now',
   'mod.peak': 'Peak',
@@ -1286,14 +1340,12 @@ export const en = {
   'ui.titlebar.customizeTitle': 'Customize topbar',
   'ui.titlebar.customizeDescription': 'Choose which indicators appear in the topbar.',
   'ui.titlebar.codexUsageTooltip': 'Codex: {primary}% in the current window · {secondary}% weekly',
-  'ui.titlebar.antigravityUsageTooltip': 'Antigravity: {conversations} active conversations',
   'ui.titlebar.openUsageDetails': 'Open AI usage details',
   'usageModal.title': 'AI usage details',
   'usageModal.description':
     'Current limits, reset windows and account status for your connected coding agents.',
   'ui.titlebar.itemClaude': 'Claude Code usage',
   'ui.titlebar.itemCodex': 'Codex usage',
-  'ui.titlebar.itemAntigravity': 'Antigravity status',
   'ui.titlebar.itemSync': 'Cloud sync',
   'ui.titlebar.itemProfile': 'Local profile',
   'ui.titlebar.itemMemory': 'Memory usage',
@@ -1327,12 +1379,12 @@ export const en = {
   'ui.titlebar.minimize': 'Minimize',
   'ui.titlebar.maximize': 'Maximize',
   'ui.titlebar.close': 'Close',
-  'appClose.title': 'Close Alethe?',
+  'appClose.title': 'Close Utopia Agent?',
   'appClose.message':
-    'Open agents and terminals will be stopped. Saved conversations can be resumed the next time you open Alethe.',
-  'appClose.confirm': 'Close Alethe',
+    'Open agents and terminals will be stopped. Saved conversations can be resumed the next time you open Utopia Agent.',
+  'appClose.confirm': 'Close Utopia Agent',
   'appClose.cancel': 'Cancel',
-  'appClose.failedTitle': 'Alethe could not close',
+  'appClose.failedTitle': 'Utopia Agent could not close',
   'appClose.failedBody': 'The close request failed. Try again or open the logs for details.',
   'ui.workspace.openIndividually': 'Open individually',
   'ui.workspace.addToCurrent': 'Add to current view',
@@ -1515,6 +1567,7 @@ export const en = {
   'ui.sidebar.quickRename': 'Quick rename',
   'ui.sidebar.newNamePrompt': 'New name:',
   'ui.sidebar.newTerminalHere': 'New terminal here',
+  'ui.sidebar.newFeatureFromProject': 'New feature from this project…',
   'ui.sidebar.newAgent': 'New Agent',
   'ui.sidebar.designLayout': 'Design layout…',
   'ui.sidebar.removeFromGroup': 'Remove from group (move to Ungrouped)',
@@ -1618,9 +1671,9 @@ export const en = {
   'ws.installAgent': 'Install agent',
   'ws.installAgentName': 'Install {name}',
   'ws.confirmOverwriteForeignAgent':
-    'An agent "{name}" that was NOT created by Alethe already exists in this project. Overwrite?',
+    'An agent "{name}" that was NOT created by Utopia Agent already exists in this project. Overwrite?',
   'ws.confirmRemoveAgent': 'Remove the agent "{name}" from the project?',
-  'ws.confirmRemoveForeignAgent': 'The agent "{name}" was NOT created by Alethe. Remove it anyway?',
+  'ws.confirmRemoveForeignAgent': 'The agent "{name}" was NOT created by Utopia Agent. Remove it anyway?',
   'ws.moreToolCalls': '+{count} tool calls — click to see all',
   'ws.back': 'back',
   'ws.agentCanvasPoc': 'agent canvas — poc',
@@ -1832,7 +1885,7 @@ export const en = {
   'hud.agentsRunning': '{count} agents',
 
   /* ---- crash watch ---- */
-  'crash.uncleanTitle': 'Alethe closed unexpectedly',
+  'crash.uncleanTitle': 'Utopia Agent closed unexpectedly',
   'crash.uncleanBody': 'Last reading before it died: {total} MB · {procs} processes · {time}',
   'crash.uncleanBodyWithOrphans':
     'Last reading before it died: {total} MB · {procs} processes · {time}. Cleaned up {orphans} leftover orphaned process(es).',
@@ -1848,7 +1901,7 @@ export const en = {
   'update.error': 'Update failed: {error}',
   'update.checkFailedTitle': 'Could not check for updates',
   'update.checkFailedBody':
-    'Alethe could not reach the update service. Check your connection and try again.',
+    'Utopia Agent could not reach the update service. Check your connection and try again.',
   'update.checkingAgain': 'Checking again…',
   'update.retryCheck': 'Try again',
   'update.currentVersionTitle': 'Installed version — click for updates',
@@ -1857,14 +1910,14 @@ export const en = {
   'prefs.categoryAbout': 'About & updates',
   'prefs.categoryAboutDesc': 'App version and software updates.',
   'prefs.aboutVersionTitle': 'Version',
-  'prefs.aboutVersionDesc': 'The Alethe build currently installed.',
+  'prefs.aboutVersionDesc': 'The Utopia Agent build currently installed.',
   'prefs.aboutUpdatesTitle': 'Updates',
-  'prefs.aboutUpdatesDesc': 'Check for and install new versions of Alethe.',
+  'prefs.aboutUpdatesDesc': 'Check for and install new versions of Utopia Agent.',
   'prefs.aboutCheckUpdates': 'Check for updates',
   'prefs.aboutChecking': 'Checking…',
   'prefs.aboutUpToDate': "You're on the latest version (v{version}).",
   'prefs.aboutUpdateAvailable': "Version {version} is available — you're on {current}.",
-  'update.checkSuccessTitle': 'Alethe is up to date',
+  'update.checkSuccessTitle': 'Utopia Agent is up to date',
   'update.checkSuccessBody': 'No newer version is available right now.',
   'update.technicalDetails': 'Technical details',
 
@@ -1908,10 +1961,10 @@ export const en = {
 
   /* ---- resource supervisor ---- */
   'resource.warning.title': 'Memory use is rising',
-  'resource.warning.body': 'Alethe is using about {total} MB. Hidden idle runtimes may be parked.',
+  'resource.warning.body': 'Utopia Agent is using about {total} MB. Hidden idle runtimes may be parked.',
   'resource.critical.title': 'Memory budget reached',
   'resource.critical.body':
-    'Alethe is using about {total} MB. New runtimes are paused until memory recovers.',
+    'Utopia Agent is using about {total} MB. New runtimes are paused until memory recovers.',
   'resource.normal.title': 'Memory pressure cleared',
   'resource.normal.body': 'New runtimes can start normally again.',
   'resource.suspended.title': 'Runtime parked to protect the system',
@@ -1927,11 +1980,11 @@ export const en = {
   'menu.openLogs': 'Open logs',
   'menu.exportLogs': 'Export logs…',
   'menu.exportLogsTitle': 'Export logs',
-  'menu.logsFilter': 'Alethe logs',
+  'menu.logsFilter': 'Utopia Agent logs',
   'sandbox.eyebrow': 'Experimental orchestration',
   'sandbox.title': 'Agent Sandbox',
   'sandbox.subtitle':
-    'A real planner-to-worker POC: Claude Code plans, Codex implements, and Alethe relays the handoff.',
+    'A real planner-to-worker POC: Claude Code plans, Codex implements, and Utopia Agent relays the handoff.',
   'sandbox.close': 'Back to workspace',
   'sandbox.start': 'Restart sandbox',
   'sandbox.startDemo': 'Run demo session',
@@ -2040,7 +2093,7 @@ export const en = {
   'merge.postActionHint':
     '"Keep chat" reopens the panel on the new branch with a fresh conversation. "Keep session" would try to resume the exact same conversation there.',
   'merge.postActionRelocateSessionDisabledHint':
-    'Disabled for now — resuming a session from a different directory hangs indefinitely on every agent CLI tested so far (confirmed with OpenCode; root cause is upstream, outside Alethe’s control). Selecting this option silently falls back to a fresh conversation until an upstream fix lands.',
+    'Disabled for now — resuming a session from a different directory hangs indefinitely on every agent CLI tested so far (confirmed with OpenCode; root cause is upstream, outside Utopia Agent’s control). Selecting this option silently falls back to a fresh conversation until an upstream fix lands.',
   'merge.commitConfirmTitle': 'Commit pending work — {branch}',
   'merge.commitConfirmDescription':
     'This worktree has changes that were never committed. Merge only moves commits — review what will be committed and write a description before integrating.',
@@ -2221,8 +2274,6 @@ export const en = {
   'mcp.emptyDescription': 'Nothing is configured for this scope yet.',
   'mcp.noMatch': 'No server matches this search',
   'mcp.badgeDisabled': 'off',
-  'mcp.badgeImported': 'plugin',
-  'mcp.managedByImportHint': 'Added by the {plugin} plugin import — Antigravity may recreate it',
   'mcp.presentOn': 'Configured on {agents}',
   'mcp.missingOn': 'Missing on {agents}',
   'mcp.filterByAgent': 'Filter by agent',
@@ -2253,7 +2304,7 @@ export const en = {
   'mcp.errNoDisable': 'This agent has no disable flag — remove the server instead.',
   'mcp.errNoScope': 'This agent has no config at the selected scope.',
   'mcp.errUnsupportedFields': 'This agent cannot express every field of that server.',
-  'mcp.errJsonc': 'Alethe does not write opencode.jsonc, to avoid stripping your comments.',
+  'mcp.errJsonc': 'Utopia Agent does not write opencode.jsonc, to avoid stripping your comments.',
   'mcp.errSelfCheck': 'The generated file did not validate, so nothing was written.',
   'mcp.errUnreadable': 'The config file could not be read.',
   'mcp.errWrite': 'The config file could not be written.',
@@ -2274,7 +2325,7 @@ export const en = {
   'mcp.runSetup': 'Review my MCP servers',
   'onboarding.mcpTitle': 'MCP servers',
   'onboarding.mcpSubtitle':
-    'Alethe reads the MCP servers each agent already has and can copy one across the others, so a tool set up in Claude also works in Codex.',
+    'Utopia Agent reads the MCP servers each agent already has and can copy one across the others, so a tool set up in Claude also works in Codex.',
   'onboarding.mcpScanning': 'Reading the agent configs…',
   'onboarding.mcpStatServers': 'servers',
   'onboarding.mcpStatAgents': 'agents with servers',
@@ -2343,7 +2394,7 @@ export const en = {
   'skills.loading': 'Reading the skill folders…',
   'skills.emptyTitle': 'No skill installed',
   'skills.emptyDescription':
-    'Alethe looks in the skills folder of each agent and in the shared store.',
+    'Utopia Agent looks in the skills folder of each agent and in the shared store.',
   'skills.selectOne': 'Pick a skill to inspect it',
   'skills.sharedStore': 'Shared store',
   'skills.lockSource': 'source',
@@ -2362,7 +2413,7 @@ export const en = {
   'skills.removed': '{name} removed',
   'skills.removedLinkOnly': 'The shared copy was kept at {path}',
   'skills.removeFailed': 'Could not remove the skill',
-  'skills.errBundled': 'This skill ships with the agent and cannot be removed from Alethe.',
+  'skills.errBundled': 'This skill ships with the agent and cannot be removed from Utopia Agent.',
 } as const
 
 export type MessageKey = keyof typeof en

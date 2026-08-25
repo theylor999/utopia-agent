@@ -1,32 +1,20 @@
-export type AgentType =
-  'shell' | 'claude' | 'codex' | 'copilot' | 'opencode' | 'freebuff' | 'mimo' | 'antigravity'
+export type AgentType = 'omp' | 'grok' | 'claude' | 'shell' | 'codex' | 'opencode'
 
 export const AGENT_TYPE_LABELS: Record<AgentType, string> = {
+  omp: 'OMP',
+  grok: 'Grok Build',
   claude: 'Claude Code',
-  codex: 'Codex',
-  copilot: 'GitHub Copilot',
-  antigravity: 'Antigravity',
-  opencode: 'OpenCode',
-  mimo: 'Mimo',
-  freebuff: 'Freebuff',
   shell: 'Shell',
+  codex: 'Codex',
+  opencode: 'OpenCode',
 }
 
-export const ALL_AGENT_TYPES: AgentType[] = [
-  'claude',
-  'codex',
-  'copilot',
-  'antigravity',
-  'opencode',
-  'mimo',
-  'freebuff',
-  'shell',
-]
+export const ALL_AGENT_TYPES: AgentType[] = ['omp', 'grok', 'claude', 'shell']
 
 export function agentCliCommand(agent: AgentType): string | undefined {
-  if (agent === 'shell') return undefined
-  return agent === 'antigravity' ? 'agy' : agent
+  return agent === 'shell' ? undefined : agent
 }
+
 
 export type Locale = 'en' | 'pt-BR'
 
@@ -129,25 +117,20 @@ export type AgentHandoffBootstrap = {
   id: string
   contextDir: string
   contextPath: string
-  sourceProvider: 'claude' | 'codex'
+  sourceProvider: Exclude<AgentType, 'shell'>
   sourceSessionId: string
 }
 
 export type AgentRuntimeProfile = 'full' | 'lean' | 'diagnostic'
 
 /** Flag de "modo irrestrito" por agente (skip permissions / approvals). */
-
-/** Flag de "modo irrestrito" por agente (skip permissions / approvals). */
 export const UNRESTRICTED_FLAG: Record<AgentType, string | null> = {
-  shell: null,
+  omp: null,
+  grok: null,
   claude: '--dangerously-skip-permissions',
+  shell: null,
   codex: '--dangerously-bypass-approvals-and-sandbox',
-  copilot: '--allow-all',
   opencode: '--dangerously-skip-permissions',
-
-  freebuff: null,
-  mimo: null,
-  antigravity: '--dangerously-skip-permissions',
 }
 
 export type PaneKind =
@@ -459,10 +442,10 @@ export type Preferences = {
   /** Itens opcionais exibidos no canto direito da topbar. */
   topbarShowClaudeUsage: boolean
   topbarShowCodexUsage: boolean
-  topbarShowAntigravityUsage: boolean
   topbarShowSync: boolean
   topbarShowProfile: boolean
   topbarShowMemory: boolean
+  nativeTerminalMacos: boolean
   /** Starts the LAN remote listener on launch. Off until the user opts in. */
   remoteEnabled: boolean
   /** Maximum number of authenticated LAN remote devices. Default 1. */
@@ -499,9 +482,8 @@ export type Preferences = {
   /** Most recently saved custom layouts for the workspace. */
   workspaceGridLayoutHistory?: GridLayoutHistoryEntry[]
 
-  nativeTerminalMacos?: boolean
   /**
-   * v3 — perfil de heap do Node.js para agentes (Claude, Codex, OpenCode).
+   * v3 — perfil de heap do Node.js para processos de agentes.
    * Injeta --max-old-space-size e UV_THREADPOOL_SIZE no ambiente do PTY.
    */
   nodeHeapProfile?: 'conservative' | 'balanced' | 'performance'
@@ -563,14 +545,12 @@ export const DEFAULT_PREFERENCES: Preferences = {
   windowOpacity: 1,
   terminalTheme: null,
   enabledAgents: {
-    shell: true,
+    omp: true,
+    grok: true,
     claude: true,
-    codex: true,
-    copilot: true,
-    antigravity: true,
-    opencode: true,
-    freebuff: true,
-    mimo: true,
+    shell: true,
+    codex: false,
+    opencode: false,
   },
   onboardingDone: false,
   workspaceFlat: false,
@@ -589,11 +569,11 @@ export const DEFAULT_PREFERENCES: Preferences = {
   spotifyClientSecret: '',
   discordRichPresenceEnabled: false,
   topbarShowClaudeUsage: true,
-  topbarShowCodexUsage: true,
-  topbarShowAntigravityUsage: true,
+  topbarShowCodexUsage: false,
   topbarShowSync: true,
   topbarShowProfile: true,
   topbarShowMemory: true,
+  nativeTerminalMacos: false,
   remoteEnabled: false,
   remoteMaxDevices: 1,
   remoteSessionExpirySecs: 3600,
@@ -669,43 +649,24 @@ export const GROUP_COLORS = [
 ] as const
 
 export const PROVIDER_MODELS: Record<AgentType, { id: string; label: string }[]> = {
+  omp: [],
+  grok: [],
   claude: [
     { id: 'claude-3-7-sonnet', label: 'Claude 3.7 Sonnet (Padrão)' },
     { id: 'claude-3-5-sonnet', label: 'Claude 3.5 Sonnet' },
     { id: 'claude-3-5-haiku', label: 'Claude 3.5 Haiku' },
     { id: 'claude-3-opus', label: 'Claude 3 Opus' },
   ],
-  codex: [
-    { id: 'gpt-4o', label: 'GPT-4o (Padrão)' },
-    { id: 'o3-mini', label: 'o3-mini (Raciocínio)' },
-    { id: 'o1', label: 'o1 (Avançado)' },
-    { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
-  ],
-  copilot: [],
-  opencode: [
-    { id: 'deepseek/deepseek-r1', label: 'DeepSeek R1 (Raciocínio)' },
-    { id: 'deepseek/deepseek-chat', label: 'DeepSeek V3' },
-    { id: 'qwen/qwen-2.5-coder-32b', label: 'Qwen 2.5 Coder 32B' },
-    { id: 'meta-llama/llama-3.3-70b', label: 'Llama 3.3 70B' },
-  ],
-  antigravity: [
-    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Padrão)' },
-    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-    { id: 'claude-3.7-sonnet', label: 'Claude 3.7 Sonnet' },
-  ],
-  mimo: [
-    { id: 'mimo-pro', label: 'Mimo Pro' },
-    { id: 'mimo-flash', label: 'Mimo Flash' },
-  ],
-  freebuff: [{ id: 'freebuff-auto', label: 'Freebuff Auto' }],
   shell: [{ id: 'default', label: 'Shell Padrão' }],
+  codex: [],
+  opencode: [],
 }
 
 export type McpScope = 'global' | 'project'
 
-export type McpAgent = Extract<AgentType, 'claude' | 'codex' | 'opencode' | 'antigravity'>
+export type McpAgent = Extract<AgentType, 'claude'>
 
-export const MCP_AGENTS: McpAgent[] = ['claude', 'codex', 'opencode', 'antigravity']
+export const MCP_AGENTS: McpAgent[] = ['claude']
 
 /** Literal values never leave Rust: `preview` is masked, use mcpRevealEnv for the real one. */
 export type McpEnvEntry = {
@@ -753,7 +714,6 @@ export type McpServerRecord = {
   scope: McpScope
   sourceKind: McpSourceKind
   sourcePath: string
-  managedByImport: string | null
 }
 
 export type McpAgentSnapshot = {

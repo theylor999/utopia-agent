@@ -417,6 +417,18 @@ svg {
   font-size: 0.62rem;
   font-weight: 850;
 }
+.agent-badge[data-agent='omp'] {
+  color: var(--agent-omp);
+  background: var(--agent-omp-soft);
+}
+.agent-badge[data-agent='cursor'] {
+  color: var(--agent-cursor);
+  background: var(--agent-cursor-soft);
+}
+.agent-badge[data-agent='grok'] {
+  color: var(--agent-grok);
+  background: var(--agent-grok-soft);
+}
 .agent-badge[data-agent='claude'] {
   color: var(--agent-claude);
   background: var(--agent-claude-soft);
@@ -436,10 +448,6 @@ svg {
 .agent-badge[data-agent='mimo'] {
   color: var(--agent-mimo);
   background: var(--agent-mimo-soft);
-}
-.agent-badge[data-agent='antigravity'] {
-  color: var(--agent-antigravity);
-  background: var(--agent-antigravity-soft);
 }
 .agent-badge[data-agent='copilot'] {
   color: var(--fg-muted);

@@ -45,6 +45,11 @@ import {
   replaceCurrentHistorySnapshot,
   sanitizeWorkspaceSnapshot,
 } from '../lib/workspaceNavigation'
+import {
+  createFeatureWorkspaceSlice,
+  type FeatureWorkspaceRegistration,
+  type FeatureWorkspaceStoreRequest,
+} from './projectsStore.featureWorkspaceSlice'
 import { migrate } from './projectsStore.migrations'
 import { createGroupsSlice, createProjectsSlice } from './projectsStore.projectSlices'
 import {
@@ -104,6 +109,9 @@ export type ProjectsState = ProjectsFile & {
     githubUrl?: string
     firstBootPending?: boolean
   }) => Project
+  createFeatureWorkspace: (
+    request: FeatureWorkspaceStoreRequest,
+  ) => Promise<FeatureWorkspaceRegistration>
   renameProject: (id: string, name: string) => void
   archiveProject: (id: string) => void
   unarchiveProject: (id: string) => void
@@ -713,6 +721,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => {
 
     ...createGroupsSlice(sliceCtx),
     ...createProjectsSlice(sliceCtx),
+    ...createFeatureWorkspaceSlice(sliceCtx),
     ...createWorkspaceSlice(sliceCtx),
     ...createTerminalsSlice(sliceCtx),
     ...createContainersSlice(sliceCtx),

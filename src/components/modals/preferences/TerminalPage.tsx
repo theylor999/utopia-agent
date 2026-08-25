@@ -6,23 +6,17 @@ import { pickFile } from '../../../lib/dialog'
 import { useT } from '../../../lib/i18n'
 import { isMacOS } from '../../../lib/platform'
 import { countLiveResumablePanes, resetLastSession } from '../../../lib/resetLastSession'
-import { agentCliCommand, type AgentType } from '../../../lib/types'
+import { agentCliCommand, AGENT_TYPE_LABELS, ALL_AGENT_TYPES, type AgentType } from '../../../lib/types'
 import { SPAWN_CONCURRENCY_LIMITS, useProjectsStore } from '../../../stores/projectsStore'
 import { useUiStore } from '../../../stores/uiStore'
 import { AgentIcon } from '../../icons/AgentIcons'
 import styles from '../PreferencesModal.module.css'
 import { SettingsSection } from './primitives'
 
-const AGENTS: { id: AgentType; label: string }[] = [
-  { id: 'shell', label: 'Shell' },
-  { id: 'claude', label: 'Claude Code' },
-  { id: 'codex', label: 'Codex' },
-  { id: 'copilot', label: 'GitHub Copilot' },
-  { id: 'antigravity', label: 'Antigravity' },
-  { id: 'opencode', label: 'OpenCode' },
-  { id: 'freebuff', label: 'Freebuff' },
-  { id: 'mimo', label: 'Mimo Code' },
-]
+const AGENTS: { id: AgentType; label: string }[] = ALL_AGENT_TYPES.map((id) => ({
+  id,
+  label: AGENT_TYPE_LABELS[id],
+}))
 
 export function TerminalPage({ enabledCount }: { enabledCount: number }) {
   const t = useT()

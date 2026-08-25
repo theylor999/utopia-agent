@@ -60,21 +60,18 @@ pub trait McpAdapter: Send + Sync {
 static CLAUDE: ClaudeAdapter = ClaudeAdapter;
 static CODEX: CodexAdapter = CodexAdapter;
 static OPENCODE: OpenCodeAdapter = OpenCodeAdapter;
-static ANTIGRAVITY: AntigravityAdapter = AntigravityAdapter;
 
 pub fn adapter(agent: McpAgent) -> &'static dyn McpAdapter {
     match agent {
         McpAgent::Claude => &CLAUDE,
         McpAgent::Codex => &CODEX,
         McpAgent::Opencode => &OPENCODE,
-        McpAgent::Antigravity => &ANTIGRAVITY,
     }
 }
 
 pub struct ClaudeAdapter;
 pub struct CodexAdapter;
 pub struct OpenCodeAdapter;
-pub struct AntigravityAdapter;
 
 impl McpAdapter for ClaudeAdapter {
     fn config_sources(&self, scope: McpScope, repo: Option<&Path>) -> Vec<McpSource> {
@@ -127,38 +124,6 @@ impl McpAdapter for ClaudeAdapter {
     }
 }
 
-impl McpAdapter for AntigravityAdapter {
-    fn config_sources(&self, scope: McpScope, _repo: Option<&Path>) -> Vec<McpSource> {
-        match scope {
-            McpScope::Global => mcp_home(&[".gemini", "config", "mcp_config.json"])
-                .map(|path| vec![McpSource::file(path, McpSourceKind::User)])
-                .unwrap_or_default(),
-            McpScope::Project => Vec::new(),
-        }
-    }
-
-    fn parse(&self, raw: &str, source: &McpSource) -> Result<Vec<McpServer>, String> {
-        parse_json_servers(raw, "mcpServers", false, source)
-    }
-
-    fn upsert(&self, raw: &str, source: &McpSource, server: &McpServer) -> Result<String, String> {
-        json_upsert(raw, "mcpServers", CLAUDE_MANAGED, false, source, server)
-    }
-
-    fn remove(&self, raw: &str, source: &McpSource, name: &str) -> Result<String, String> {
-        json_remove(raw, "mcpServers", source, name)
-    }
-
-    fn set_enabled(
-        &self,
-        _raw: &str,
-        _source: &McpSource,
-        _name: &str,
-        _on: bool,
-    ) -> Result<String, String> {
-        Err("unsupported_disable".to_string())
-    }
-}
 
 impl McpAdapter for OpenCodeAdapter {
     fn config_sources(&self, scope: McpScope, repo: Option<&Path>) -> Vec<McpSource> {
@@ -1095,25 +1060,6 @@ name = "gate"
             .is_empty());
     }
 
-    #[test]
-    fn antigravity_shares_the_claude_shape() {
-        let raw = r#"{"mcpServers":{"swarm":{"type":"stdio","command":"node","args":["a.js"]}}}"#;
-        assert_eq!(
-            AntigravityAdapter
-                .parse(raw, &user_src())
-                .expect("parses")
-                .len(),
-            1
-        );
-    }
-
-    #[test]
-    fn antigravity_has_no_project_scope() {
-        let repo = PathBuf::from("D:/repo");
-        assert!(AntigravityAdapter
-            .config_sources(McpScope::Project, Some(&repo))
-            .is_empty());
-    }
 
     fn probe(name: &str) -> McpServer {
         McpServer {
@@ -1424,20 +1370,6 @@ name = "gate"
         assert!(!OpenCodeAdapter.parse(&next, &user_src()).expect("parses")[0].enabled);
     }
 
-    #[test]
-    fn antigravity_writes_the_claude_shape() {
-        let raw = r#"{"mcpServers":{}}"#;
-        let next = AntigravityAdapter
-            .upsert(raw, &user_src(), &probe("a"))
-            .expect("writes");
-        assert_eq!(
-            AntigravityAdapter
-                .parse(&next, &user_src())
-                .expect("parses")
-                .len(),
-            1
-        );
-    }
 
     #[test]
     fn project_paths_follow_each_agent_convention() {

@@ -10,6 +10,8 @@ import { normalizeEnabledFeatures } from '../lib/features'
 import { normalizeAppIconTheme } from '../lib/themeIcons'
 import { normalizeTodoTags, normalizeTodoTitle } from '../lib/todos'
 import {
+  type AgentType,
+  ALL_AGENT_TYPES,
   DEFAULT_PREFERENCES,
   EMPTY_PROJECTS_FILE,
   type Group,
@@ -17,6 +19,9 @@ import {
   type Preferences,
   type Project,
   type ProjectsFile,
+  type SubTab,
+  type Terminal,
+  type TerminalCreationPreset,
   type TodoItem,
   type WorkspaceContainer,
   type WorkspaceRecentTab,
@@ -34,7 +39,138 @@ import {
   MAX_RECENT_PROJECT_TABS,
 } from './projectsStore.constants'
 
-type LegacyPreferences = Partial<Preferences> & { showGitControl?: boolean }
+const LEGACY_AGENT_TYPES = [
+  'antigravity',
+  'cursor',
+  'codex',
+  'opencode',
+  'mimo',
+  'freebuff',
+  'copilot',
+] as const
+const LEGACY_USAGE_PREFERENCES = [
+  'topbarShowAntigravityUsage',
+  'topbarShowCodexUsage',
+] as const
+const PRODUCT_AGENT_TYPES: Record<string, true> = {
+  omp: true,
+  grok: true,
+  claude: true,
+  shell: true,
+}
+
+type LegacyTerminalCreationPreset = Omit<TerminalCreationPreset, 'firstTab'> & {
+  firstTab: Omit<TerminalCreationPreset['firstTab'], 'type'> & {
+    type: unknown
+  }
+}
+
+type LegacyPreferences = Omit<Partial<Preferences>, 'enabledAgents' | 'lastTerminalCreation'> & {
+  showGitControl?: boolean
+  enabledAgents?: Partial<Record<string, boolean>>
+  lastTerminalCreation?: LegacyTerminalCreationPreset | null
+}
+
+type LegacySubTab = Omit<SubTab, 'type'> & {
+  type: unknown
+}
+
+type LegacyTerminal = Omit<Terminal, 'tabs'> & {
+  tabs?: LegacySubTab[]
+}
+
+type LegacyProject = Omit<
+  Project,
+  'terminals' | 'conflictAgentProvider' | 'reviewAgentProvider'
+> & {
+  terminals?: LegacyTerminal[]
+  conflictAgentProvider?: unknown
+  reviewAgentProvider?: unknown
+}
+
+function isAgentType(value: string): value is AgentType {
+  return Object.prototype.hasOwnProperty.call(PRODUCT_AGENT_TYPES, value)
+}
+
+function normalizeAgentType(value: unknown): AgentType {
+  return typeof value === 'string' && isAgentType(value) ? value : 'omp'
+}
+
+function normalizeOptionalAgentType(value: unknown): AgentType | undefined {
+  return value == null ? undefined : normalizeAgentType(value)
+}
+
+function normalizeEnabledAgents(raw: LegacyPreferences | undefined): Preferences['enabledAgents'] {
+  const persisted = raw?.enabledAgents ?? {}
+  const legacyOmp = [
+    ...LEGACY_AGENT_TYPES.map((agent) => persisted[agent]),
+    ...Object.entries(persisted)
+      .filter(([agent]) => !isAgentType(agent))
+      .map(([, enabled]) => enabled),
+  ].find((enabled) => typeof enabled === 'boolean')
+  const omp =
+    typeof persisted.omp === 'boolean'
+      ? persisted.omp
+      : typeof legacyOmp === 'boolean'
+        ? legacyOmp
+        : DEFAULT_PREFERENCES.enabledAgents.omp
+
+  return {
+    omp,
+    grok:
+      typeof persisted.grok === 'boolean'
+        ? persisted.grok
+        : DEFAULT_PREFERENCES.enabledAgents.grok,
+    claude:
+      typeof persisted.claude === 'boolean'
+        ? persisted.claude
+        : DEFAULT_PREFERENCES.enabledAgents.claude,
+    shell:
+      typeof persisted.shell === 'boolean'
+        ? persisted.shell
+        : DEFAULT_PREFERENCES.enabledAgents.shell,
+    codex: false,
+    opencode: false,
+  }
+}
+
+function normalizeLastTerminalCreation(
+  value: LegacyTerminalCreationPreset | null | undefined,
+): Preferences['lastTerminalCreation'] {
+  if (!value) return null
+  return {
+    ...value,
+    firstTab: {
+      ...value.firstTab,
+      type: normalizeAgentType(value.firstTab.type),
+    },
+  }
+}
+
+function normalizeCliPaths(raw: unknown): ProjectsFile['cliPaths'] {
+  const persisted = (raw ?? {}) as Record<string, unknown>
+  const paths: ProjectsFile['cliPaths'] = {}
+  for (const agent of ALL_AGENT_TYPES) {
+    const path = persisted[agent]
+    if (typeof path === 'string') paths[agent] = path
+  }
+  return paths
+}
+
+function normalizeProjectAgents(project: LegacyProject): Project {
+  return {
+    ...project,
+    conflictAgentProvider: normalizeOptionalAgentType(project.conflictAgentProvider),
+    reviewAgentProvider: normalizeOptionalAgentType(project.reviewAgentProvider),
+    terminals: (project.terminals ?? []).map((terminal) => ({
+      ...terminal,
+      tabs: (terminal.tabs ?? []).map((tab) => ({
+        ...tab,
+        type: normalizeAgentType(tab.type),
+      })),
+    })),
+  }
+}
 
 function normalizeStoredAccent(value: unknown, fallback?: string): string | undefined {
   if (typeof value !== 'string') return fallback
@@ -71,6 +207,9 @@ export function normalizePreferences(raw: LegacyPreferences | undefined): Prefer
     ...(raw ?? {}),
   } as Preferences & { showGitControl?: boolean }
   delete preferences.showGitControl
+  for (const key of LEGACY_USAGE_PREFERENCES) {
+    delete (preferences as unknown as Record<string, unknown>)[key]
+  }
   const rawResourcePolicy = raw?.resourcePolicy
   const resourcePolicy = {
     ...DEFAULT_PREFERENCES.resourcePolicy,
@@ -96,7 +235,8 @@ export function normalizePreferences(raw: LegacyPreferences | undefined): Prefer
       : 1,
                                                                                
                                                                             
-    enabledAgents: { ...DEFAULT_PREFERENCES.enabledAgents, ...preferences.enabledAgents },
+    enabledAgents: normalizeEnabledAgents(raw),
+    lastTerminalCreation: normalizeLastTerminalCreation(raw?.lastTerminalCreation),
                                                                                  
     enabledFeatures: normalizeEnabledFeatures(raw),
     leftSidebarVisible: raw?.leftSidebarVisible ?? true,
@@ -296,10 +436,12 @@ function migrateToV7(parsed: any): ProjectsFile {
   return normalizeStoredAccents({
     ...parsed,
     version: 7,
-    projects: (parsed.projects ?? []).map((project: any) => ({
-      ...project,
-      gridLayoutHistory: project.gridLayoutHistory ?? [],
-    })),
+    projects: (parsed.projects ?? []).map((project: any) =>
+      normalizeProjectAgents({
+        ...project,
+        gridLayoutHistory: project.gridLayoutHistory ?? [],
+      }),
+    ),
     groups: (parsed.groups ?? []).map((group: any) => ({
       ...group,
       gridLayoutHistory: group.gridLayoutHistory ?? [],
@@ -308,6 +450,7 @@ function migrateToV7(parsed: any): ProjectsFile {
       ...normalizePreferences(parsed.preferences),
       workspaceGridLayoutHistory: parsed.preferences?.workspaceGridLayoutHistory ?? [],
     },
+    cliPaths: normalizeCliPaths(parsed.cliPaths),
   })
 }
 

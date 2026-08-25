@@ -24,24 +24,7 @@ function stripClaudeSessionArgs(args: string[]): string[] {
   )
 }
 
-function stripCodexSessionArgs(args: string[]): string[] {
-  if (args[0] !== 'resume') return [...args]
-  const rest = args.slice(1)
-  if (rest[0] === '--last' || (rest[0] && !rest[0].startsWith('-'))) rest.shift()
-  return rest
-}
 
-function stripOpenCodeSessionArgs(args: string[]): string[] {
-  return stripFlagWithValue(args, new Set(['--session', '-s'])).filter(
-    (arg) => arg !== '--continue' && arg !== '-c' && arg !== '--resume',
-  )
-}
-
-function stripAntigravitySessionArgs(args: string[]): string[] {
-  return stripFlagWithValue(args, new Set(['--conversation'])).filter(
-    (arg) => arg !== '--continue' && arg !== '-c',
-  )
-}
 
    
                                                                             
@@ -84,39 +67,14 @@ export function buildAgentLaunch(
     }
   }
 
-  if (agent === 'codex') {
-    const clean = stripCodexSessionArgs([...baseArgs])
-    return {
-      args: sessionId ? ['resume', sessionId, ...clean] : clean,
-      sessionId,
-      createdSession: false,
-    }
-  }
 
-  if (agent === 'opencode') {
-    const clean = stripOpenCodeSessionArgs([...baseArgs])
-                                                                        
-                                                                            
-                                                                         
-                                   
-    return {
-      args: sessionId ? ['--session', sessionId, ...clean] : clean,
-      sessionId,
-      createdSession: false,
-    }
-  }
-
-  if (agent === 'antigravity') {
-    const clean = stripAntigravitySessionArgs([...baseArgs])
-    return {
-      args: sessionId ? ['--conversation', sessionId, ...clean] : clean,
-      sessionId,
-      createdSession: false,
-    }
-  }
 
                                                                                   
                                                                                  
                                                                        
-  return { args: [...baseArgs], sessionId: undefined, createdSession: false }
+  return {
+    args: [...baseArgs],
+    sessionId: undefined,
+    createdSession: false,
+  }
 }

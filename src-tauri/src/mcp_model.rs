@@ -57,15 +57,10 @@ pub enum McpAgent {
     Claude,
     Codex,
     Opencode,
-    Antigravity,
 }
 
-pub const ALL_MCP_AGENTS: [McpAgent; 4] = [
-    McpAgent::Claude,
-    McpAgent::Codex,
-    McpAgent::Opencode,
-    McpAgent::Antigravity,
-];
+pub const ALL_MCP_AGENTS: [McpAgent; 3] =
+    [McpAgent::Claude, McpAgent::Codex, McpAgent::Opencode];
 
 impl McpAgent {
     pub fn as_str(self) -> &'static str {
@@ -73,7 +68,6 @@ impl McpAgent {
             McpAgent::Claude => "claude",
             McpAgent::Codex => "codex",
             McpAgent::Opencode => "opencode",
-            McpAgent::Antigravity => "antigravity",
         }
     }
 
@@ -82,7 +76,6 @@ impl McpAgent {
             "claude" => Some(McpAgent::Claude),
             "codex" => Some(McpAgent::Codex),
             "opencode" => Some(McpAgent::Opencode),
-            "antigravity" | "agy" => Some(McpAgent::Antigravity),
             _ => None,
         }
     }
@@ -285,7 +278,6 @@ pub struct McpServerRecord {
     pub scope: McpScope,
     pub source_kind: McpSourceKind,
     pub source_path: String,
-    pub managed_by_import: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -296,7 +288,6 @@ pub struct McpServerRecordView {
     pub scope: McpScope,
     pub source_kind: McpSourceKind,
     pub source_path: String,
-    pub managed_by_import: Option<String>,
 }
 
 impl McpServerRecord {
@@ -307,7 +298,6 @@ impl McpServerRecord {
             scope: self.scope,
             source_kind: self.source_kind,
             source_path: self.source_path.clone(),
-            managed_by_import: self.managed_by_import.clone(),
         }
     }
 }
@@ -358,15 +348,6 @@ pub fn capability(agent: McpAgent) -> McpCapability {
             project_scope: true,
             enabled_flag: true,
             env_passthrough: true,
-            timeouts: false,
-            headers: true,
-            remote: true,
-        },
-        McpAgent::Antigravity => McpCapability {
-            agent,
-            project_scope: false,
-            enabled_flag: false,
-            env_passthrough: false,
             timeouts: false,
             headers: true,
             remote: true,
@@ -460,9 +441,10 @@ mod tests {
     }
 
     #[test]
-    fn agent_parse_accepts_the_antigravity_binary_name() {
-        assert_eq!(McpAgent::parse("agy"), Some(McpAgent::Antigravity));
-        assert_eq!(McpAgent::parse("Antigravity"), Some(McpAgent::Antigravity));
+    fn agent_parse_accepts_only_supported_mcp_providers() {
+        assert_eq!(McpAgent::parse("claude"), Some(McpAgent::Claude));
+        assert_eq!(McpAgent::parse("opencode"), Some(McpAgent::Opencode));
+        assert_eq!(McpAgent::parse("omp"), None);
         assert_eq!(McpAgent::parse("shell"), None);
     }
 

@@ -7,7 +7,7 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event'
    
 
                                                                    
-const OPEN_PATH_EVENT = 'alethe://open-path'
+const OPEN_PATH_EVENT = 'utopia-agent://open-path'
 
 export type CliShimStatus = {
                                                      

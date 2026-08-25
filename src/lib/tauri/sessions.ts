@@ -1,18 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
 
-export type AntigravitySessionSnapshot = {
-  id: string
-  preview: string
-  modified_at_ms: number
-}
-
-export async function snapshotAntigravitySessions(
-  cwd: string,
-): Promise<AntigravitySessionSnapshot[]> {
-  return invoke<AntigravitySessionSnapshot[]>('snapshot_antigravity_sessions', { cwd })
-}
-
-                                                            
 export type ModelCost = {
   model: string
   input: number

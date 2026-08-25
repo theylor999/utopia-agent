@@ -5,21 +5,17 @@
 
 import { normalizeCwd } from './platform'
 import { readScopedStorage, writeScopedStorage } from './storageNamespace'
+import type { AgentType } from './types'
 
 const STORAGE_KEY = 'active-sessions'
 
 export type SavedSession = {
   sessionId: string
-  /** Claude conversation ID (nome do JSONL, ex: "abc123-def456"). */
   claudeSessionId?: string
-  /** Codex conversation ID (payload.id do session_meta em ~/.codex/sessions). */
   codexSessionId?: string
-  /** OpenCode session ID (ses_... do opencode session list). */
   opencodeSessionId?: string
-  /** Antigravity conversation ID (conversation_metadata.json). */
-  antigravitySessionId?: string
   cwd: string
-  agent: string
+  agent: AgentType
   timestamp: number
 }
 
@@ -27,16 +23,14 @@ export type ActiveSessions = Record<string, SavedSession>
 
 export function savedConversationIdFor(
   session: SavedSession | null,
-  agent: string | null | undefined,
+  agent: AgentType | null | undefined,
   cwd: string | null | undefined,
 ): string | undefined {
   if (!session || !agent || !cwd) return undefined
   if (session.agent !== agent) return undefined
   if (normalizeCwd(session.cwd) !== normalizeCwd(cwd)) return undefined
   if (agent === 'claude') return session.claudeSessionId
-  if (agent === 'codex') return session.codexSessionId
-  if (agent === 'antigravity') return session.antigravitySessionId
-  if (agent === 'opencode') return session.opencodeSessionId
+
   return undefined
 }
 

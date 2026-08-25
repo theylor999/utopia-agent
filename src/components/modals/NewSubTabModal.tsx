@@ -4,23 +4,23 @@ import { useEffect, useMemo, useState } from 'react'
 import { useUiStore } from '../../stores/uiStore'
 import { useProjectsStore } from '../../stores/projectsStore'
 import { pickDirectory } from '../../lib/dialog'
-import { UNRESTRICTED_FLAG, type AgentRuntimeProfile, type AgentType } from '../../lib/types'
+import {
+  AGENT_TYPE_LABELS,
+  ALL_AGENT_TYPES,
+  type AgentRuntimeProfile,
+  type AgentType,
+  UNRESTRICTED_FLAG,
+} from '../../lib/types'
 import { AgentIcon } from '../icons/AgentIcons'
 import { useT } from '../../lib/i18n'
 import { Modal } from './Modal'
 import controls from './controls.module.css'
 import picker from './agentPicker.module.css'
 
-const AGENTS: { type: AgentType; label: string }[] = [
-  { type: 'shell', label: 'Shell' },
-  { type: 'claude', label: 'Claude' },
-  { type: 'codex', label: 'Codex' },
-  { type: 'copilot', label: 'GitHub Copilot' },
-  { type: 'antigravity', label: 'Antigravity' },
-  { type: 'opencode', label: 'OpenCode' },
-  { type: 'freebuff', label: 'Freebuff' },
-  { type: 'mimo', label: 'Mimo' },
-]
+const AGENTS: { type: AgentType; label: string }[] = ALL_AGENT_TYPES.map((type) => ({
+  type,
+  label: AGENT_TYPE_LABELS[type],
+}))
 
 export function NewSubTabModal() {
   const t = useT()
@@ -41,19 +41,15 @@ export function NewSubTabModal() {
     return project?.terminals.find((item) => item.id === context.terminalId) ?? null
   })
 
-  const [type, setType] = useState<AgentType>('shell')
+  const [type, setType] = useState<AgentType>('omp')
   const [runtimeProfile, setRuntimeProfile] = useState<AgentRuntimeProfile>('lean')
   const [cwd, setCwd] = useState('')
-  const [unrestricted, setUnrestricted] = useState<Record<AgentType, boolean>>({
-    shell: false,
-    claude: false,
-    codex: false,
-    copilot: false,
-    antigravity: false,
-    opencode: false,
-    freebuff: false,
-    mimo: false,
-  })
+  const [unrestricted, setUnrestricted] = useState<Record<AgentType, boolean>>(() =>
+    Object.fromEntries(ALL_AGENT_TYPES.map((agent) => [agent, false])) as Record<
+      AgentType,
+      boolean
+    >,
+  )
 
   const visibleAgents = AGENTS.filter((a) => enabled[a.type])
   const inheritedCwd = useMemo(() => {
@@ -68,19 +64,15 @@ export function NewSubTabModal() {
   }, [open, context?.projectId, context?.terminalId, inheritedCwd])
 
   const reset = () => {
-    setType('shell')
+    setType('omp')
     setRuntimeProfile('lean')
     setCwd('')
-    setUnrestricted({
-      shell: false,
-      claude: false,
-      codex: false,
-      copilot: false,
-      antigravity: false,
-      opencode: false,
-      freebuff: false,
-      mimo: false,
-    })
+    setUnrestricted(
+      Object.fromEntries(ALL_AGENT_TYPES.map((agent) => [agent, false])) as Record<
+        AgentType,
+        boolean
+      >,
+    )
   }
 
   const submit = () => {
@@ -204,9 +196,7 @@ export function NewSubTabModal() {
             ))}
           </div>
           <span className={controls.hint}>
-            {type === 'opencode'
-              ? t('term.runtimeProfile.opencodeNote')
-              : t(`term.runtimeProfile.${runtimeProfile}.desc`)}
+            {t(`term.runtimeProfile.${runtimeProfile}.desc`)}
           </span>
         </div>
       ) : null}

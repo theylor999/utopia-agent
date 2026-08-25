@@ -7,7 +7,6 @@ import {
 } from '../lib/markdownSidebarHistory'
 import { basename } from '../lib/paths'
 import type {
-  AntigravityUsage,
   ClaudeUsage,
   CodexUsage,
   MemoryStats,
@@ -20,6 +19,7 @@ import type { UpdateInfo } from '../lib/updater'
 
 type ModalKind =
   | 'newProject'
+  | 'newFeature'
   | 'newGroup'
   | 'editGroup'
   | 'editProject'
@@ -83,7 +83,6 @@ type UiState = {
   memoryHistory: MemorySample[]
   claudeUsage: ClaudeUsage | null
   codexUsage: CodexUsage | null
-  antigravityUsage: AntigravityUsage | null
 
   focusedTerminalId: string | null
   /**
@@ -134,7 +133,6 @@ type UiState = {
   clearMemoryHistory: () => void
   setClaudeUsage: (value: ClaudeUsage | null) => void
   setCodexUsage: (value: CodexUsage | null) => void
-  setAntigravityUsage: (value: AntigravityUsage | null) => void
   setFocusedTerminal: (id: string | null) => void
   requestPaneFocus: (terminalId: string) => void
   setActiveTerminal: (projectId: string, terminalId: string) => void
@@ -180,7 +178,6 @@ export const useUiStore = create<UiState>((set) => ({
   memoryHistory: [],
   claudeUsage: null,
   codexUsage: null,
-  antigravityUsage: null,
   focusedTerminalId: null,
   keptAlivePaneIds: [],
   mountedPaneIds: [],
@@ -229,7 +226,6 @@ export const useUiStore = create<UiState>((set) => ({
   clearMemoryHistory: () => set({ memoryHistory: [] }),
   setClaudeUsage: (value) => set({ claudeUsage: value }),
   setCodexUsage: (value) => set({ codexUsage: value }),
-  setAntigravityUsage: (value) => set({ antigravityUsage: value }),
   setFocusedTerminal: (id) => set({ focusedTerminalId: id }),
   requestPaneFocus: (terminalId) => set({ focusRequest: { terminalId, ts: Date.now() } }),
   setActiveTerminal: (projectId, terminalId) => set({ activeTerminal: { projectId, terminalId } }),

@@ -3,6 +3,7 @@ import {
   FileText,
   FolderOpen,
   Globe2,
+  GitBranch,
   Layout,
   MoveRight,
   PanelTopOpen,
@@ -137,6 +138,12 @@ export function createSidebarMenus(deps: SidebarMenuDeps) {
       label: t('ui.sidebar.newTerminalHere'),
       icon: <Plus size={14} />,
       onClick: () => openModal('newTerminal', { projectId: project.id }),
+    },
+    {
+      kind: 'item',
+      label: t('ui.sidebar.newFeatureFromProject'),
+      icon: <GitBranch size={14} />,
+      onClick: () => openModal('newFeature', { sourceProjectId: project.id }),
     },
     ...(browserEnabled
       ? [

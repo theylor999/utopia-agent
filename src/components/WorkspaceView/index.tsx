@@ -21,13 +21,14 @@ import {
   reconcileGridLayout,
 } from '../../lib/gridLayout'
 import { useT } from '../../lib/i18n'
-import type {
-  AgentType,
-  GridLayout,
-  Group,
-  Project,
-  Terminal,
-  WorkspaceContainer,
+import {
+  ALL_AGENT_TYPES,
+  type AgentType,
+  type GridLayout,
+  type Group,
+  type Project,
+  type Terminal,
+  type WorkspaceContainer,
 } from '../../lib/types'
 import { MAX_WORKSPACE_TABS } from '../../lib/workspaceNavigation'
 import { selectActiveProject, useProjectsStore } from '../../stores/projectsStore'
@@ -895,13 +896,10 @@ function NoWorkspace({
     (s) => s.preferences.terminalTheme ?? s.preferences.uiTheme,
   )
   const quickAgents = useMemo(
-    () =>
-      (['claude', 'codex', 'antigravity', 'opencode', 'shell'] as AgentType[]).filter(
-        (agent) => enabledAgents[agent],
-      ),
+    () => ALL_AGENT_TYPES.filter((agent) => enabledAgents[agent]),
     [enabledAgents],
   )
-  const [quickAgent, setQuickAgent] = useState<AgentType>('claude')
+  const [quickAgent, setQuickAgent] = useState<AgentType>('omp')
 
   useEffect(() => {
     if (!project) return

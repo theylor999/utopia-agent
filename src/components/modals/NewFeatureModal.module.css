@@ -1,0 +1,158 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sourceGrid,
+.namingGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.projectOption {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.projectOption > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectOption small {
+  color: var(--fg-muted);
+  font-size: 10px;
+}
+
+.notice,
+.preview {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+}
+
+.notice {
+  padding: 12px;
+  color: var(--fg-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.preview {
+  min-height: 112px;
+  overflow: hidden;
+}
+
+.previewHeader {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--fg);
+  font-size: 12px;
+}
+
+.spinner {
+  margin-left: auto;
+  animation: spin 800ms linear infinite;
+  color: var(--fg-muted);
+}
+
+.previewBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+}
+
+.previewRow {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 10px;
+  font-size: 11px;
+}
+
+.previewRow > span {
+  color: var(--fg-muted);
+}
+
+.preview code,
+.planItem > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview code {
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.planItem {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+}
+
+.planItem strong {
+  color: var(--fg-muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.planItem > span {
+  color: var(--fg-muted);
+}
+
+.previewHint,
+.error {
+  padding: 14px 12px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.previewHint {
+  color: var(--fg-muted);
+}
+
+.error {
+  color: var(--status-error);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 620px) {
+  .sourceGrid,
+  .namingGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .planItem {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .planItem > span[aria-hidden='true'] {
+    display: none;
+  }
+
+  .planItem code {
+    grid-column: 2;
+  }
+}

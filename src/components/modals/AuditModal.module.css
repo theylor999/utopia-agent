@@ -129,7 +129,7 @@
 }
 
 .logRowInfo {
-  border-left-color: var(--agent-antigravity);
+  border-left-color: var(--accent);
 }
 
 .logHeader {

@@ -238,7 +238,7 @@ export function PreferencesModal() {
         target: 'agents',
         label: t('prefs.agentsTitle'),
         description: t('prefs.agentsDesc'),
-        keywords: 'agents agentes claude codex opencode shell',
+        keywords: 'agents agentes omp grok build claude code shell',
       },
       {
         category: 'terminal',

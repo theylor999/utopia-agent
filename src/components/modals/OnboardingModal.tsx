@@ -19,7 +19,13 @@ import { DEFAULT_PROFILE_IMAGE_URL, getProfileInitial } from '../../lib/profile'
 import { agentCliVersion, findCliLauncher } from '../../lib/tauri'
 import { APP_ICON_OPTIONS, getThemeIcon } from '../../lib/themeIcons'
 import { THEME_OPTIONS, themeDescription, themeLabel } from '../../lib/themes'
-import { agentCliCommand, type AgentType, type VisualStyle } from '../../lib/types'
+import {
+  agentCliCommand,
+  AGENT_TYPE_LABELS,
+  ALL_AGENT_TYPES,
+  type AgentType,
+  type VisualStyle,
+} from '../../lib/types'
 import { useProjectsStore } from '../../stores/projectsStore'
 import { useUiStore } from '../../stores/uiStore'
 import { ImageInput } from './ImageInput'
@@ -52,15 +58,9 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
 
 type CodingAgent = Exclude<AgentType, 'shell'>
 
-const AGENTS: { id: CodingAgent; label: string }[] = [
-  { id: 'claude', label: 'Claude' },
-  { id: 'codex', label: 'Codex' },
-  { id: 'copilot', label: 'GitHub Copilot' },
-  { id: 'antigravity', label: 'Antigravity' },
-  { id: 'opencode', label: 'OpenCode' },
-  { id: 'freebuff', label: 'Freebuff' },
-  { id: 'mimo', label: 'Mimo' },
-]
+const AGENTS: { id: CodingAgent; label: string }[] = ALL_AGENT_TYPES.filter(
+  (id): id is CodingAgent => id !== 'shell',
+).map((id) => ({ id, label: AGENT_TYPE_LABELS[id] }))
 
 const FEATURE_ICONS = {
   todos: ListTodo,

@@ -4,7 +4,6 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 use crate::mcp_agents::{adapter, McpSource};
 use crate::mcp_model::{
@@ -84,48 +83,6 @@ fn is_writable(path: &Path) -> bool {
     }
 }
 
-/// Antigravity records plugin-contributed configuration in an import manifest but does
-/// not name the servers it added, so a contributed server is matched by name prefix.
-fn antigravity_imports() -> Vec<String> {
-    let Some(path) = adapter(McpAgent::Antigravity)
-        .config_sources(McpScope::Global, None)
-        .first()
-        .and_then(|source| {
-            source
-                .path
-                .parent()
-                .map(|dir| dir.join("import_manifest.json"))
-        })
-    else {
-        return Vec::new();
-    };
-    let Ok(raw) = fs::read_to_string(&path) else {
-        return Vec::new();
-    };
-    let Ok(value) = serde_json::from_str::<Value>(&raw) else {
-        return Vec::new();
-    };
-    value
-        .get("imports")
-        .and_then(Value::as_array)
-        .map(|items| {
-            items
-                .iter()
-                .filter_map(|item| item.get("name").and_then(Value::as_str))
-                .filter(|name| !name.trim().is_empty())
-                .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-fn import_owner(imports: &[String], server_name: &str) -> Option<String> {
-    let needle = server_name.to_ascii_lowercase();
-    imports
-        .iter()
-        .find(|import| needle.starts_with(&import.to_ascii_lowercase()))
-        .cloned()
-}
 
 fn read_servers(
     agent: McpAgent,
@@ -156,12 +113,7 @@ fn read_servers(
     Ok(servers)
 }
 
-fn scan_agent(
-    agent: McpAgent,
-    scope: McpScope,
-    repo: Option<&Path>,
-    imports: &[String],
-) -> McpAgentSnapshot {
+fn scan_agent(agent: McpAgent, scope: McpScope, repo: Option<&Path>) -> McpAgentSnapshot {
     let mut snapshot = McpAgentSnapshot {
         agent,
         scope,
@@ -196,11 +148,6 @@ fn scan_agent(
         match read_servers(agent, &source, mtime_ms, metadata.len()) {
             Ok(servers) => {
                 for server in servers {
-                    let managed_by_import = if agent == McpAgent::Antigravity {
-                        import_owner(imports, &server.name)
-                    } else {
-                        None
-                    };
                     snapshot.servers.push(
                         McpServerRecord {
                             server,
@@ -208,7 +155,6 @@ fn scan_agent(
                             scope,
                             source_kind: source.kind,
                             source_path: display_path.clone(),
-                            managed_by_import,
                         }
                         .view(),
                     );
@@ -233,14 +179,9 @@ fn scan_inner(
     let repo = repo_path(repo);
     let repo_ref = repo.as_deref();
     let picked = requested_agents(agents);
-    let imports = if picked.contains(&McpAgent::Antigravity) {
-        antigravity_imports()
-    } else {
-        Vec::new()
-    };
     picked
         .into_iter()
-        .map(|agent| scan_agent(agent, scope, repo_ref, &imports))
+        .map(|agent| scan_agent(agent, scope, repo_ref))
         .collect()
 }
 
@@ -412,7 +353,6 @@ pub struct McpWriteReport {
     pub kind: McpSourceKind,
     pub backup_path: Option<String>,
     pub changed: Vec<String>,
-    pub warnings: Vec<String>,
 }
 
 enum Mutation {
@@ -612,7 +552,6 @@ fn apply_to_source(
         kind: source.kind,
         backup_path,
         changed: vec![target],
-        warnings: Vec::new(),
     })
 }
 
@@ -635,16 +574,7 @@ fn mutate(
         mutation.creates(),
     )?;
 
-    let mut warnings = Vec::new();
-    if agent == McpAgent::Antigravity {
-        if let Some(owner) = import_owner(&antigravity_imports(), &target) {
-            warnings.push(format!("managed_by_import:{owner}"));
-        }
-    }
-
-    let mut report = apply_to_source(agent, &source, mutation, backup_dir(app).as_deref())?;
-    report.warnings = warnings;
-    Ok(report)
+    apply_to_source(agent, &source, mutation, backup_dir(app).as_deref())
 }
 
 fn parse_source_kind(raw: Option<String>) -> Result<Option<McpSourceKind>, String> {
@@ -1292,27 +1222,14 @@ name = "gate"
         let _ = fs::remove_dir_all(&dir);
     }
 
-    #[test]
-    fn import_owner_matches_a_prefixed_server_name() {
-        let imports = vec!["codeagentswarm".to_string()];
-        assert_eq!(
-            import_owner(&imports, "codeagentswarm-tasks"),
-            Some("codeagentswarm".to_string())
-        );
-        assert_eq!(import_owner(&imports, "figma"), None);
-    }
 
     #[test]
     fn requested_agents_falls_back_to_every_agent() {
-        assert_eq!(requested_agents(None).len(), 4);
-        assert_eq!(requested_agents(Some(vec!["nonsense".into()])).len(), 4);
+        assert_eq!(requested_agents(None).len(), 3);
+        assert_eq!(requested_agents(Some(vec!["nonsense".into()])).len(), 3);
         assert_eq!(
             requested_agents(Some(vec!["codex".into()])),
             vec![McpAgent::Codex]
-        );
-        assert_eq!(
-            requested_agents(Some(vec!["agy".into()])),
-            vec![McpAgent::Antigravity]
         );
     }
 
@@ -1338,7 +1255,6 @@ name = "gate"
             McpAgent::Codex,
             McpScope::Project,
             Some(Path::new("D:/definitely/not/a/repo")),
-            &[],
         );
         assert_eq!(snapshot.sources.len(), 1);
         assert!(!snapshot.sources[0].exists);
@@ -1346,15 +1262,4 @@ name = "gate"
         assert!(snapshot.servers.is_empty());
     }
 
-    #[test]
-    fn antigravity_reports_no_project_config() {
-        let snapshot = scan_agent(
-            McpAgent::Antigravity,
-            McpScope::Project,
-            Some(Path::new("D:/repo")),
-            &[],
-        );
-        assert!(snapshot.sources.is_empty());
-        assert!(snapshot.servers.is_empty());
-    }
 }

@@ -8,9 +8,9 @@
 
 import { listen } from '@tauri-apps/api/event'
 
-type WatchAgent = 'claude' | 'codex' | 'opencode'
+type WatchAgent = 'claude'
 
-const waiters: Record<WatchAgent, Array<() => void>> = { claude: [], codex: [], opencode: [] }
+const waiters: Record<WatchAgent, Array<() => void>> = { claude: [] }
                                                                                
                                                                              
                                                                                     
@@ -22,7 +22,7 @@ function ensureStarted(): void {
   started = true
   void listen<{ agent?: string }>('session://new', (event) => {
     const agent = event.payload?.agent
-    if (agent !== 'claude' && agent !== 'codex' && agent !== 'opencode') return
+    if (agent !== 'claude') return
     const pending = waiters[agent]
     waiters[agent] = []
     for (const resolve of pending) resolve()

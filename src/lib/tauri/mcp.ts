@@ -60,7 +60,6 @@ export type McpWriteReport = {
   kind: McpSourceKind
   backupPath: string | null
   changed: string[]
-  warnings: string[]
 }
 
 export async function mcpUpsert(

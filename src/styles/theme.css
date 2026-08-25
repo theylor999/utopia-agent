@@ -128,20 +128,24 @@
   --status-idle: var(--status-stopped);
 
   /* agent colors */
-  --agent-shell: #10b981;
+  --agent-omp: #a78bfa;
+  --agent-cursor: #e5e7eb;
+  --agent-grok: #f43f5e;
   --agent-claude: #ec9333;
   --agent-codex: #06b6d4;
   --agent-opencode: #8b8b95;
   --agent-freebuff: #7c5cff;
   --agent-mimo: #ff7a1a;
-  --agent-antigravity: #4285f4;
-  --agent-shell-soft: rgba(16, 185, 129, 0.14);
+  --agent-shell: #10b981;
+  --agent-omp-soft: rgba(167, 139, 250, 0.15);
+  --agent-cursor-soft: rgba(229, 231, 235, 0.15);
+  --agent-grok-soft: rgba(244, 63, 94, 0.15);
   --agent-claude-soft: rgba(236, 147, 51, 0.15);
   --agent-codex-soft: rgba(6, 182, 212, 0.15);
   --agent-opencode-soft: rgba(139, 139, 149, 0.15);
   --agent-freebuff-soft: rgba(124, 92, 255, 0.15);
   --agent-mimo-soft: rgba(255, 122, 26, 0.15);
-  --agent-antigravity-soft: rgba(66, 133, 244, 0.15);
+  --agent-shell-soft: rgba(16, 185, 129, 0.14);
 
   --project-orange: #f97316;
   --project-pink: #ec4899;

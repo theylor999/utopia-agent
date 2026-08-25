@@ -36,25 +36,6 @@ export async function getCodexUsage(): Promise<CodexUsage> {
   return invoke<CodexUsage>('get_codex_usage')
 }
 
-export type AntigravityQuotaBucket = {
-  label: string
-  models: string[]
-  used_percent: number
-  remaining_percent: number
-  resets_at: string
-}
-
-export type AntigravityUsage = {
-  status: 'ready' | 'no_cli' | 'no_auth' | 'unavailable'
-  cli_path: string
-  used_percent: number
-  rate_limited: boolean
-  buckets: AntigravityQuotaBucket[]
-}
-
-export async function getAntigravityUsage(): Promise<AntigravityUsage> {
-  return invoke<AntigravityUsage>('get_antigravity_usage')
-}
 
                                                                         
 export type ModelRate = {

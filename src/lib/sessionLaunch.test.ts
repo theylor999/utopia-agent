@@ -34,30 +34,9 @@ describe('buildAgentLaunch', () => {
     expect(launch.createdSession).toBe(false)
   })
 
-  it('Codex without a known id starts a new chat instead of resuming last', () => {
-    const launch = buildAgentLaunch('codex', ['resume', '--last', '--search'])
-    expect(launch.args).toEqual(['--search'])
-  })
-
-  it('Codex and OpenCode use their pane-specific resume syntax', () => {
-    expect(buildAgentLaunch('codex', ['resume', 'old', '--search'], 'codex-pane').args).toEqual([
-      'resume',
-      'codex-pane',
-      '--search',
-    ])
-    expect(
-      buildAgentLaunch('opencode', ['--continue', '--session', 'old', '--model', 'x'], 'open-pane')
-        .args,
-    ).toEqual(['--session', 'open-pane', '--model', 'x'])
-  })
-
-  it('Antigravity keeps agy flags and uses its pane-specific conversation', () => {
-    expect(
-      buildAgentLaunch(
-        'antigravity',
-        ['--continue', '--conversation', 'old', '--dangerously-skip-permissions'],
-        'agy-pane',
-      ).args,
-    ).toEqual(['--conversation', 'agy-pane', '--dangerously-skip-permissions'])
+  it('launches OMP, Grok Build, and Shell directly', () => {
+    expect(buildAgentLaunch('omp').args).toEqual([])
+    expect(buildAgentLaunch('grok', ['--verbose']).args).toEqual(['--verbose'])
+    expect(buildAgentLaunch('shell', ['-NoLogo']).args).toEqual(['-NoLogo'])
   })
 })

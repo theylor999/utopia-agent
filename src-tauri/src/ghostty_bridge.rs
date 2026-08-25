@@ -189,14 +189,14 @@ mod imp {
                 )
             };
             if s.is_null() {
-                eprintln!("[alethe-ghostty] surface_new FALHOU id={id}");
+                eprintln!("[utopia-agent-ghostty] surface_new FALHOU id={id}");
                 return Err("ghostty_surface_new retornou null".into());
             }
-            eprintln!("[alethe-ghostty] surface criada id={id}");
+            eprintln!("[utopia-agent-ghostty] surface criada id={id}");
 
             // estabilizar, digitamos um echo e lemos o grid de volta — provando o
 
-            if std::env::var("ALETHE_GHOSTTY_PROBE").as_deref() == Ok("1")
+            if std::env::var("UTOPIA_AGENT_GHOSTTY_PROBE").as_deref() == Ok("1")
                 && !PROBE_STARTED.swap(true, std::sync::atomic::Ordering::SeqCst)
             {
                 let app_thread = app.clone();
@@ -218,31 +218,31 @@ mod imp {
                                 debug_send_read(
                                     &state,
                                     lid,
-                                    "echo alethe_app_marker_99\r".to_string(),
+                                    "echo utopia_agent_marker_99\r".to_string(),
                                 )
                                 .ok()
                             });
                             let _ = tx.send(result);
                         });
                         if let Ok(Some(screen)) = rx.recv() {
-                            let ok = screen.contains("alethe_app_marker_99");
+                            let ok = screen.contains("utopia_agent_marker_99");
                             let preview: String = screen
                                 .lines()
                                 .filter(|l| !l.trim().is_empty())
                                 .take(3)
                                 .collect::<Vec<_>>()
                                 .join(" | ");
-                            eprintln!("[alethe-ghostty] PROBE echo_visivel={ok} tela: {preview}");
+                            eprintln!("[utopia-agent-ghostty] PROBE echo_visivel={ok} tela: {preview}");
                             return;
                         }
                         std::thread::sleep(std::time::Duration::from_secs(1));
                         let _ = attempt;
                     }
-                    eprintln!("[alethe-ghostty] PROBE erro: nenhuma surface viva após retries");
+                    eprintln!("[utopia-agent-ghostty] PROBE erro: nenhuma surface viva após retries");
                 });
             }
 
-            if std::env::var("ALETHE_GHOSTTY_WATCH").as_deref() == Ok("1")
+            if std::env::var("UTOPIA_AGENT_GHOSTTY_WATCH").as_deref() == Ok("1")
                 && !WATCH_STARTED.swap(true, std::sync::atomic::Ordering::SeqCst)
             {
                 let app_w = app.clone();
@@ -264,7 +264,7 @@ mod imp {
                                 .rfind(|l| !l.trim().is_empty())
                                 .unwrap_or("(vazio)")
                                 .to_string();
-                            eprintln!("[alethe-ghostty] WATCH última-linha: {last}");
+                            eprintln!("[utopia-agent-ghostty] WATCH última-linha: {last}");
                         }
                         std::thread::sleep(std::time::Duration::from_secs(2));
                     }

@@ -1,4 +1,4 @@
-import { AlertTriangle, Copy, Eye, Plus, Search, Trash2 } from 'lucide-react'
+import { Copy, Eye, Plus, Search, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { useT } from '../../lib/i18n'
@@ -364,15 +364,6 @@ export function McpManagerModal() {
               {record.sourcePath}
             </p>
           ))}
-          {confirmTarget.some((record) => record.managedByImport) ? (
-            <p className={styles.warning}>
-              <AlertTriangle size={14} />
-              {t('mcp.managedByImportHint', {
-                plugin:
-                  confirmTarget.find((record) => record.managedByImport)?.managedByImport ?? '',
-              })}
-            </p>
-          ) : null}
         </Modal>
       ) : null}
     </Modal>
@@ -408,7 +399,6 @@ function ServerDetail({
 }: DetailProps) {
   const t = useT()
   const primary = group.records[0]
-  const importedFrom = group.records.find((record) => record.managedByImport)?.managedByImport
   const headers =
     primary.server.transport.kind === 'stdio' ? {} : primary.server.transport.headers
 
@@ -434,12 +424,6 @@ function ServerDetail({
         </span>
       </div>
 
-      {importedFrom ? (
-        <div className={styles.warning}>
-          <AlertTriangle size={14} />
-          <span>{t('mcp.managedByImportHint', { plugin: importedFrom })}</span>
-        </div>
-      ) : null}
 
       <div>
         <div className={styles.sectionTitle}>
@@ -508,17 +492,15 @@ function ServerDetail({
                   {record.sourcePath}
                 </span>
                 <span className={styles.agentActions}>
-                  {agent !== 'antigravity' ? (
-                    <button
-                      type="button"
-                      className={`${controls.btn} ${controls.btnSm}`}
-                      disabled={checking !== null}
-                      onClick={() => onCheck(agent)}
-                      title={t('mcp.healthCheckHint')}
-                    >
-                      {checking === agent ? t('mcp.healthChecking') : t('mcp.healthCheck')}
-                    </button>
-                  ) : null}
+                  <button
+                    type="button"
+                    className={`${controls.btn} ${controls.btnSm}`}
+                    disabled={checking !== null}
+                    onClick={() => onCheck(agent)}
+                    title={t('mcp.healthCheckHint')}
+                  >
+                    {checking === agent ? t('mcp.healthChecking') : t('mcp.healthCheck')}
+                  </button>
                   {enabledFlagFor(agent) ? (
                     <button
                       type="button"

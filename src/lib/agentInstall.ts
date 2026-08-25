@@ -45,43 +45,6 @@ export const AGENT_INSTALL_CATALOG: Partial<Record<AgentType, AgentInstallCatalo
       { id: 'npm', command: 'npm install -g @anthropic-ai/claude-code', requires: 'npm' },
     ],
   },
-  codex: {
-    docsUrl: 'https://github.com/openai/codex',
-    methods: [
-      { id: 'native', command: 'irm https://chatgpt.com/codex/install.ps1 | iex' },
-      { id: 'npm', command: 'npm install -g @openai/codex', requires: 'npm' },
-    ],
-  },
-  copilot: {
-    docsUrl: 'https://docs.github.com/en/copilot/how-tos/copilot-cli/cli-getting-started',
-    methods: [
-      { id: 'winget', command: 'winget install GitHub.Copilot', requires: 'winget' },
-      { id: 'npm', command: 'npm install -g @github/copilot', requires: 'npm' },
-    ],
-  },
-  antigravity: {
-    docsUrl: 'https://antigravity.google/docs/cli/install',
-    methods: [{ id: 'native', command: 'irm https://antigravity.google/cli/install.ps1 | iex' }],
-  },
-  mimo: {
-    docsUrl: 'https://github.com/XiaomiMiMo/MiMo-Code',
-    methods: [
-      { id: 'native', command: 'irm https://mimo.xiaomi.com/install.ps1 | iex' },
-      { id: 'npm', command: 'npm install -g @mimo-ai/cli', requires: 'npm' },
-    ],
-  },
-  freebuff: {
-    docsUrl: 'https://freebuff.com',
-    methods: [{ id: 'npm', command: 'npm install -g freebuff', requires: 'npm' }],
-  },
-  opencode: {
-    docsUrl: 'https://opencode.ai/docs/',
-    methods: [
-      { id: 'npm', command: 'npm install -g opencode-ai', requires: 'npm' },
-      { id: 'scoop', command: 'scoop install opencode', requires: 'scoop' },
-      { id: 'choco', command: 'choco install opencode', requires: 'choco' },
-    ],
-  },
 }
 
 export function installDocsUrl(agent: AgentType): string | undefined {

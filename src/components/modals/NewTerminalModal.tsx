@@ -4,7 +4,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { pickDirectory } from '../../lib/dialog'
 import { useT } from '../../lib/i18n'
 import { basename } from '../../lib/paths'
-import { AGENT_TYPE_LABELS, type AgentRuntimeProfile, type AgentType,ALL_AGENT_TYPES, UNRESTRICTED_FLAG } from '../../lib/types'
+import {
+  AGENT_TYPE_LABELS,
+  ALL_AGENT_TYPES,
+  type AgentRuntimeProfile,
+  type AgentType,
+  UNRESTRICTED_FLAG,
+} from '../../lib/types'
 import { getProjectDefaultCwd, useProjectsStore } from '../../stores/projectsStore'
 import { useUiStore } from '../../stores/uiStore'
 import { AgentIcon } from '../icons/AgentIcons'
@@ -34,23 +40,19 @@ export function NewTerminalModal() {
     (s) => s.preferences.terminalTheme ?? s.preferences.uiTheme,
   )
 
-  const [type, setType] = useState<AgentType>('claude')
+  const [type, setType] = useState<AgentType>('omp')
   const [runtimeProfile, setRuntimeProfile] = useState<AgentRuntimeProfile>('lean')
   const [cwd, setCwd] = useState('')
-  const [unrestricted, setUnrestricted] = useState<Record<AgentType, boolean>>({
-    shell: false,
-    claude: false,
-    codex: false,
-    copilot: false,
-    antigravity: false,
-    opencode: false,
-    freebuff: false,
-    mimo: false,
-  })
+  const [unrestricted, setUnrestricted] = useState<Record<AgentType, boolean>>(() =>
+    Object.fromEntries(ALL_AGENT_TYPES.map((agent) => [agent, false])) as Record<
+      AgentType,
+      boolean
+    >,
+  )
 
   const visibleAgents = AGENTS.filter((a) => enabled[a.type])
   const defaultType =
-    visibleAgents.find((agent) => agent.type === 'claude')?.type ??
+    visibleAgents.find((agent) => agent.type === 'omp')?.type ??
     visibleAgents[0]?.type ??
     'shell'
   const selectedAgent = AGENTS.find((agent) => agent.type === type) ?? AGENTS[0]
@@ -79,32 +81,23 @@ export function NewTerminalModal() {
     if (!open) return
     setCwd(inheritedCwd)
     setType(defaultType)
-    setUnrestricted({
-      shell: alwaysStartUnrestricted,
-      claude: alwaysStartUnrestricted,
-      codex: alwaysStartUnrestricted,
-      copilot: alwaysStartUnrestricted,
-      antigravity: alwaysStartUnrestricted,
-      opencode: alwaysStartUnrestricted,
-      freebuff: alwaysStartUnrestricted,
-      mimo: alwaysStartUnrestricted,
-    })
+    setUnrestricted(
+      Object.fromEntries(
+        ALL_AGENT_TYPES.map((agent) => [agent, alwaysStartUnrestricted]),
+      ) as Record<AgentType, boolean>,
+    )
   }, [open, context?.projectId, inheritedCwd, defaultType, alwaysStartUnrestricted])
 
   const reset = () => {
     setType(defaultType)
     setRuntimeProfile('lean')
     setCwd('')
-    setUnrestricted({
-      shell: false,
-      claude: false,
-      codex: false,
-      copilot: false,
-      antigravity: false,
-      opencode: false,
-      freebuff: false,
-      mimo: false,
-    })
+    setUnrestricted(
+      Object.fromEntries(ALL_AGENT_TYPES.map((agent) => [agent, false])) as Record<
+        AgentType,
+        boolean
+      >,
+    )
   }
 
   const submit = async () => {

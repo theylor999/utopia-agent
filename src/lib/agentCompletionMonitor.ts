@@ -1,5 +1,5 @@
 import { getLocale, translate } from './i18n'
-import type { AgentType } from './types'
+import { AGENT_TYPE_LABELS, type AgentType } from './types'
 import { notifyAgentDone } from './notifications'
 import { pathSegments } from './paths'
 
@@ -95,7 +95,9 @@ export class AgentCompletionMonitor {
       this.options.onComplete?.()
       if (this.options.notifyOnComplete !== false) {
         void notifyAgentDone(
-          translate(getLocale(), 'notif.agentDoneTitle', { agent: agentLabel(this.options.agent) }),
+          translate(getLocale(), 'notif.agentDoneTitle', {
+            agent: AGENT_TYPE_LABELS[this.options.agent],
+          }),
           buildNotificationBody(this.options),
           { agent: this.options.agent },
         )
@@ -121,11 +123,6 @@ function buildNotificationBody(options: AgentCompletionMonitorOptions): string {
   return translate(locale, 'notif.responseReady')
 }
 
-function agentLabel(agent: Exclude<AgentType, 'shell'>): string {
-  if (agent === 'claude') return 'Claude'
-  if (agent === 'codex') return 'Codex'
-  return 'OpenCode'
-}
 
 function shortPath(path: string): string {
   const cleaned = path.replace(/[\\/]+$/, '')

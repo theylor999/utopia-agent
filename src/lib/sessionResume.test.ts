@@ -5,8 +5,6 @@ import { savedConversationIdFor, type SavedSession } from './sessionResume'
 const baseSession: SavedSession = {
   sessionId: 'pty-1',
   claudeSessionId: 'claude-chat',
-  codexSessionId: 'codex-chat',
-  antigravitySessionId: 'antigravity-chat',
   cwd: 'D:\\Work\\Project',
   agent: 'claude',
   timestamp: 1000,
@@ -18,30 +16,20 @@ describe('savedConversationIdFor', () => {
   })
 
   it('ignores saved sessions from another agent', () => {
-    expect(savedConversationIdFor(baseSession, 'codex', 'D:/Work/Project')).toBeUndefined()
+    expect(savedConversationIdFor(baseSession, 'grok', 'D:/Work/Project')).toBeUndefined()
   })
 
   it('ignores saved sessions from another cwd', () => {
     expect(savedConversationIdFor(baseSession, 'claude', 'D:/Work/Other')).toBeUndefined()
   })
 
-  it('returns the saved Antigravity conversation id', () => {
+  it('does not invent conversation ids for providers without resume support', () => {
     expect(
       savedConversationIdFor(
-        { ...baseSession, agent: 'antigravity' },
-        'antigravity',
+        { ...baseSession, agent: 'omp', claudeSessionId: undefined },
+        'omp',
         'D:/Work/Project',
       ),
-    ).toBe('antigravity-chat')
-  })
-
-  it('returns the saved OpenCode session id', () => {
-    expect(
-      savedConversationIdFor(
-        { ...baseSession, agent: 'opencode', opencodeSessionId: 'opencode-chat' },
-        'opencode',
-        'D:/Work/Project',
-      ),
-    ).toBe('opencode-chat')
+    ).toBeUndefined()
   })
 })

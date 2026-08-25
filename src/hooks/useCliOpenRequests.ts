@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 import { planCliOpen } from '../lib/cliOpen'
 import { useT } from '../lib/i18n'
 import { cliTakePendingOpen, listenCliOpenPath } from '../lib/tauri'
-import type { AgentType } from '../lib/types'
+import { AGENT_TYPE_LABELS, ALL_AGENT_TYPES } from '../lib/types'
 import { useProjectsStore } from '../stores/projectsStore'
 import { useUiStore } from '../stores/uiStore'
 
@@ -16,26 +16,6 @@ import { useUiStore } from '../stores/uiStore'
                                                  
    
 
-                                                                           
-const AGENT_PREFERENCE: AgentType[] = [
-  'claude',
-  'codex',
-  'copilot',
-  'antigravity',
-  'opencode',
-  'shell',
-]
-
-const AGENT_LABEL: Record<AgentType, string> = {
-  claude: 'Claude',
-  codex: 'Codex',
-  copilot: 'GitHub Copilot',
-  antigravity: 'Antigravity',
-  opencode: 'OpenCode',
-  shell: 'Shell',
-  mimo: 'Mimo',
-  freebuff: 'Freebuff',
-}
 
 export function useCliOpenRequests(hydrated: boolean) {
   const t = useT()
@@ -58,9 +38,9 @@ export function useCliOpenRequests(hydrated: boolean) {
 
       const project = store.createProject({ name: plan.name, defaultCwd: plan.cwd })
       const agent =
-        AGENT_PREFERENCE.find((candidate) => store.preferences.enabledAgents[candidate]) ?? 'shell'
+        ALL_AGENT_TYPES.find((candidate) => store.preferences.enabledAgents[candidate]) ?? 'shell'
       const terminal = store.createTerminal(project.id, {
-        name: AGENT_LABEL[agent],
+        name: AGENT_TYPE_LABELS[agent],
         cwd: plan.cwd,
         firstTab: { type: agent, cwd: plan.cwd, runtimeProfile: 'lean' },
       })

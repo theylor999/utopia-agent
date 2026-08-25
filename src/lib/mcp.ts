@@ -153,7 +153,7 @@ function serverFromEntry(name: string, entry: UnknownRecord): McpServerInput | n
     }
   }
 
-  // OpenCode packs the command and its arguments into one array.
+  // Some clients pack the command and its arguments into one array.
   const packed = stringArray(entry.command)
   const command = packed.length > 0 ? packed[0] : typeof entry.command === 'string' ? entry.command : ''
   if (!command.trim()) return null
@@ -239,7 +239,7 @@ export function unsupportedFor(
   ) {
     out.push('headers')
   }
-  if (server.bearerTokenEnvVar && capability.agent !== 'codex') out.push('bearerTokenEnvVar')
+  if (server.bearerTokenEnvVar) out.push('bearerTokenEnvVar')
   return out
 }
 
