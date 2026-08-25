@@ -169,6 +169,8 @@ export const ptBR: Record<MessageKey, string> = {
     'O destino do workspace já existe: {path}',
   'featureWorkspace.error.destinationExistsForRole':
     'O destino de {role} já existe: {path}',
+  'featureWorkspace.error.invalidWorkspacesRoot':
+    'A pasta das áreas de trabalho não é um caminho absoluto utilizável. Defina de novo nas Preferências.',
   'featureWorkspace.error.invalidBaseRef':
     'A ref base não é um nome de ref utilizável. Use algo como origin/hml.',
   'featureWorkspace.error.baseRefMissing':
@@ -2484,4 +2486,26 @@ export const ptBR: Record<MessageKey, string> = {
   'prefs.featureBaseRefInvalid':
     'Não é um nome de ref utilizável. Até corrigir, novas funcionalidades usam origin/hml.',
   'prefs.featureBaseRefReset': 'Voltar para {baseRef}',
+  'prefs.featureReposRoot': 'Pasta dos repositórios',
+  'prefs.featureReposRootDesc':
+    'Pasta que guarda seus clones. A varredura encontra os repositórios Git diretamente dentro dela e atribui uma camada a cada um, preenchendo os três campos abaixo. Pastas que não são repositórios Git são ignoradas.',
+  'prefs.featureReposRootLabel': 'Pasta dos repositórios',
+  'prefs.featureReposRescan': 'Varrer de novo',
+  'prefs.featureReposScanning': 'Varrendo…',
+  'prefs.featureReposScanEmpty': 'Nenhum repositório encontrado nesta pasta.',
+  'prefs.featureReposScanRole': 'Detectado como {role}',
+  'prefs.featureReposScanNoRole': 'Nenhuma camada atribuída',
+  'prefs.featureReposScanUnassigned':
+    'Nenhum repositório detectado para: {roles}. Escolha um nos campos abaixo.',
+  'prefs.featureReposScanSkipped': 'Ignorado: não é um repositório Git',
+  'prefs.featureRepoFromScan':
+    'Preenchido pela varredura. Se você escolher uma pasta aqui, sua escolha é mantida.',
+  'prefs.featureWorkspacesRoot': 'Pasta das áreas de trabalho',
+  'prefs.featureWorkspacesRootDesc':
+    'Pasta onde cada área de trabalho de funcionalidade é criada, no formato <raiz>\\<camadas>\\<categoria>\\<nome>\\<camada>. As pastas que faltarem são criadas.',
+  'prefs.featureWorkspacesRootLabel': 'Pasta das áreas de trabalho',
+  'prefs.featureWorkspacesRootExample':
+    'Uma funcionalidade de backend + frontend chamada tal vai para {root}\\front_back\\feature\\tal\\back e …\\front.',
+  'prefs.featureWorkspacesRootUnset':
+    'Não definida: as áreas de trabalho são criadas ao lado do repositório principal, como antes.',
 }

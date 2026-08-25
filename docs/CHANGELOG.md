@@ -44,6 +44,20 @@ Notable user-facing changes to **Utopia Agent** are documented here. The format 
 
 ### Added
 
+- A **repositories root** preference: point it at the folder holding your repositories once and
+  the app scans its immediate children, detects which one is the backend, the frontend and the
+  scripts, and fills the three per-role paths for you. Folders that are not Git repositories are
+  skipped and never assigned a role. A folder name alone can never assign a role — the name is
+  only a tiebreaker on top of a real stack signal. Re-scanning never overwrites a path you set by
+  hand.
+- A **workspaces root** preference. Worktrees are created under
+  `<workspacesRoot>\<combo>\<category>\<name>\<slice>` — for backend+frontend, `feature`, `tal`
+  that is `…\front_back\feature\tal\back` and `…\front_back\feature\tal\front`. Intermediate
+  directories are created on demand and, on removal, pruned only when empty, so a sibling feature
+  keeps them. With the preference empty the previous layout (next to the main repository) is kept.
+- With both roots configured, creating a feature asks for nothing but the slices, the category and
+  the name: no repository dropdown, no folder picker, no stack detection at all.
+
 - Creating a feature no longer requires registering a project first. Each slice can point straight
   at any Git repository folder through the folder picker, so a fresh install with zero projects can
   create a feature workspace.

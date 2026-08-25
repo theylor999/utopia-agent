@@ -32,6 +32,15 @@ const FEATURE_ROLE_ORDER: [FeatureRole; 3] = [
     FeatureRole::Scripts,
 ];
 
+/// Combo folder order. Deliberately front-first, matching the layout the owner
+/// asked for (`front_back`), while `FEATURE_ROLE_ORDER` above keeps driving
+/// plans, items, and rollback.
+const COMBO_SLUG_ORDER: [FeatureRole; 3] = [
+    FeatureRole::Frontend,
+    FeatureRole::Backend,
+    FeatureRole::Scripts,
+];
+
 impl FeatureRole {
     fn as_str(self) -> &'static str {
         match self {
@@ -40,6 +49,26 @@ impl FeatureRole {
             Self::Scripts => "scripts",
         }
     }
+
+    /// Short folder name used inside a workspaces-root layout.
+    fn short_str(self) -> &'static str {
+        match self {
+            Self::Backend => "back",
+            Self::Frontend => "front",
+            Self::Scripts => "scripts",
+        }
+    }
+}
+
+/// Folder that groups every feature spanning the same slice set, for example
+/// `front_back` for a backend + frontend feature.
+fn combo_slug(slices: &[FeatureRole]) -> String {
+    COMBO_SLUG_ORDER
+        .iter()
+        .filter(|role| slices.contains(role))
+        .map(|role| role.short_str())
+        .collect::<Vec<_>>()
+        .join("_")
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -62,6 +91,11 @@ pub struct FeatureWorkspaceRequest {
     /// caller that omits it gets `invalid_base_ref` instead of a serde error.
     #[serde(default)]
     pub base_ref: String,
+    /// Root every workspace is created under. When empty the workspace lands
+    /// next to the main repository, the behavior this flow shipped with, so an
+    /// installation that never configured a root keeps working.
+    #[serde(default)]
+    pub workspaces_root: String,
     pub sources: Vec<FeatureWorkspaceSource>,
 }
 
@@ -80,6 +114,11 @@ pub struct FeatureWorkspacePlan {
     /// Ref every slice in `items` branches from, echoed back so the preview can
     /// state it before the user commits to creating anything.
     pub base_ref: String,
+    /// Configured workspaces root, echoed back so the descriptor a later
+    /// removal receives rebuilds the exact same paths. Empty for a workspace
+    /// created next to its main repository.
+    #[serde(default)]
+    pub workspaces_root: String,
     pub workspace_root: String,
     pub items: Vec<FeatureWorkspaceItem>,
 }
@@ -113,6 +152,8 @@ struct ResolvedFeatureWorkspace {
     plan: FeatureWorkspacePlan,
     /// Validated base ref, identical to `plan.base_ref`.
     base_ref: String,
+    /// Configured workspaces root, or `None` for the historical layout.
+    workspaces_root: Option<PathBuf>,
     roots: Vec<PathBuf>,
     workspace_root: PathBuf,
     destinations: Vec<PathBuf>,
@@ -196,6 +237,9 @@ pub(crate) fn feature_workspace_remove_inner(
             false
         }
     };
+    if workspace_root_removed {
+        prune_empty_workspace_ancestors(&resolved);
+    }
     let complete = workspace_root_removed
         && errors.is_empty()
         && items.iter().all(|item| {
@@ -281,14 +325,34 @@ fn resolve_request(
     }
 
     validate_branch(&roots[0], &branch)?;
-    let workspace_parent = roots[0]
-        .parent()
-        .ok_or_else(|| "invalid_repository_root".to_string())?;
-    let workspace_root = workspace_parent.join(branch_slug(&branch)?);
-    let destinations: Vec<PathBuf> = expected
-        .iter()
-        .map(|role| workspace_root.join(role.as_str()))
-        .collect();
+    let workspaces_root = validated_workspaces_root(&request.workspaces_root)?;
+    let (workspace_root, destinations): (PathBuf, Vec<PathBuf>) = match &workspaces_root {
+        // `<workspacesRoot>/<combo>/<category>/<name>/<slice>`: one folder per
+        // slice set, then the branch split into its two segments.
+        Some(root) => {
+            let workspace_root = root
+                .join(combo_slug(&expected))
+                .join(branch_slug(category)?)
+                .join(branch_slug(name)?);
+            let destinations = expected
+                .iter()
+                .map(|role| workspace_root.join(role.short_str()))
+                .collect();
+            (workspace_root, destinations)
+        }
+        // Historical layout: next to the main repository of the first slice.
+        None => {
+            let workspace_parent = roots[0]
+                .parent()
+                .ok_or_else(|| "invalid_repository_root".to_string())?;
+            let workspace_root = workspace_parent.join(branch_slug(&branch)?);
+            let destinations = expected
+                .iter()
+                .map(|role| workspace_root.join(role.as_str()))
+                .collect();
+            (workspace_root, destinations)
+        }
+    };
     let items = expected
         .iter()
         .enumerate()
@@ -302,11 +366,16 @@ fn resolve_request(
         plan: FeatureWorkspacePlan {
             branch,
             base_ref: base_ref.clone(),
+            workspaces_root: workspaces_root
+                .as_ref()
+                .map(|root| git_arg(root))
+                .unwrap_or_default(),
             workspace_root: git_arg(&workspace_root),
             items,
         },
         base_ref,
         roots,
+        workspaces_root,
         workspace_root,
         destinations,
     };
@@ -346,6 +415,21 @@ fn validated_base_ref(base_ref: &str) -> Result<String, String> {
     } else {
         Err("invalid_base_ref".to_string())
     }
+}
+
+/// Accepts the configured workspaces root: an absolute path, with no revision
+/// or wildcard characters that Windows refuses in a folder name. `None` means
+/// the preference is unset and the historical layout applies.
+fn validated_workspaces_root(workspaces_root: &str) -> Result<Option<PathBuf>, String> {
+    let trimmed = workspaces_root.trim();
+    if trimmed.is_empty() {
+        return Ok(None);
+    }
+    let path = PathBuf::from(trimmed);
+    if !path.is_absolute() || trimmed.contains(['<', '>', '|', '"', '*', '?']) {
+        return Err("invalid_workspaces_root".to_string());
+    }
+    Ok(Some(path))
 }
 
 /// Remote a base ref tracks and the branch on it, or `None` when the ref is
@@ -522,6 +606,22 @@ fn ensure_item_available(
     Ok(())
 }
 
+/// Removes the `<combo>/<category>` folders a workspace leaves behind, never
+/// the workspaces root itself. Best effort: a folder another feature still uses
+/// is not empty, so `remove_dir` fails and the folder stays.
+fn prune_empty_workspace_ancestors(resolved: &ResolvedFeatureWorkspace) {
+    let Some(root) = resolved.workspaces_root.as_deref() else {
+        return;
+    };
+    let mut current = resolved.workspace_root.parent();
+    while let Some(candidate) = current {
+        if same_path(candidate, root) || fs::remove_dir(candidate).is_err() {
+            return;
+        }
+        current = candidate.parent();
+    }
+}
+
 fn path_occupied(path: &Path) -> Result<bool, String> {
     match fs::symlink_metadata(path) {
         Ok(_) => Ok(true),
@@ -648,6 +748,12 @@ where
     if base_oids.len() != resolved.plan.items.len() {
         return Err("invalid_slices".to_string());
     }
+    // The combo and category folders, and the workspaces root itself, are
+    // created on demand. The workspace folder stays a plain `create_dir`, so an
+    // occupied destination is still reported instead of being reused.
+    if let Some(parent) = resolved.workspace_root.parent() {
+        fs::create_dir_all(parent).map_err(|error| format!("mkdir_failed:{error}"))?;
+    }
     fs::create_dir(&resolved.workspace_root).map_err(|error| {
         if error.kind() == ErrorKind::AlreadyExists {
             format!("destination_exists:{}", resolved.plan.workspace_root)
@@ -702,8 +808,10 @@ fn rollback_created(
     }
 
     match fs::remove_dir(&resolved.workspace_root) {
-        Ok(()) => {}
-        Err(error) if error.kind() == ErrorKind::NotFound => {}
+        Ok(()) => prune_empty_workspace_ancestors(resolved),
+        Err(error) if error.kind() == ErrorKind::NotFound => {
+            prune_empty_workspace_ancestors(resolved)
+        }
         Err(error) => errors.push(format!("workspace_root_remove:{error}")),
     }
     errors
@@ -849,6 +957,7 @@ fn resolve_workspace_descriptor(
         category: category.to_string(),
         name: name.to_string(),
         base_ref: workspace.base_ref.clone(),
+        workspaces_root: workspace.workspaces_root.clone(),
         sources: workspace
             .items
             .iter()
@@ -861,6 +970,7 @@ fn resolve_workspace_descriptor(
     let resolved = resolve_request(request, false)?;
     if resolved.plan.branch != workspace.branch
         || resolved.plan.base_ref != workspace.base_ref
+        || resolved.plan.workspaces_root != workspace.workspaces_root
         || !same_path(
             Path::new(&resolved.plan.workspace_root),
             Path::new(&workspace.workspace_root),
@@ -1041,6 +1151,25 @@ mod tests {
             category: "feature".to_string(),
             name: name.to_string(),
             base_ref: base_ref.to_string(),
+            workspaces_root: String::new(),
+            sources,
+        }
+    }
+
+    /// Same as `request`, but targeting a configured workspaces root.
+    fn rooted_request(
+        slices: &[FeatureRole],
+        category: &str,
+        name: &str,
+        workspaces_root: &Path,
+        sources: Vec<FeatureWorkspaceSource>,
+    ) -> FeatureWorkspaceRequest {
+        FeatureWorkspaceRequest {
+            slices: slices.to_vec(),
+            category: category.to_string(),
+            name: name.to_string(),
+            base_ref: "HEAD".to_string(),
+            workspaces_root: git_arg(workspaces_root),
             sources,
         }
     }
@@ -1639,6 +1768,253 @@ mod tests {
         assert!(second.workspace_root_removed);
         assert!(second.items[0].worktree_removed);
         assert!(second.items[0].branch_removed);
+        fs::remove_dir_all(base).expect("cleanup fixture");
+    }
+
+    #[test]
+    fn combo_slug_names_every_slice_set_front_first() {
+        use FeatureRole::{Backend, Frontend, Scripts};
+        assert_eq!(combo_slug(&[Frontend]), "front");
+        assert_eq!(combo_slug(&[Backend]), "back");
+        assert_eq!(combo_slug(&[Scripts]), "scripts");
+        assert_eq!(combo_slug(&[Backend, Frontend]), "front_back");
+        assert_eq!(combo_slug(&[Frontend, Scripts]), "front_scripts");
+        assert_eq!(combo_slug(&[Backend, Scripts]), "back_scripts");
+        assert_eq!(combo_slug(&[Backend, Frontend, Scripts]), "front_back_scripts");
+    }
+
+    #[test]
+    fn rejects_a_workspaces_root_that_is_not_a_usable_absolute_folder() {
+        assert_eq!(validated_workspaces_root("   ").unwrap(), None);
+        for value in ["utopia_repos", "./utopia", "C:/utopia?repos", "C:/a|b"] {
+            assert_eq!(
+                validated_workspaces_root(value).unwrap_err(),
+                "invalid_workspaces_root"
+            );
+        }
+        assert!(validated_workspaces_root("  C:/utopia_repos  ")
+            .unwrap()
+            .is_some());
+    }
+
+    #[test]
+    fn plans_the_combo_category_name_slice_layout_under_the_workspaces_root() {
+        let base = temp_root("workspaces-root-layout");
+        let backend = base.join("api");
+        let frontend = base.join("web");
+        let scripts = base.join("tools");
+        init_repo(&backend);
+        init_repo(&frontend);
+        init_repo(&scripts);
+        let workspaces_root = base.join("utopia_repos");
+        let repo_for = |role: FeatureRole| match role {
+            FeatureRole::Backend => &backend,
+            FeatureRole::Frontend => &frontend,
+            FeatureRole::Scripts => &scripts,
+        };
+
+        let combinations: [(&[FeatureRole], &str, &[&str]); 7] = [
+            (&[FeatureRole::Frontend], "front", &["front"]),
+            (&[FeatureRole::Backend], "back", &["back"]),
+            (&[FeatureRole::Scripts], "scripts", &["scripts"]),
+            (
+                &[FeatureRole::Backend, FeatureRole::Frontend],
+                "front_back",
+                &["back", "front"],
+            ),
+            (
+                &[FeatureRole::Backend, FeatureRole::Scripts],
+                "back_scripts",
+                &["back", "scripts"],
+            ),
+            (
+                &[FeatureRole::Frontend, FeatureRole::Scripts],
+                "front_scripts",
+                &["front", "scripts"],
+            ),
+            (
+                &[FeatureRole::Backend, FeatureRole::Frontend, FeatureRole::Scripts],
+                "front_back_scripts",
+                &["back", "front", "scripts"],
+            ),
+        ];
+
+        for (index, (slices, combo, slice_dirs)) in combinations.iter().enumerate() {
+            let name = format!("tal-{index}");
+            let plan = feature_workspace_plan_inner(rooted_request(
+                slices,
+                "feature",
+                &name,
+                &workspaces_root,
+                slices
+                    .iter()
+                    .map(|role| source(*role, repo_for(*role)))
+                    .collect(),
+            ))
+            .expect("plan under a workspaces root");
+
+            let expected_root = workspaces_root.join(combo).join("feature").join(&name);
+            assert!(
+                same_path(Path::new(&plan.workspace_root), &expected_root),
+                "unexpected workspace root: {}",
+                plan.workspace_root
+            );
+            assert!(same_path(
+                Path::new(&plan.workspaces_root),
+                &workspaces_root
+            ));
+            assert_eq!(plan.items.len(), slice_dirs.len());
+            for (item, slice_dir) in plan.items.iter().zip(slice_dirs.iter()) {
+                assert!(same_path(
+                    Path::new(&item.destination),
+                    &expected_root.join(slice_dir)
+                ));
+            }
+        }
+
+        fs::remove_dir_all(base).expect("cleanup fixture");
+    }
+
+    #[test]
+    fn creates_the_workspaces_root_layout_and_prunes_it_on_removal() {
+        let base = temp_root("workspaces-root-create");
+        let backend = base.join("api");
+        let frontend = base.join("web");
+        init_repo(&backend);
+        init_repo(&frontend);
+        // The root itself does not exist yet: the flow must create it.
+        let workspaces_root = base.join("utopia_repos");
+        assert!(!workspaces_root.exists());
+
+        let created = feature_workspace_create_inner(rooted_request(
+            &[FeatureRole::Frontend, FeatureRole::Backend],
+            "feature",
+            "tal",
+            &workspaces_root,
+            vec![
+                source(FeatureRole::Frontend, &frontend),
+                source(FeatureRole::Backend, &backend),
+            ],
+        ))
+        .expect("workspace under a configured root");
+
+        let expected_root = workspaces_root.join("front_back").join("feature").join("tal");
+        assert!(expected_root.join("back").join(".git").exists());
+        assert!(expected_root.join("front").join(".git").exists());
+        assert_eq!(created.items.len(), 2);
+        assert_eq!(created.items[0].role, FeatureRole::Backend);
+        assert!(same_path(
+            Path::new(&created.items[0].destination),
+            &expected_root.join("back")
+        ));
+        assert!(same_path(
+            Path::new(&created.items[1].destination),
+            &expected_root.join("front")
+        ));
+        // Still no upstream on either branch.
+        for root in [&backend, &frontend] {
+            let upstream = git_command(
+                root,
+                &["rev-parse", "--abbrev-ref", "feature/tal@{upstream}"],
+            )
+            .expect("upstream probe runs");
+            assert!(!upstream.status.success(), "branch must have no upstream");
+        }
+
+        // A second feature in the same combo and category shares the folders.
+        let sibling = feature_workspace_create_inner(rooted_request(
+            &[FeatureRole::Backend, FeatureRole::Frontend],
+            "feature",
+            "outra",
+            &workspaces_root,
+            vec![
+                source(FeatureRole::Backend, &backend),
+                source(FeatureRole::Frontend, &frontend),
+            ],
+        ))
+        .expect("sibling workspace");
+
+        let cleanup = feature_workspace_remove_inner(created).expect("cleanup report");
+        assert!(cleanup.complete);
+        assert!(!expected_root.exists());
+        // The shared folders stay while the sibling still lives there.
+        assert!(workspaces_root.join("front_back").join("feature").exists());
+
+        let sibling_cleanup = feature_workspace_remove_inner(sibling).expect("sibling cleanup");
+        assert!(sibling_cleanup.complete);
+        // Now empty, so the combo and category folders are pruned, but never
+        // the configured root itself.
+        assert!(!workspaces_root.join("front_back").exists());
+        assert!(workspaces_root.exists());
+
+        fs::remove_dir_all(base).expect("cleanup fixture");
+    }
+
+    #[test]
+    fn collision_checks_still_run_against_the_workspaces_root_layout() {
+        let base = temp_root("workspaces-root-collision");
+        let repo = base.join("api");
+        init_repo(&repo);
+        let workspaces_root = base.join("utopia_repos");
+        let occupied = workspaces_root.join("back").join("feature").join("tal");
+        fs::create_dir_all(&occupied).expect("occupied destination");
+
+        let error = feature_workspace_plan_inner(rooted_request(
+            &[FeatureRole::Backend],
+            "feature",
+            "tal",
+            &workspaces_root,
+            vec![source(FeatureRole::Backend, &repo)],
+        ))
+        .unwrap_err();
+        assert!(
+            error.starts_with("destination_exists:"),
+            "unexpected error: {error}"
+        );
+        fs::remove_dir_all(&occupied).expect("free the destination");
+
+        run_git(&repo, &["branch", "feature/tal"]);
+        let branch_error = feature_workspace_plan_inner(rooted_request(
+            &[FeatureRole::Backend],
+            "feature",
+            "tal",
+            &workspaces_root,
+            vec![source(FeatureRole::Backend, &repo)],
+        ))
+        .unwrap_err();
+        assert!(branch_error.starts_with("branch_exists:"));
+
+        fs::remove_dir_all(base).expect("cleanup fixture");
+    }
+
+    #[test]
+    fn remove_rejects_a_descriptor_whose_workspaces_root_was_changed() {
+        let base = temp_root("descriptor-workspaces-root");
+        let repo = base.join("api");
+        init_repo(&repo);
+        let workspaces_root = base.join("utopia_repos");
+        let plan = feature_workspace_plan_inner(rooted_request(
+            &[FeatureRole::Backend],
+            "feature",
+            "tal",
+            &workspaces_root,
+            vec![source(FeatureRole::Backend, &repo)],
+        ))
+        .expect("valid plan");
+
+        let mut dropped = plan.clone();
+        dropped.workspaces_root = String::new();
+        assert_eq!(
+            feature_workspace_remove_inner(dropped).unwrap_err(),
+            "invalid_workspace_descriptor"
+        );
+
+        let mut moved = plan;
+        moved.workspaces_root = git_arg(&base.join("elsewhere"));
+        assert_eq!(
+            feature_workspace_remove_inner(moved).unwrap_err(),
+            "invalid_workspace_descriptor"
+        );
         fs::remove_dir_all(base).expect("cleanup fixture");
     }
 

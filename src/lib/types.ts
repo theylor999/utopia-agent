@@ -469,6 +469,24 @@ export type Preferences = {
   featureFrontendRepoPath: string
   featureScriptsRepoPath: string
   /**
+   * Folder that holds the clones a feature branches from, for example
+   * `C:\repos_originais`. Scanning it assigns a role to each repository inside
+   * and fills the three paths above. Empty means unset.
+   */
+  featureRepositoriesRoot: string
+  /**
+   * Paths the last scan of `featureRepositoriesRoot` assigned, per role. A role
+   * whose current path differs from the value here was set by hand, so a
+   * re-scan leaves it alone.
+   */
+  featureScannedRepoPaths: FeatureRoleRepoPaths
+  /**
+   * Folder every feature workspace is created under, for example
+   * `C:\utopia_repos`. Empty keeps the historical layout, next to the main
+   * repository of the first slice.
+   */
+  featureWorkspacesRoot: string
+  /**
    * Ref every feature branch starts from, shared by all slices because a
    * feature is one branch name across its repositories. A remote-tracking ref
    * such as `origin/hml` is refreshed with a read-only fetch before branching;
@@ -561,6 +579,19 @@ export type ProjectsFile = {
  */
 export const DEFAULT_FEATURE_BASE_REF = 'origin/hml'
 
+/** One repository path per feature slice role. */
+export type FeatureRoleRepoPaths = {
+  backend: string
+  frontend: string
+  scripts: string
+}
+
+export const EMPTY_FEATURE_ROLE_REPO_PATHS: FeatureRoleRepoPaths = {
+  backend: '',
+  frontend: '',
+  scripts: '',
+}
+
 export const DEFAULT_PREFERENCES: Preferences = {
   language: 'en',
   uiTheme: 'elite-indigo',
@@ -619,6 +650,9 @@ export const DEFAULT_PREFERENCES: Preferences = {
   featureBackendRepoPath: '',
   featureFrontendRepoPath: '',
   featureScriptsRepoPath: '',
+  featureRepositoriesRoot: '',
+  featureScannedRepoPaths: EMPTY_FEATURE_ROLE_REPO_PATHS,
+  featureWorkspacesRoot: '',
   featureBaseRef: DEFAULT_FEATURE_BASE_REF,
   featureSliceGroupsSeeded: false,
   mcpDefaultScope: 'global',

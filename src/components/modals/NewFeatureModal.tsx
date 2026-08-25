@@ -19,6 +19,7 @@ import {
   featureBaseRef,
   featureRoleRepoPath,
   featureSliceGroupNameKey,
+  featureWorkspacesRoot,
   FEATURE_SLICES,
   isUsableFeatureBaseRef,
   planFeatureWorkspace,
@@ -175,6 +176,8 @@ export function NewFeatureModal() {
   const lastBrowsedPath = useRef('')
 
   const configuredBaseRef = featureBaseRef(preferences)
+  /** Root every workspace is created under. Empty keeps the historical layout. */
+  const workspacesRoot = featureWorkspacesRoot(preferences)
   const baseRef = baseRefOverride ?? configuredBaseRef
   const baseRefUsable = isUsableFeatureBaseRef(baseRef)
   const categorySlug = useMemo(() => slugifyFeatureSegment(category), [category])
@@ -333,6 +336,7 @@ export function NewFeatureModal() {
       category: categorySlug,
       name: nameSlug,
       baseRef: baseRef.trim(),
+      workspacesRoot,
       sources: selected.map((entry) => {
         const source = entry.source!
         return source.projectId
@@ -340,7 +344,7 @@ export function NewFeatureModal() {
           : { role: entry.role, path: source.path }
       }),
     }
-  }, [baseRef, baseRefUsable, categorySlug, nameSlug, resolvedSources, slices])
+  }, [baseRef, baseRefUsable, categorySlug, nameSlug, resolvedSources, slices, workspacesRoot])
 
   useEffect(() => {
     setPlan(null)

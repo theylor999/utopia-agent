@@ -1,7 +1,13 @@
 import type { MessageKey } from './i18n'
-import { DEFAULT_FEATURE_BASE_REF, type Preferences } from './types'
+import {
+  DEFAULT_FEATURE_BASE_REF,
+  EMPTY_FEATURE_ROLE_REPO_PATHS,
+  type FeatureRoleRepoPaths,
+  type Preferences,
+} from './types'
 
 export { DEFAULT_FEATURE_BASE_REF }
+export type { FeatureRoleRepoPaths }
 
 /** Canonical slice order. Plans, group names, and previews all follow it. */
 export const FEATURE_SLICES = ['backend', 'frontend', 'scripts'] as const
@@ -24,6 +30,106 @@ export function featureRoleRepoPath(
   role: FeatureRole,
 ): string {
   return (preferences[FEATURE_ROLE_REPO_PREFERENCE[role]] ?? '').trim()
+}
+
+/** Configured repositories root, or an empty string when unset. */
+export function featureRepositoriesRoot(
+  preferences: Pick<Preferences, 'featureRepositoriesRoot'>,
+): string {
+  return (preferences.featureRepositoriesRoot ?? '').trim()
+}
+
+/**
+ * Configured workspaces root, or an empty string. Empty keeps the historical
+ * layout, where the workspace lands next to the main repository.
+ */
+export function featureWorkspacesRoot(
+  preferences: Pick<Preferences, 'featureWorkspacesRoot'>,
+): string {
+  return (preferences.featureWorkspacesRoot ?? '').trim()
+}
+
+/** Stack detection of one scanned repository, as the backend reports it. */
+export type ScannedRepositoryStack = {
+  stack: 'web' | 'cli' | 'desktop' | 'fullstack' | 'unknown'
+  hasFrontend: boolean
+  hasBackend: boolean
+  hasTauri: boolean
+  suggestedCommands: string[]
+}
+
+export type ScannedRepository = {
+  name: string
+  path: string
+  /** Role the scan assigned, or null when a better match took every role. */
+  role: FeatureRole | null
+  score: number
+  stack: ScannedRepositoryStack
+}
+
+export type SkippedRepositoryEntry = {
+  name: string
+  /** `not_a_git_repository` or `stack_detection_failed`. */
+  reason: string
+}
+
+export type RepositoryScan = {
+  root: string
+  repositories: ScannedRepository[]
+  skipped: SkippedRepositoryEntry[]
+}
+
+/** Paths a scan assigned, per role, with unassigned roles left empty. */
+export function scannedRepoPaths(scan: RepositoryScan): FeatureRoleRepoPaths {
+  const paths: FeatureRoleRepoPaths = { ...EMPTY_FEATURE_ROLE_REPO_PATHS }
+  for (const repository of scan.repositories) {
+    if (repository.role) paths[repository.role] = repository.path
+  }
+  return paths
+}
+
+type ScanTargetPreferences = Pick<
+  Preferences,
+  | 'featureBackendRepoPath'
+  | 'featureFrontendRepoPath'
+  | 'featureScriptsRepoPath'
+  | 'featureScannedRepoPaths'
+>
+
+/**
+ * Preference patch a scan result produces. A role whose current path is neither
+ * empty nor the one the previous scan wrote was set by hand, so it is left
+ * exactly as it is — re-scanning never silently overwrites a manual choice.
+ */
+export function featureRepoScanPatch(
+  preferences: ScanTargetPreferences,
+  scan: RepositoryScan,
+): Partial<Preferences> {
+  const detected = scannedRepoPaths(scan)
+  const previous = preferences.featureScannedRepoPaths ?? EMPTY_FEATURE_ROLE_REPO_PATHS
+  const patch: Partial<Preferences> = {}
+  const nextScanned: FeatureRoleRepoPaths = { ...previous }
+
+  for (const role of FEATURE_SLICES) {
+    const current = featureRoleRepoPath(preferences, role)
+    const manual = current.length > 0 && current !== (previous[role] ?? '')
+    if (manual) continue
+    nextScanned[role] = detected[role]
+    if (current === detected[role]) continue
+    if (role === 'backend') patch.featureBackendRepoPath = detected.backend
+    else if (role === 'frontend') patch.featureFrontendRepoPath = detected.frontend
+    else patch.featureScriptsRepoPath = detected.scripts
+  }
+  patch.featureScannedRepoPaths = nextScanned
+  return patch
+}
+
+/** Roles a scan could not assign, so the modal still offers a picker. */
+export function unassignedScanRoles(scan: RepositoryScan): FeatureRole[] {
+  const assigned = new Set(
+    scan.repositories.flatMap((repository) => (repository.role ? [repository.role] : [])),
+  )
+  return FEATURE_SLICES.filter((role) => !assigned.has(role))
 }
 
 /**
@@ -78,6 +184,11 @@ export type FeatureWorkspaceRequest = {
   name: string
   /** Ref every slice branches from, for example `origin/hml`. */
   baseRef: string
+  /**
+   * Root the workspace is created under. Omitted or empty keeps the historical
+   * layout, next to the main repository of the first slice.
+   */
+  workspacesRoot?: string
   sources: FeatureWorkspaceSource[]
 }
 
@@ -91,6 +202,8 @@ export type FeatureWorkspacePlan = {
   branch: string
   /** Ref every item branches from, echoed back by the backend. */
   baseRef: string
+  /** Configured workspaces root, echoed back. Empty for the old layout. */
+  workspacesRoot: string
   workspaceRoot: string
   items: FeatureWorkspaceItem[]
 }
@@ -148,4 +261,5 @@ export {
   createFeatureWorkspace,
   planFeatureWorkspace,
   removeFeatureWorkspace,
+  scanFeatureRepositories,
 } from './tauri/featureWorkspace'

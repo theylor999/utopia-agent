@@ -52,6 +52,9 @@ export function featureWorkspaceReadableError(error: unknown): string {
       : translate(locale, 'featureWorkspace.error.destinationExists', { path: detail })
   }
   if (code === 'invalid_base_ref') return translate(locale, 'featureWorkspace.error.invalidBaseRef')
+  if (code === 'invalid_workspaces_root') {
+    return translate(locale, 'featureWorkspace.error.invalidWorkspacesRoot')
+  }
   if (code === 'base_ref_missing') {
     const match = detail.match(/^(backend|frontend|scripts):\s*(.*)$/s)
     return translate(locale, 'featureWorkspace.error.baseRefMissing', {

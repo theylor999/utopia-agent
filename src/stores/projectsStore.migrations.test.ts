@@ -311,6 +311,39 @@ describe('identity survives partial persisted payloads', () => {
     expect(preferences.featureSliceGroupsSeeded).toBe(true)
   })
 
+  it('defaults the repositories and workspaces roots without touching the identity', () => {
+    // A payload written before the two roots existed: both must come back empty
+    // and the scanned-paths record must be complete, never undefined.
+    const preferences = normalizePreferences({ ...identity, accountCreated: true })
+
+    expect(preferences).toMatchObject({ ...identity, accountCreated: true })
+    expect(preferences.featureRepositoriesRoot).toBe('')
+    expect(preferences.featureWorkspacesRoot).toBe('')
+    expect(preferences.featureScannedRepoPaths).toEqual({
+      backend: '',
+      frontend: '',
+      scripts: '',
+    })
+  })
+
+  it('keeps configured roots and repairs a partial scanned-paths record', () => {
+    const preferences = normalizePreferences({
+      ...identity,
+      featureRepositoriesRoot: '  C:/repos_originais  ',
+      featureWorkspacesRoot: 'C:/utopia_repos',
+      featureScannedRepoPaths: { backend: '  C:/repos_originais/nplan  ', scripts: 7 },
+    } as unknown as Parameters<typeof normalizePreferences>[0])
+
+    expect(preferences).toMatchObject({ ...identity })
+    expect(preferences.featureRepositoriesRoot).toBe('C:/repos_originais')
+    expect(preferences.featureWorkspacesRoot).toBe('C:/utopia_repos')
+    expect(preferences.featureScannedRepoPaths).toEqual({
+      backend: 'C:/repos_originais/nplan',
+      frontend: '',
+      scripts: '',
+    })
+  })
+
   it('derives accountCreated from a legacy onboarding flag', () => {
     expect(normalizePreferences({ ...identity, onboardingDone: true }).accountCreated).toBe(true)
   })

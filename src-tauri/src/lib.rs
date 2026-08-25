@@ -56,6 +56,7 @@ mod projects;
 mod provider_common;
 mod pty;
 mod remote;
+mod repository_scan;
 mod resource_manager;
 mod resources;
 mod scheduler;
@@ -398,6 +399,7 @@ pub fn run() {
             feature_workspace::feature_workspace_plan,
             feature_workspace::feature_workspace_create,
             feature_workspace::feature_workspace_remove,
+            repository_scan::feature_repository_scan,
             worktrees::worktree_provision,
             worktrees::worktree_list,
             worktrees::worktree_remove,

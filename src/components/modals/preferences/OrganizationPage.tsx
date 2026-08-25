@@ -2,21 +2,30 @@ import {
   ArchiveRestore,
   FileCode2,
   FolderArchive,
+  FolderGit2,
+  FolderTree,
   Monitor,
   Server,
   Trash2,
 } from 'lucide-react'
-import { type ReactNode, useMemo } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { pickDirectory } from '../../../lib/dialog'
+import { readableError } from '../../../lib/errors'
 import {
   DEFAULT_FEATURE_BASE_REF,
   FEATURE_ROLE_REPO_PREFERENCE,
   FEATURE_SLICES,
   featureBaseRef,
+  featureRepoScanPatch,
+  featureRepositoriesRoot,
   featureRoleRepoPath,
+  featureWorkspacesRoot,
   isUsableFeatureBaseRef,
+  scanFeatureRepositories,
+  unassignedScanRoles,
   type FeatureRole,
+  type RepositoryScan,
 } from '../../../lib/featureWorkspace'
 import { type MessageKey, useT } from '../../../lib/i18n'
 import { useProjectsStore } from '../../../stores/projectsStore'
@@ -51,6 +60,19 @@ export function OrganizationPage() {
     [allProjects],
   )
 
+  const repositoriesRoot = featureRepositoriesRoot(preferences)
+  const workspacesRoot = featureWorkspacesRoot(preferences)
+  const scannedPaths = preferences.featureScannedRepoPaths
+  const [scan, setScan] = useState<RepositoryScan | null>(null)
+  const [scanError, setScanError] = useState('')
+  const [isScanning, setIsScanning] = useState(false)
+  // The scan is async: the patch must be computed against the preferences as
+  // they are when the result lands, not as they were when it started.
+  const preferencesRef = useRef(preferences)
+  preferencesRef.current = preferences
+  /** Roles the scan could not fill, so the modal still offers a picker. */
+  const unassignedRoles = useMemo(() => (scan ? unassignedScanRoles(scan) : []), [scan])
+
   const chooseRepo = async (role: FeatureRole) => {
     const current = featureRoleRepoPath(preferences, role)
     const directory = await pickDirectory({ defaultPath: current || undefined })
@@ -58,8 +80,132 @@ export function OrganizationPage() {
     setPreferences({ [FEATURE_ROLE_REPO_PREFERENCE[role]]: directory })
   }
 
+  /**
+   * Scans the repositories root and fills the per-role paths from the result.
+   * A path the user typed or picked by hand is never overwritten.
+   */
+  const runScan = useCallback(
+    async (root: string) => {
+      if (!root) return
+      setIsScanning(true)
+      setScanError('')
+      try {
+        const result = await scanFeatureRepositories(root)
+        setScan(result)
+        setPreferences(featureRepoScanPatch(preferencesRef.current, result))
+      } catch (error) {
+        setScan(null)
+        setScanError(readableError(error))
+      } finally {
+        setIsScanning(false)
+      }
+    },
+    [setPreferences],
+  )
+
+  // Scans once whenever the configured root changes, including on open, so the
+  // detected roles are always visible next to the fields they filled.
+  useEffect(() => {
+    void runScan(repositoriesRoot)
+  }, [repositoriesRoot, runScan])
+
+  const chooseRoot = async (
+    key: 'featureRepositoriesRoot' | 'featureWorkspacesRoot',
+    current: string,
+  ) => {
+    const directory = await pickDirectory({ defaultPath: current || undefined })
+    if (!directory) return
+    setPreferences({ [key]: directory })
+  }
+
   return (
     <section className={styles.section}>
+      <SettingsSection
+        id="feature-repositories-root"
+        title={t('prefs.featureReposRoot')}
+        description={t('prefs.featureReposRootDesc')}
+      >
+        <div className={styles.agentList}>
+          <div className={styles.cliPathRow}>
+            <span className={styles.agentIcon}>
+              <FolderGit2 size={18} aria-hidden="true" />
+            </span>
+            <span className={styles.agentCopy}>
+              <strong>{t('prefs.featureReposRootLabel')}</strong>
+              <span className={styles.cliPathValue} title={repositoriesRoot || undefined}>
+                {repositoriesRoot || t('prefs.featureRepoNotSet')}
+              </span>
+            </span>
+            <span className={styles.cliPathActions}>
+              <button
+                type="button"
+                onClick={() => void chooseRoot('featureRepositoriesRoot', repositoriesRoot)}
+              >
+                {t('prefs.featureRepoChoose')}
+              </button>
+              {repositoriesRoot ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={isScanning}
+                    onClick={() => void runScan(repositoriesRoot)}
+                  >
+                    {isScanning ? t('prefs.featureReposScanning') : t('prefs.featureReposRescan')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScan(null)
+                      setScanError('')
+                      setPreferences({ featureRepositoriesRoot: '' })
+                    }}
+                  >
+                    {t('prefs.featureRepoClear')}
+                  </button>
+                </>
+              ) : null}
+            </span>
+          </div>
+        </div>
+        {scanError ? <p className={styles.cliPathWarning}>{scanError}</p> : null}
+        {scan ? (
+          <div className={styles.optionList}>
+            {scan.repositories.length === 0 && scan.skipped.length === 0 ? (
+              <div className={styles.emptyState}>{t('prefs.featureReposScanEmpty')}</div>
+            ) : null}
+            {scan.repositories.map((repository) => (
+              <div key={repository.path} className={styles.optionRow}>
+                <div className={styles.optionCopy}>
+                  <strong>{repository.name}</strong>
+                  <span title={repository.path}>{repository.path}</span>
+                </div>
+                <span>
+                  {repository.role
+                    ? t('prefs.featureReposScanRole', {
+                        role: t(ROLE_LABEL_KEYS[repository.role]),
+                      })
+                    : t('prefs.featureReposScanNoRole')}
+                </span>
+              </div>
+            ))}
+            {unassignedRoles.length > 0 ? (
+              <div className={styles.emptyState}>
+                {t('prefs.featureReposScanUnassigned', {
+                  roles: unassignedRoles.map((role) => t(ROLE_LABEL_KEYS[role])).join(', '),
+                })}
+              </div>
+            ) : null}
+            {scan.skipped.map((entry) => (
+              <div key={entry.name} className={styles.optionRow}>
+                <div className={styles.optionCopy}>
+                  <strong>{entry.name}</strong>
+                  <span>{t('prefs.featureReposScanSkipped')}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </SettingsSection>
       <SettingsSection
         id="feature-repositories"
         title={t('prefs.featureRepos')}
@@ -76,6 +222,9 @@ export function OrganizationPage() {
                   <span className={styles.cliPathValue} title={path || undefined}>
                     {path || t('prefs.featureRepoNotSet')}
                   </span>
+                  {path && path === scannedPaths[role] ? (
+                    <span>{t('prefs.featureRepoFromScan')}</span>
+                  ) : null}
                 </span>
                 <span className={styles.cliPathActions}>
                   <button type="button" onClick={() => void chooseRepo(role)}>
@@ -95,6 +244,46 @@ export function OrganizationPage() {
               </div>
             )
           })}
+        </div>
+      </SettingsSection>
+      <SettingsSection
+        id="feature-workspaces-root"
+        title={t('prefs.featureWorkspacesRoot')}
+        description={t('prefs.featureWorkspacesRootDesc')}
+      >
+        <div className={styles.agentList}>
+          <div className={styles.cliPathRow}>
+            <span className={styles.agentIcon}>
+              <FolderTree size={18} aria-hidden="true" />
+            </span>
+            <span className={styles.agentCopy}>
+              <strong>{t('prefs.featureWorkspacesRootLabel')}</strong>
+              <span className={styles.cliPathValue} title={workspacesRoot || undefined}>
+                {workspacesRoot || t('prefs.featureRepoNotSet')}
+              </span>
+              <span>
+                {workspacesRoot
+                  ? t('prefs.featureWorkspacesRootExample', { root: workspacesRoot })
+                  : t('prefs.featureWorkspacesRootUnset')}
+              </span>
+            </span>
+            <span className={styles.cliPathActions}>
+              <button
+                type="button"
+                onClick={() => void chooseRoot('featureWorkspacesRoot', workspacesRoot)}
+              >
+                {t('prefs.featureRepoChoose')}
+              </button>
+              {workspacesRoot ? (
+                <button
+                  type="button"
+                  onClick={() => setPreferences({ featureWorkspacesRoot: '' })}
+                >
+                  {t('prefs.featureRepoClear')}
+                </button>
+              ) : null}
+            </span>
+          </div>
         </div>
       </SettingsSection>
       <SettingsSection

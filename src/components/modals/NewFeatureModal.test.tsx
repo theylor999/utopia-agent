@@ -56,6 +56,7 @@ vi.mock('../../lib/featureWorkspace', async () => {
   return {
     FEATURE_SLICES: actual.FEATURE_SLICES,
     FEATURE_ROLE_REPO_PREFERENCE: actual.FEATURE_ROLE_REPO_PREFERENCE,
+    featureWorkspacesRoot: actual.featureWorkspacesRoot,
     DEFAULT_FEATURE_BASE_REF: actual.DEFAULT_FEATURE_BASE_REF,
     featureBaseRef: actual.featureBaseRef,
     isUsableFeatureBaseRef: actual.isUsableFeatureBaseRef,
@@ -202,6 +203,7 @@ describe('NewFeatureModal', () => {
       category: 'feature',
       name: 'orders',
       baseRef: BASE_REF,
+      workspacesRoot: '',
       sources: [
         { role: 'backend', path: 'C:/repos/api', projectId: 'api' },
         { role: 'frontend', path: 'C:/repos/web', projectId: 'web' },
@@ -377,6 +379,7 @@ describe('NewFeatureModal', () => {
       category: 'feature',
       name: 'orders',
       baseRef: BASE_REF,
+      workspacesRoot: '',
       sources: [{ role: 'backend', path: 'C:/repos/fresh' }],
     })
 
@@ -389,6 +392,7 @@ describe('NewFeatureModal', () => {
         category: 'feature',
         name: 'orders',
         baseRef: BASE_REF,
+        workspacesRoot: '',
         sources: [{ role: 'backend', path: 'C:/repos/fresh' }],
       }),
     )
@@ -417,6 +421,7 @@ describe('NewFeatureModal', () => {
       category: 'feature',
       name: 'orders',
       baseRef: BASE_REF,
+      workspacesRoot: '',
       sources: [
         { role: 'backend', path: 'C:/repos/api', projectId: 'api' },
         { role: 'frontend', path: 'C:/repos/picked-web' },
@@ -475,6 +480,7 @@ describe('NewFeatureModal', () => {
       category: 'feature',
       name: 'orders',
       baseRef: BASE_REF,
+      workspacesRoot: '',
       sources: [
         { role: 'backend', path: 'D:/work/api' },
         { role: 'frontend', path: 'D:/work/web' },
@@ -486,6 +492,81 @@ describe('NewFeatureModal', () => {
     fireEvent.click(createButton)
     await waitFor(() => expect(feature.create).toHaveBeenCalled())
     expect(feature.pick).not.toHaveBeenCalled()
+  })
+
+  it('creates a feature with nothing but slices, category and name', async () => {
+    // Everything the flow needs is configured: the three repositories came from
+    // the repositories-root scan, and the workspaces root sets the layout.
+    projectsStore.state.projects = []
+    projectsStore.state.preferences = {
+      featureBackendRepoPath: 'C:/repos_originais/nplan',
+      featureFrontendRepoPath: 'C:/repos_originais/nplan-forecast',
+      featureScriptsRepoPath: 'C:/repos_originais/nplan-forecast-scripts',
+      featureWorkspacesRoot: 'C:/utopia_repos',
+    }
+    feature.plan.mockResolvedValue({
+      branch: 'feature/tal',
+      baseRef: BASE_REF,
+      workspacesRoot: 'C:/utopia_repos',
+      workspaceRoot: 'C:/utopia_repos/front_back/feature/tal',
+      items: [
+        {
+          role: 'backend',
+          source: 'C:/repos_originais/nplan',
+          destination: 'C:/utopia_repos/front_back/feature/tal/back',
+        },
+        {
+          role: 'frontend',
+          source: 'C:/repos_originais/nplan-forecast',
+          destination: 'C:/utopia_repos/front_back/feature/tal/front',
+        },
+      ],
+    })
+    render(<NewFeatureModal />)
+
+    // Only three things are asked: slices, category and name.
+    fireEvent.click(screen.getByRole('checkbox', { name: /featureWorkspace.roleFrontend/ }))
+    fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
+      target: { value: 'tal' },
+    })
+
+    await waitFor(() => expect(feature.plan).toHaveBeenCalled())
+    expect(feature.plan).toHaveBeenLastCalledWith({
+      slices: ['backend', 'frontend'],
+      category: 'feature',
+      name: 'tal',
+      baseRef: BASE_REF,
+      workspacesRoot: 'C:/utopia_repos',
+      sources: [
+        { role: 'backend', path: 'C:/repos_originais/nplan' },
+        { role: 'frontend', path: 'C:/repos_originais/nplan-forecast' },
+      ],
+    })
+
+    // No repository picker at all, and nothing blocking on a missing source.
+    expect(
+      screen.queryByRole('button', { name: 'featureWorkspace.roleBackend' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'featureWorkspace.roleFrontend' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText('featureWorkspace.sourceRequired')).not.toBeInTheDocument()
+
+    // The preview states the real destinations under the workspaces root.
+    expect(screen.getByText('C:/utopia_repos/front_back/feature/tal')).toBeInTheDocument()
+    expect(
+      screen.getByText('C:/utopia_repos/front_back/feature/tal/back'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('C:/utopia_repos/front_back/feature/tal/front'),
+    ).toBeInTheDocument()
+
+    const createButton = screen.getByRole('button', { name: 'featureWorkspace.create' })
+    await waitFor(() => expect(createButton).toBeEnabled())
+    fireEvent.click(createButton)
+    await waitFor(() => expect(feature.create).toHaveBeenCalled())
+    expect(feature.pick).not.toHaveBeenCalled()
+    expect(feature.detect).not.toHaveBeenCalled()
   })
 
   it('falls back to the picker for a role with no configured repository', async () => {
@@ -523,6 +604,7 @@ describe('NewFeatureModal', () => {
       category: 'feature',
       name: 'orders',
       baseRef: BASE_REF,
+      workspacesRoot: '',
       sources: [
         { role: 'backend', path: 'D:/work/api' },
         { role: 'frontend', path: 'D:/work/web' },

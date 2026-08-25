@@ -171,6 +171,8 @@ export const en = {
     'The workspace destination already exists: {path}',
   'featureWorkspace.error.destinationExistsForRole':
     'The destination for {role} already exists: {path}',
+  'featureWorkspace.error.invalidWorkspacesRoot':
+    'The workspaces folder is not a usable absolute path. Set it again in Preferences.',
   'featureWorkspace.error.invalidBaseRef':
     'The base ref is not a usable ref name. Use something like origin/hml.',
   'featureWorkspace.error.baseRefMissing':
@@ -2465,6 +2467,27 @@ export const en = {
   'prefs.featureBaseRefInvalid':
     'Not a usable ref name. Until it is fixed, new features fall back to origin/hml.',
   'prefs.featureBaseRefReset': 'Reset to {baseRef}',
+  'prefs.featureReposRoot': 'Repositories root',
+  'prefs.featureReposRootDesc':
+    'Folder that holds your clones. Scanning it finds the Git repositories directly inside and assigns each one a slice, filling the three fields below. Folders that are not Git repositories are skipped.',
+  'prefs.featureReposRootLabel': 'Repositories folder',
+  'prefs.featureReposRescan': 'Scan again',
+  'prefs.featureReposScanning': 'Scanning…',
+  'prefs.featureReposScanEmpty': 'No repositories found in this folder.',
+  'prefs.featureReposScanRole': 'Detected as {role}',
+  'prefs.featureReposScanNoRole': 'No slice assigned',
+  'prefs.featureReposScanUnassigned':
+    'No repository detected for: {roles}. Pick one in the fields below.',
+  'prefs.featureReposScanSkipped': 'Skipped: not a Git repository',
+  'prefs.featureRepoFromScan': 'Filled by the scan. Choosing a folder here keeps your choice.',
+  'prefs.featureWorkspacesRoot': 'Workspaces root',
+  'prefs.featureWorkspacesRootDesc':
+    'Folder every feature workspace is created under, as <root>\\<slices>\\<category>\\<name>\\<slice>. Missing folders are created.',
+  'prefs.featureWorkspacesRootLabel': 'Workspaces folder',
+  'prefs.featureWorkspacesRootExample':
+    'A backend + frontend feature named tal lands in {root}\\front_back\\feature\\tal\\back and …\\front.',
+  'prefs.featureWorkspacesRootUnset':
+    'Not set: workspaces are created next to the main repository, as before.',
 } as const
 
 export type MessageKey = keyof typeof en

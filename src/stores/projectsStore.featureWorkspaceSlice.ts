@@ -182,6 +182,9 @@ export function createFeatureWorkspaceSlice({
           category: request.category,
           name: request.name,
           baseRef: request.baseRef,
+          // Empty when no workspaces root is configured, which keeps the
+          // historical layout on the backend side.
+          workspacesRoot: request.workspacesRoot ?? '',
           sources: request.sources.map(({ role, path }) => ({ role, path })),
         }
         await planFeatureWorkspace(workspaceRequest)

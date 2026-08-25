@@ -16,6 +16,7 @@ import {
   DEFAULT_FEATURE_BASE_REF,
   DEFAULT_PREFERENCES,
   EMPTY_PROJECTS_FILE,
+  type FeatureRoleRepoPaths,
   type Group,
   GROUP_COLORS,
   type Preferences,
@@ -203,6 +204,22 @@ function normalizeStoredAccents(file: ProjectsFile): ProjectsFile {
   }
 }
 
+/**
+ * Per-role paths recorded by the last repositories-root scan. Absent, partial,
+ * or malformed payloads collapse to empty strings, so an old `projects.json`
+ * loads without a schema version bump.
+ */
+function normalizeFeatureScannedRepoPaths(raw: unknown): FeatureRoleRepoPaths {
+  const source = (raw ?? {}) as Partial<Record<keyof FeatureRoleRepoPaths, unknown>>
+  const value = (key: keyof FeatureRoleRepoPaths) =>
+    typeof source[key] === 'string' ? (source[key] as string).trim() : ''
+  return {
+    backend: value('backend'),
+    frontend: value('frontend'),
+    scripts: value('scripts'),
+  }
+}
+
 export function normalizePreferences(raw: LegacyPreferences | undefined): Preferences {
   const preferences = {
     ...DEFAULT_PREFERENCES,
@@ -261,6 +278,11 @@ export function normalizePreferences(raw: LegacyPreferences | undefined): Prefer
     featureBackendRepoPath: (preferences.featureBackendRepoPath ?? '').trim(),
     featureFrontendRepoPath: (preferences.featureFrontendRepoPath ?? '').trim(),
     featureScriptsRepoPath: (preferences.featureScriptsRepoPath ?? '').trim(),
+    featureRepositoriesRoot: (preferences.featureRepositoriesRoot ?? '').trim(),
+    featureWorkspacesRoot: (preferences.featureWorkspacesRoot ?? '').trim(),
+    featureScannedRepoPaths: normalizeFeatureScannedRepoPaths(
+      preferences.featureScannedRepoPaths,
+    ),
     // A blank or absent base ref falls back to the default instead of leaving
     // the flow without a ref to branch from.
     featureBaseRef:

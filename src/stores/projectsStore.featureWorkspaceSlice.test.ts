@@ -338,6 +338,7 @@ describe('createFeatureWorkspace store action', () => {
       category: 'feature',
       name: 'orders',
       baseRef: BASE_REF,
+      workspacesRoot: '',
       sources: [
         { role: 'backend', path: 'C:/repos/api' },
         { role: 'frontend', path: 'C:/repos/web' },
@@ -348,6 +349,7 @@ describe('createFeatureWorkspace store action', () => {
       category: 'feature',
       name: 'orders',
       baseRef: BASE_REF,
+      workspacesRoot: '',
       sources: [
         { role: 'backend', path: 'C:/repos/api' },
         { role: 'frontend', path: 'C:/repos/web' },
@@ -509,6 +511,7 @@ describe('createFeatureWorkspace store action', () => {
       category: 'feature',
       name: 'orders',
       baseRef: 'origin/main',
+      workspacesRoot: '',
       sources: [{ role: 'backend', path: 'D:/fresh/checkout-api' }],
     })
     const project = harness

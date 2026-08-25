@@ -6,7 +6,14 @@ import {
   DEFAULT_FEATURE_BASE_REF,
   featureBaseRef,
   isUsableFeatureBaseRef,
+  featureRepoScanPatch,
+  featureRepositoriesRoot,
   featureSliceGroupNameKey,
+  featureWorkspacesRoot,
+  scanFeatureRepositories,
+  scannedRepoPaths,
+  unassignedScanRoles,
+  type RepositoryScan,
   planFeatureWorkspace,
   removeFeatureWorkspace,
   type FeatureRole,
@@ -33,6 +40,7 @@ const request: FeatureWorkspaceRequest = {
 const result: FeatureWorkspaceResult = {
   branch: 'feature/workspace-wizard',
   baseRef: 'origin/hml',
+  workspacesRoot: '',
   workspaceRoot: 'C:/repos/feature-workspace-wizard',
   items: [
     {
@@ -167,5 +175,131 @@ describe('feature base ref', () => {
     ]) {
       expect(isUsableFeatureBaseRef(unusable)).toBe(false)
     }
+  })
+})
+
+const WEB_STACK = {
+  stack: 'web' as const,
+  hasFrontend: true,
+  hasBackend: false,
+  hasTauri: false,
+  suggestedCommands: [],
+}
+
+/** Scan shaped like the owner's repositories root. */
+const SCAN: RepositoryScan = {
+  root: 'C:/repos_originais',
+  repositories: [
+    {
+      name: 'nplan',
+      path: 'C:/repos_originais/nplan',
+      role: 'backend',
+      score: 1,
+      stack: { ...WEB_STACK, stack: 'unknown', hasFrontend: false },
+    },
+    {
+      name: 'nplan-forecast',
+      path: 'C:/repos_originais/nplan-forecast',
+      role: 'frontend',
+      score: 3,
+      stack: WEB_STACK,
+    },
+    {
+      name: 'nplan-forecast-scripts',
+      path: 'C:/repos_originais/nplan-forecast-scripts',
+      role: 'scripts',
+      score: 4,
+      stack: { ...WEB_STACK, stack: 'cli', hasFrontend: false, hasBackend: true },
+    },
+  ],
+  skipped: [{ name: '_shared-hooks', reason: 'not_a_git_repository' }],
+}
+
+const NO_SCAN_PATHS = { backend: '', frontend: '', scripts: '' }
+
+describe('repositories root scan', () => {
+  beforeEach(() => {
+    invoke.mockReset()
+  })
+
+  it('asks the backend to scan the configured root', async () => {
+    invoke.mockResolvedValue(SCAN)
+
+    await expect(scanFeatureRepositories('C:/repos_originais')).resolves.toEqual(SCAN)
+    expect(invoke).toHaveBeenCalledWith('feature_repository_scan', {
+      root: 'C:/repos_originais',
+    })
+  })
+
+  it('reads the two configured roots and trims them', () => {
+    expect(featureRepositoriesRoot({ featureRepositoriesRoot: '  C:/repos  ' })).toBe('C:/repos')
+    expect(featureRepositoriesRoot({ featureRepositoriesRoot: '' })).toBe('')
+    expect(featureWorkspacesRoot({ featureWorkspacesRoot: '  C:/utopia_repos ' })).toBe(
+      'C:/utopia_repos',
+    )
+    expect(featureWorkspacesRoot({ featureWorkspacesRoot: '' })).toBe('')
+  })
+
+  it('turns a scan into one path per role and reports the roles it could not fill', () => {
+    expect(scannedRepoPaths(SCAN)).toEqual({
+      backend: 'C:/repos_originais/nplan',
+      frontend: 'C:/repos_originais/nplan-forecast',
+      scripts: 'C:/repos_originais/nplan-forecast-scripts',
+    })
+    expect(unassignedScanRoles(SCAN)).toEqual([])
+
+    const partial: RepositoryScan = {
+      ...SCAN,
+      repositories: SCAN.repositories.filter((repository) => repository.role !== 'scripts'),
+    }
+    expect(scannedRepoPaths(partial).scripts).toBe('')
+    expect(unassignedScanRoles(partial)).toEqual(['scripts'])
+  })
+
+  it('fills every empty role from the scan and records what it wrote', () => {
+    const patch = featureRepoScanPatch(
+      {
+        featureBackendRepoPath: '',
+        featureFrontendRepoPath: '',
+        featureScriptsRepoPath: '',
+        featureScannedRepoPaths: NO_SCAN_PATHS,
+      },
+      SCAN,
+    )
+
+    expect(patch).toEqual({
+      featureBackendRepoPath: 'C:/repos_originais/nplan',
+      featureFrontendRepoPath: 'C:/repos_originais/nplan-forecast',
+      featureScriptsRepoPath: 'C:/repos_originais/nplan-forecast-scripts',
+      featureScannedRepoPaths: {
+        backend: 'C:/repos_originais/nplan',
+        frontend: 'C:/repos_originais/nplan-forecast',
+        scripts: 'C:/repos_originais/nplan-forecast-scripts',
+      },
+    })
+  })
+
+  it('never overwrites a path the user set by hand, however often it re-scans', () => {
+    const afterFirstScan = {
+      featureBackendRepoPath: 'D:/my-own/api',
+      featureFrontendRepoPath: 'C:/repos_originais/nplan-forecast',
+      featureScriptsRepoPath: '',
+      featureScannedRepoPaths: {
+        backend: 'C:/repos_originais/nplan',
+        frontend: 'C:/repos_originais/nplan-forecast',
+        scripts: '',
+      },
+    }
+
+    const patch = featureRepoScanPatch(afterFirstScan, SCAN)
+
+    // Backend was replaced by hand, so the scan leaves it alone and keeps
+    // remembering the path it had assigned itself.
+    expect(patch.featureBackendRepoPath).toBeUndefined()
+    expect(patch.featureScannedRepoPaths?.backend).toBe('C:/repos_originais/nplan')
+    // Frontend still holds what the scan wrote, so it is refreshed silently.
+    expect(patch.featureFrontendRepoPath).toBeUndefined()
+    // Scripts was empty, so the scan fills it.
+    expect(patch.featureScriptsRepoPath).toBe('C:/repos_originais/nplan-forecast-scripts')
   })
 })
