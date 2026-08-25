@@ -1,5 +1,6 @@
 [package]
 name = "alethe"
+default-run = "alethe"
 version = "1.6.0"
 description = "Alethe — terminal multiplexer GUI"
 authors = ["Kauã Miguel"]
