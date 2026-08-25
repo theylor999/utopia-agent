@@ -81,6 +81,30 @@ function visibleProjectTerminals(project: Project): Terminal[] {
   return project.terminals.filter((term) => !term.gsdSyncViewer)
 }
 
+/**
+ * Menu behind the `+` in the projects header: the two things the button used to
+ * be ambiguous about, spelled out.
+ */
+export function createProjectsHeaderMenu({
+  t,
+  openModal,
+}: Pick<SidebarMenuDeps, 't' | 'openModal'>): MenuItem[] {
+  return [
+    {
+      kind: 'item',
+      label: t('ui.sidebar.newProject'),
+      icon: <FolderOpen size={14} />,
+      onClick: () => openModal('newProject'),
+    },
+    {
+      kind: 'item',
+      label: t('ui.sidebar.newFeature'),
+      icon: <GitBranch size={14} />,
+      onClick: () => openModal('newFeature'),
+    },
+  ]
+}
+
                                                                          
 export function createSidebarMenus(deps: SidebarMenuDeps) {
   const {

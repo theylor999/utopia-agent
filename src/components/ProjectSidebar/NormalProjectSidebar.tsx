@@ -45,7 +45,7 @@ import { NormalGroupNode as GroupNode } from './NormalGroupNode'
 import { LayoutFooter, WorkspaceLayoutFooter } from './LayoutFooter'
 import { NormalProjectNode as ProjectNode } from './NormalProjectNode'
 import styles from './NormalProjectSidebar.module.css'
-import { createSidebarMenus } from './sidebarMenus'
+import { createProjectsHeaderMenu, createSidebarMenus } from './sidebarMenus'
 import { SidebarMergePanel } from './SidebarMergePanel'
 import { SidebarUpdate } from './SidebarUpdate'
 
@@ -562,9 +562,16 @@ export function NormalProjectSidebar() {
             <button
               type="button"
               className={styles.iconBtn}
-              onClick={() => openModal('newProject')}
-              title={t('ui.sidebar.newProjectTitle', { shortcut: formatShortcut('Ctrl+Shift+P') })}
-              aria-label={t('ui.sidebar.newProject')}
+              onClick={(event) => {
+                const rect = event.currentTarget.getBoundingClientRect()
+                setMenu({
+                  x: rect.left,
+                  y: rect.bottom + 4,
+                  items: createProjectsHeaderMenu({ t, openModal }),
+                })
+              }}
+              title={t('ui.sidebar.createMenu')}
+              aria-label={t('ui.sidebar.createMenu')}
             >
               <Plus size={14} />
             </button>

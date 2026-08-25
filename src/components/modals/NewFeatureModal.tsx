@@ -1,8 +1,9 @@
 import {
   AlertTriangle,
+  Check,
   FileCode2,
+  FolderTree,
   GitBranch,
-  Layers,
   Loader2,
   Monitor,
   Server,
@@ -10,8 +11,10 @@ import {
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
+  canonicalFeatureSlices,
+  featureSliceGroupNameKey,
+  FEATURE_SLICES,
   planFeatureWorkspace,
-  type FeatureKind,
   type FeatureRole,
   type FeatureWorkspacePlan,
 } from '../../lib/featureWorkspace'
@@ -26,20 +29,25 @@ import controls from './controls.module.css'
 import styles from './NewFeatureModal.module.css'
 import { Modal } from './Modal'
 
-const ROLES_BY_KIND: Record<FeatureKind, FeatureRole[]> = {
-  backend: ['backend'],
-  frontend: ['frontend'],
-  backendFrontend: ['backend', 'frontend'],
-  scripts: ['scripts'],
-}
-
 const ROLE_LABEL_KEYS: Record<FeatureRole, MessageKey> = {
   backend: 'featureWorkspace.roleBackend',
   frontend: 'featureWorkspace.roleFrontend',
   scripts: 'featureWorkspace.roleScripts',
 }
 
-const CATEGORY_OPTIONS = ['feature', 'fix', 'chore', 'refactor'] as const
+const ROLE_HINT_KEYS: Record<FeatureRole, MessageKey> = {
+  backend: 'featureWorkspace.sliceBackendHint',
+  frontend: 'featureWorkspace.sliceFrontendHint',
+  scripts: 'featureWorkspace.sliceScriptsHint',
+}
+
+const ROLE_ICONS: Record<FeatureRole, ReactNode> = {
+  backend: <Server size={17} aria-hidden="true" />,
+  frontend: <Monitor size={17} aria-hidden="true" />,
+  scripts: <FileCode2 size={17} aria-hidden="true" />,
+}
+
+const CATEGORY_OPTIONS = ['feature', 'fix', 'chore', 'refactor', 'hotfix'] as const
 
 /** Longest slug we allow per branch segment, so paths stay usable on Windows. */
 const SEGMENT_MAX_LENGTH = 60
@@ -104,7 +112,7 @@ export function NewFeatureModal() {
   const projects = useProjectsStore((state) => state.projects)
   const createFeatureWorkspace = useProjectsStore((state) => state.createFeatureWorkspace)
 
-  const [kind, setKind] = useState<FeatureKind>('backend')
+  const [slices, setSlices] = useState<FeatureRole[]>(['backend'])
   const [category, setCategory] = useState<string>('feature')
   const [featureName, setFeatureName] = useState('')
   const [sources, setSources] = useState<SourceSelections>({
@@ -185,7 +193,7 @@ export function NewFeatureModal() {
         frontend: frontend?.id ?? '',
         scripts: scripts?.id ?? '',
       })
-      if (contextRole) setKind(contextRole)
+      if (contextRole) setSlices([contextRole])
       suggestionsApplied.current = true
     })
 
@@ -194,35 +202,46 @@ export function NewFeatureModal() {
     }
   }, [availableProjects, context?.sourceProjectId, open])
 
+  const toggleSlice = (role: FeatureRole) =>
+    setSlices((current) =>
+      canonicalFeatureSlices(
+        current.includes(role)
+          ? current.filter((candidate) => candidate !== role)
+          : [...current, role],
+      ),
+    )
+
+  const selectedProjectIds = useMemo(
+    () => slices.map((role) => sources[role]).filter((id) => id !== ''),
+    [slices, sources],
+  )
+  const hasDuplicateSources =
+    new Set(selectedProjectIds).size !== selectedProjectIds.length
+
   /**
-   * Reachable dead ends the create button alone cannot explain: paired mode
-   * needs two distinct repositories, so say so instead of staying disabled.
+   * Reachable dead ends the create button alone cannot explain: every slice
+   * needs its own repository, so say so instead of staying disabled.
    */
-  const blockingWarning: MessageKey | null =
-    kind !== 'backendFrontend'
-      ? null
-      : availableProjects.length < 2
-        ? 'featureWorkspace.pairedNeedsTwoProjects'
-        : sources.backend !== '' && sources.backend === sources.frontend
-          ? 'featureWorkspace.sameSourceWarning'
+  const blockingWarning: { key: MessageKey; params?: Record<string, number> } | null =
+    slices.length === 0
+      ? { key: 'featureWorkspace.slicesRequired' }
+      : availableProjects.length < slices.length
+        ? { key: 'featureWorkspace.needsMoreProjects', params: { count: slices.length } }
+        : hasDuplicateSources
+          ? { key: 'featureWorkspace.sameSourceWarning' }
           : null
 
   const request = useMemo<FeatureWorkspaceStoreRequest | null>(() => {
-    if (!categorySlug || !nameSlug) return null
-    const roles = ROLES_BY_KIND[kind]
-    const selected = roles.map((role) => ({
+    if (!categorySlug || !nameSlug || slices.length === 0) return null
+    const selected = slices.map((role) => ({
       role,
       project: availableProjects.find((project) => project.id === sources[role]),
     }))
     if (selected.some((entry) => !entry.project)) return null
-    if (
-      kind === 'backendFrontend' &&
-      selected[0]?.project?.id === selected[1]?.project?.id
-    ) {
-      return null
-    }
+    const chosenIds = selected.map((entry) => entry.project!.id)
+    if (new Set(chosenIds).size !== chosenIds.length) return null
     return {
-      kind,
+      slices,
       category: categorySlug,
       name: nameSlug,
       sources: selected.map((entry) => ({
@@ -231,7 +250,7 @@ export function NewFeatureModal() {
         projectId: entry.project!.id,
       })),
     }
-  }, [availableProjects, categorySlug, kind, nameSlug, sources])
+  }, [availableProjects, categorySlug, nameSlug, slices, sources])
 
   useEffect(() => {
     setPlan(null)
@@ -264,7 +283,7 @@ export function NewFeatureModal() {
   }, [open, request])
 
   const reset = () => {
-    setKind('backend')
+    setSlices(['backend'])
     setCategory('feature')
     setFeatureName('')
     setSources({ backend: '', frontend: '', scripts: '' })
@@ -294,7 +313,11 @@ export function NewFeatureModal() {
     }
   }
 
-  const sourceSelector = (role: FeatureRole, excludedProjectId?: string) => {
+  const sourceSelector = (role: FeatureRole) => {
+    // A repository can back only one slice, so hide it from the other slices.
+    const takenElsewhere = new Set(
+      slices.filter((candidate) => candidate !== role).map((candidate) => sources[candidate]),
+    )
     const options: DropdownOption[] = availableProjects.map((project) => {
       const detection = detections[project.id]
       const stackLabel =
@@ -303,7 +326,7 @@ export function NewFeatureModal() {
           : t(stackLabelKey(detection))
       return {
         value: project.id,
-        disabled: project.id === excludedProjectId,
+        disabled: takenElsewhere.has(project.id),
         searchText: `${project.name} ${project.path} ${stackLabel}`,
         label: (
           <span className={styles.projectOption}>
@@ -334,37 +357,8 @@ export function NewFeatureModal() {
     )
   }
 
-  const kindOptions: Array<{
-    value: FeatureKind
-    icon: ReactNode
-    label: MessageKey
-    description: MessageKey
-  }> = [
-    {
-      value: 'backend',
-      icon: <Server size={17} aria-hidden="true" />,
-      label: 'featureWorkspace.kindBackend',
-      description: 'featureWorkspace.kindBackendHint',
-    },
-    {
-      value: 'frontend',
-      icon: <Monitor size={17} aria-hidden="true" />,
-      label: 'featureWorkspace.kindFrontend',
-      description: 'featureWorkspace.kindFrontendHint',
-    },
-    {
-      value: 'backendFrontend',
-      icon: <Layers size={17} aria-hidden="true" />,
-      label: 'featureWorkspace.kindPaired',
-      description: 'featureWorkspace.kindPairedHint',
-    },
-    {
-      value: 'scripts',
-      icon: <FileCode2 size={17} aria-hidden="true" />,
-      label: 'featureWorkspace.kindScripts',
-      description: 'featureWorkspace.kindScriptsHint',
-    },
-  ]
+  const groupNameKey = featureSliceGroupNameKey(slices)
+  const groupName = groupNameKey ? t(groupNameKey) : ''
 
   return (
     <Modal
@@ -390,52 +384,44 @@ export function NewFeatureModal() {
     >
       <div className={styles.form}>
         <div className={controls.field}>
-          <label className={controls.label}>{t('featureWorkspace.kindLabel')}</label>
-          <div
-            className={controls.modeChoices}
-            role="radiogroup"
-            aria-label={t('featureWorkspace.kindLabel')}
-          >
-            {kindOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                role="radio"
-                aria-checked={kind === option.value}
-                className={`${controls.modeChoice} ${kind === option.value ? controls.modeChoiceActive : ''}`}
-                onClick={() => setKind(option.value)}
-              >
-                {option.icon}
-                <span className={controls.modeChoiceBody}>
-                  <strong>{t(option.label)}</strong>
-                  <small>{t(option.description)}</small>
-                </span>
-                <span className={controls.modeChoiceIndicator} aria-hidden="true" />
-              </button>
-            ))}
+          <label className={controls.label}>{t('featureWorkspace.slicesLabel')}</label>
+          <div className={styles.sliceChoices} role="group" aria-label={t('featureWorkspace.slicesLabel')}>
+            {FEATURE_SLICES.map((role) => {
+              const checked = slices.includes(role)
+              return (
+                <button
+                  key={role}
+                  type="button"
+                  role="checkbox"
+                  aria-checked={checked}
+                  className={`${controls.modeChoice} ${checked ? controls.modeChoiceActive : ''}`}
+                  onClick={() => toggleSlice(role)}
+                >
+                  {ROLE_ICONS[role]}
+                  <span className={controls.modeChoiceBody}>
+                    <strong>{t(ROLE_LABEL_KEYS[role])}</strong>
+                    <small>{t(ROLE_HINT_KEYS[role])}</small>
+                  </span>
+                  <span className={styles.sliceIndicator} aria-hidden="true">
+                    {checked ? <Check size={10} strokeWidth={3} /> : null}
+                  </span>
+                </button>
+              )
+            })}
           </div>
+          <small className={styles.hint}>{t('featureWorkspace.slicesHint')}</small>
         </div>
 
         {availableProjects.length === 0 ? (
           <div className={styles.notice}>{t('featureWorkspace.noProjects')}</div>
-        ) : (
-          <div className={styles.sourceGrid}>
-            {kind === 'backend' ? sourceSelector('backend') : null}
-            {kind === 'frontend' ? sourceSelector('frontend') : null}
-            {kind === 'scripts' ? sourceSelector('scripts') : null}
-            {kind === 'backendFrontend' ? (
-              <>
-                {sourceSelector('backend', sources.frontend)}
-                {sourceSelector('frontend', sources.backend)}
-              </>
-            ) : null}
-          </div>
-        )}
+        ) : slices.length > 0 ? (
+          <div className={styles.sourceGrid}>{slices.map((role) => sourceSelector(role))}</div>
+        ) : null}
 
         {blockingWarning ? (
           <div className={styles.warning} role="alert">
             <AlertTriangle size={14} aria-hidden="true" />
-            <span>{t(blockingWarning)}</span>
+            <span>{t(blockingWarning.key, blockingWarning.params)}</span>
           </div>
         ) : null}
 
@@ -501,6 +487,13 @@ export function NewFeatureModal() {
               <div className={styles.previewRow}>
                 <span>{t('featureWorkspace.branchLabel')}</span>
                 <code className={styles.branchChip}>{plan.branch}</code>
+              </div>
+              <div className={styles.previewRow}>
+                <span>{t('featureWorkspace.groupLabel')}</span>
+                <span className={styles.groupPath}>
+                  <FolderTree size={12} aria-hidden="true" />
+                  {t('featureWorkspace.groupPath', { group: groupName, branch: plan.branch })}
+                </span>
               </div>
               <div className={styles.previewRow}>
                 <span>{t('featureWorkspace.workspaceRootLabel')}</span>

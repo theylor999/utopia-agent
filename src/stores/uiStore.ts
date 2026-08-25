@@ -121,6 +121,14 @@ type UiState = {
    *  overlay, no PTY terminal involved). null = closed. */
   gsdSyncActivityView: { worktreePath: string; sessionId: string; title: string } | null
 
+  /**
+   * Close confirmation, driven by the close coordinator. Transient by design — it must never be
+   * persisted: a pending resolver only makes sense inside the session that created it.
+   */
+  closeConfirmPending: boolean
+  /** True while `CloseConfirmModal` is mounted and therefore able to ask. */
+  closeConfirmReady: boolean
+
   openModal_: (kind: Exclude<ModalKind, null>, context?: Record<string, unknown>) => void
   closeModal: () => void
   closeMainMenu: () => void
@@ -166,7 +174,18 @@ type UiState = {
   setGsdSyncActivityView: (
     view: { worktreePath: string; sessionId: string; title: string } | null,
   ) => void
+  setCloseConfirmReady: (ready: boolean) => void
+  /** Opens the close confirmation and resolves once the user answers. */
+  requestCloseConfirm: () => Promise<boolean>
+  /** Settles the pending close confirmation. A second call is a no-op. */
+  resolveCloseConfirm: (confirmed: boolean) => void
 }
+
+/**
+ * Resolver of the in-flight close confirmation. Deliberately module-scoped instead of stored in
+ * the state tree: it is a live callback, never data to keep, snapshot or serialize.
+ */
+let closeConfirmResolve: ((confirmed: boolean) => void) | null = null
 
 export const useUiStore = create<UiState>((set) => ({
   openModal: null,
@@ -195,6 +214,8 @@ export const useUiStore = create<UiState>((set) => ({
   updateInfo: null,
   linkViewerUrl: null,
   gsdSyncActivityView: null,
+  closeConfirmPending: false,
+  closeConfirmReady: false,
 
   openModal_: (kind, context) =>
     set({ openModal: kind, modalContext: context ?? null, showMainMenu: false }),
@@ -311,4 +332,20 @@ export const useUiStore = create<UiState>((set) => ({
   openLinkViewer: (url) => set({ linkViewerUrl: url }),
   closeLinkViewer: () => set({ linkViewerUrl: null }),
   setGsdSyncActivityView: (view) => set({ gsdSyncActivityView: view }),
+  setCloseConfirmReady: (ready) =>
+    set((s) => (s.closeConfirmReady === ready ? s : { closeConfirmReady: ready })),
+  requestCloseConfirm: () =>
+    new Promise<boolean>((resolve) => {
+      // The coordinator keeps a single request in flight, but if one ever survives (a reload of
+      // the hook, say), cancel it instead of leaking a never-settled promise.
+      closeConfirmResolve?.(false)
+      closeConfirmResolve = resolve
+      set({ closeConfirmPending: true })
+    }),
+  resolveCloseConfirm: (confirmed) => {
+    const resolve = closeConfirmResolve
+    closeConfirmResolve = null
+    set({ closeConfirmPending: false })
+    resolve?.(confirmed)
+  },
 }))

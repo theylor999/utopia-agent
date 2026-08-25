@@ -4,6 +4,42 @@
   gap: 16px;
 }
 
+.sliceChoices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sliceIndicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  margin-top: 1px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--accent-strong);
+  flex: none;
+}
+
+.previewRow > .groupPath {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--fg);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.previewRow > .groupPath svg {
+  color: var(--fg-muted);
+  flex: none;
+}
+
 .sourceGrid,
 .namingGrid {
   display: grid;

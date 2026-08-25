@@ -44,6 +44,32 @@ Notable user-facing changes to **Utopia Agent** are documented here. The format 
 
 ### Added
 
+- **New feature** now takes any combination of slices. Backend, frontend and scripts are
+  independent checkboxes, so all seven combinations work — including `scripts + backend` and all
+  three at once — instead of the four fixed kinds. Categories are offered in English (`feature`,
+  `fix`, `chore`, `refactor`, `hotfix`) and free text is still accepted.
+- The projects a feature creates now land in a hierarchy instead of loose in the sidebar: a
+  slice group created on demand (`Backend & frontend`, `Backend, frontend & scripts`, …, reused
+  when it already exists), a subgroup named after the branch inside it, and one project per slice
+  inside that. The plan preview shows the destination group before anything is written.
+- The `+` in the sidebar's projects header opens a menu with **New project** and **New feature**,
+  in both sidebar layouts. The right-click "new feature from this project" entry is unchanged.
+- The user identity (display name, avatar, language, onboarding state) is mirrored to
+  `%LOCALAPPDATA%\UtopiaAgent\identity.json`, a path that does not contain the bundle identifier.
+  If `projects.json` is ever empty for a profile — a changed identifier, a wiped data directory —
+  the identity is restored after hydration instead of sending the user back through the onboarding
+  form. The store stays the source of truth whenever it has data.
+
+### Changed
+
+- The close confirmation is an in-app themed modal instead of the native Windows dialog, with
+  Enter to confirm, Escape to cancel, a trapped focus ring and the destructive action as the
+  focused primary. `window.confirm` remains the fallback for when the UI cannot render, and every
+  existing guarantee is kept: one close request in flight, state flushed before quitting, and the
+  failure toast on a failed quit.
+- A profile avatar still pointing at the old default asset is rewritten to the current default.
+  An avatar the user actually chose is never touched.
+
 - Agent CLIs installed via nvm, bun, `npm --prefix`, pnpm or volta are now detected on Linux
   even when Alethe is launched from the desktop menu — which inherits a minimal PATH — matching
   the existing `~/.local/bin` and `~/.cargo/bin` fallbacks. Onboarding and agent tabs now see

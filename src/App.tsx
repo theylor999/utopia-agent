@@ -18,6 +18,7 @@ import { AddBrowserModal } from './components/modals/AddBrowserModal'
 import { AddContentModal } from './components/modals/AddContentModal'
 import { AiUsageModal } from './components/modals/AiUsageModal'
 import { AuditModal } from './components/modals/AuditModal'
+import { CloseConfirmModal } from './components/modals/CloseConfirmModal'
 import { EditGroupModal } from './components/modals/EditGroupModal'
 import { EditProjectModal } from './components/modals/EditProjectModal'
 import { FindJumpModal } from './components/modals/FindJumpModal'
@@ -734,6 +735,7 @@ export default function App() {
         <McpIntroModal />
         <RemoteControlModal />
         <AuditModal />
+        <CloseConfirmModal />
       </ErrorBoundary>
       <InAppNotifications />
       {activeView === 'agentCanvas' ? <TokenHud /> : null}

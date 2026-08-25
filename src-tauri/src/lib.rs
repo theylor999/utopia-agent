@@ -20,6 +20,7 @@ mod contract_check;
 mod crash_watch;
 mod diagnostics;
 mod discord_presence;
+mod durable_identity;
 mod economy_agents;
 mod event_bus;
 mod feature_workspace;
@@ -261,6 +262,8 @@ pub fn run() {
             agent_library::uninstall_agent,
             economy_agents::set_economy_agents,
             economy_agents::economy_agents_enabled,
+            durable_identity::load_durable_identity,
+            durable_identity::save_durable_identity,
             filesystem::list_directory,
             filesystem::read_text_file,
             filesystem::write_text_file,

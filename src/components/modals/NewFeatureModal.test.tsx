@@ -10,6 +10,7 @@ const feature = vi.hoisted(() => ({
 const ALL_PROJECTS = [
   { id: 'api', name: 'API', defaultCwd: 'C:/repos/api', archived: false },
   { id: 'web', name: 'Web', defaultCwd: 'C:/repos/web', archived: false },
+  { id: 'tools', name: 'Tools', defaultCwd: 'C:/repos/tools', archived: false },
 ]
 const ONLY_PROJECT = ALL_PROJECTS[0]
 
@@ -18,6 +19,7 @@ const projectsStore = vi.hoisted(() => ({
     projects: [
       { id: 'api', name: 'API', defaultCwd: 'C:/repos/api', archived: false },
       { id: 'web', name: 'Web', defaultCwd: 'C:/repos/web', archived: false },
+      { id: 'tools', name: 'Tools', defaultCwd: 'C:/repos/tools', archived: false },
     ],
     createFeatureWorkspace: feature.create,
   },
@@ -32,9 +34,18 @@ const uiStore = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('../../lib/featureWorkspace', () => ({
-  planFeatureWorkspace: feature.plan,
-}))
+vi.mock('../../lib/featureWorkspace', async () => {
+  const actual =
+    await vi.importActual<typeof import('../../lib/featureWorkspace')>(
+      '../../lib/featureWorkspace',
+    )
+  return {
+    FEATURE_SLICES: actual.FEATURE_SLICES,
+    canonicalFeatureSlices: actual.canonicalFeatureSlices,
+    featureSliceGroupNameKey: actual.featureSliceGroupNameKey,
+    planFeatureWorkspace: feature.plan,
+  }
+})
 
 vi.mock('../../lib/i18n', () => ({
   useT: () => (key: string) => key,
@@ -129,7 +140,7 @@ describe('NewFeatureModal', () => {
     feature.create.mockResolvedValue(undefined)
     feature.plan.mockResolvedValue(PLAN)
     feature.detect.mockImplementation(async (path: string) => ({
-      stack: path.endsWith('/web') ? 'web' : 'fullstack',
+      stack: path.endsWith('/web') ? 'web' : path.endsWith('/tools') ? 'cli' : 'fullstack',
       hasFrontend: path.endsWith('/web'),
       hasBackend: path.endsWith('/api'),
       hasTauri: false,
@@ -137,11 +148,11 @@ describe('NewFeatureModal', () => {
     }))
   })
 
-  it('suggests distinct paired projects and submits the backend/frontend plan', async () => {
+  it('plans a backend + frontend feature when both slices are checked', async () => {
     render(<NewFeatureModal />)
 
-    fireEvent.click(screen.getByRole('radio', { name: /featureWorkspace.kindPaired/ }))
-    await waitFor(() => expect(feature.detect).toHaveBeenCalledTimes(2))
+    fireEvent.click(screen.getByRole('checkbox', { name: /featureWorkspace.roleFrontend/ }))
+    await waitFor(() => expect(feature.detect).toHaveBeenCalledTimes(3))
 
     const backendSource = screen.getByRole('button', {
       name: 'featureWorkspace.roleBackend',
@@ -155,7 +166,7 @@ describe('NewFeatureModal', () => {
     fireEvent.change(nameInput, { target: { value: 'orders' } })
     await waitFor(() => expect(feature.plan).toHaveBeenCalled())
     expect(feature.plan).toHaveBeenLastCalledWith({
-      kind: 'backendFrontend',
+      slices: ['backend', 'frontend'],
       category: 'feature',
       name: 'orders',
       sources: [
@@ -164,12 +175,55 @@ describe('NewFeatureModal', () => {
       ],
     })
     expect(screen.getByText('C:/worktrees/feature-orders/backend')).toBeInTheDocument()
+    expect(screen.getByText('featureWorkspace.groupPath')).toBeInTheDocument()
 
     const createButton = screen.getByRole('button', { name: 'featureWorkspace.create' })
     await waitFor(() => expect(createButton).toBeEnabled())
     fireEvent.click(createButton)
     await waitFor(() => expect(feature.create).toHaveBeenCalledWith(expect.any(Object)))
     expect(uiStore.state.closeModal).toHaveBeenCalled()
+  })
+
+  it('plans every slice combination the user checks, in canonical order', async () => {
+    const combinations: Array<[string[], string[]]> = [
+      [['featureWorkspace.roleScripts'], ['backend', 'scripts']],
+      [['featureWorkspace.roleFrontend'], ['backend', 'frontend', 'scripts']],
+      [['featureWorkspace.roleBackend'], ['frontend', 'scripts']],
+    ]
+    render(<NewFeatureModal />)
+    await waitFor(() => expect(feature.detect).toHaveBeenCalledTimes(3))
+    fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
+      target: { value: 'orders' },
+    })
+
+    for (const [toggled, expected] of combinations) {
+      for (const label of toggled) {
+        fireEvent.click(screen.getByRole('checkbox', { name: new RegExp(label) }))
+      }
+      await waitFor(() =>
+        expect(feature.plan.mock.lastCall?.[0].slices).toEqual(expected),
+      )
+      expect(feature.plan.mock.lastCall?.[0].sources.map((s: { role: string }) => s.role)).toEqual(
+        expected,
+      )
+    }
+  })
+
+  it('needs at least one slice and stops planning when the last one is unchecked', async () => {
+    render(<NewFeatureModal />)
+    fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
+      target: { value: 'orders' },
+    })
+    await waitFor(() => expect(feature.plan).toHaveBeenCalled())
+    feature.plan.mockClear()
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /featureWorkspace.roleBackend/ }))
+
+    await waitFor(() =>
+      expect(screen.getByText('featureWorkspace.slicesRequired')).toBeInTheDocument(),
+    )
+    expect(feature.plan).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'featureWorkspace.create' })).toBeDisabled()
   })
 
   it('keeps the entered feature name when registration fails so the user can retry', async () => {
@@ -246,16 +300,14 @@ describe('NewFeatureModal', () => {
     await waitFor(() => expect(createButton).toBeEnabled())
   })
 
-  it('explains why paired mode cannot run with a single registered project', async () => {
+  it('explains that a second slice needs a second registered project', async () => {
     projectsStore.state.projects = [ONLY_PROJECT]
     render(<NewFeatureModal />)
 
-    fireEvent.click(screen.getByRole('radio', { name: /featureWorkspace.kindPaired/ }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /featureWorkspace.roleFrontend/ }))
 
     await waitFor(() =>
-      expect(
-        screen.getByText('featureWorkspace.pairedNeedsTwoProjects'),
-      ).toBeInTheDocument(),
+      expect(screen.getByText('featureWorkspace.needsMoreProjects')).toBeInTheDocument(),
     )
     fireEvent.change(screen.getByPlaceholderText('featureWorkspace.namePlaceholder'), {
       target: { value: 'orders' },

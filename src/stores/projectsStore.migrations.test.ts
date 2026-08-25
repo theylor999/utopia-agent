@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
+import {
+  DEFAULT_PROFILE_IMAGE_URL,
+  LEGACY_DEFAULT_PROFILE_IMAGE_URL,
+} from '../lib/profile'
 import { ALL_AGENT_TYPES, DEFAULT_PREFERENCES, EMPTY_PROJECTS_FILE } from '../lib/types'
 import { migrate, normalizePreferences } from './projectsStore.migrations'
 const REMOVED_AGENT_TYPES = [
@@ -191,5 +195,87 @@ describe('projects file migration', () => {
     expect(migrated.projects[0].reviewAgentProvider).toBe('omp')
     expect(migrated.preferences.lastTerminalCreation?.firstTab.type).toBe('omp')
     expect(migrated.cliPaths).toEqual({ omp: 'C:/current/omp.exe' })
+  })
+})
+
+describe('profile image migration', () => {
+  it('rewrites the old default avatar to the current default', () => {
+    const preferences = normalizePreferences({
+      ...DEFAULT_PREFERENCES,
+      profileImageUrl: LEGACY_DEFAULT_PROFILE_IMAGE_URL,
+    })
+
+    expect(preferences.profileImageUrl).toBe(DEFAULT_PROFILE_IMAGE_URL)
+  })
+
+  it('rewrites the old default avatar emitted with a build content hash', () => {
+    const preferences = normalizePreferences({
+      ...DEFAULT_PREFERENCES,
+      profileImageUrl: '/assets/dark-A1b2C3d4.png',
+    })
+
+    expect(preferences.profileImageUrl).toBe(DEFAULT_PROFILE_IMAGE_URL)
+  })
+
+  it('never rewrites an avatar the user chose', () => {
+    const chosen = [
+      'https://pbs.twimg.example/profile_images/123/avatar_400x400.jpg',
+      // Same file name, but a remote host: the user typed it.
+      'https://cdn.example.test/theme-icons/dark.png',
+      'http://localhost:8080/dark.png',
+      'data:image/png;base64,AAAA',
+      DEFAULT_PROFILE_IMAGE_URL,
+      '/assets/utopia-A1b2C3d4.png',
+      '/assets/dark-lemon.png',
+    ]
+
+    for (const profileImageUrl of chosen) {
+      expect(
+        normalizePreferences({ ...DEFAULT_PREFERENCES, profileImageUrl }).profileImageUrl,
+      ).toBe(profileImageUrl)
+    }
+  })
+
+  it('leaves an unset avatar unset so the default stays a render-time fallback', () => {
+    expect(
+      normalizePreferences({ ...DEFAULT_PREFERENCES, profileImageUrl: '   ' }).profileImageUrl,
+    ).toBe('')
+  })
+})
+
+describe('identity survives partial persisted payloads', () => {
+  const identity = {
+    displayName: 'Theylor',
+    profileImageUrl: 'https://example.test/avatar.jpg',
+  }
+
+  it('keeps the identity when the payload predates newer preference fields', () => {
+    // Only the identity is persisted: every field added later must be defaulted,
+    // never used to reset the profile.
+    const preferences = normalizePreferences(identity)
+
+    expect(preferences).toMatchObject({ ...identity, accountCreated: false })
+    expect(preferences.language).toBe(DEFAULT_PREFERENCES.language)
+    expect(preferences.enabledAgents).toEqual(DEFAULT_PREFERENCES.enabledAgents)
+    expect(preferences.resourcePolicy.memoryBudgetMb).toBe(
+      DEFAULT_PREFERENCES.resourcePolicy.memoryBudgetMb,
+    )
+  })
+
+  it('derives accountCreated from a legacy onboarding flag', () => {
+    expect(normalizePreferences({ ...identity, onboardingDone: true }).accountCreated).toBe(true)
+  })
+
+  it('keeps the identity across every schema migration path', () => {
+    for (const version of [1, 2, 3, 4, 5, 6, 7]) {
+      const migrated = migrate({
+        ...EMPTY_PROJECTS_FILE,
+        version,
+        preferences: { ...identity, accountCreated: true },
+      })
+
+      expect(migrated.version).toBe(7)
+      expect(migrated.preferences).toMatchObject({ ...identity, accountCreated: true })
+    }
   })
 })

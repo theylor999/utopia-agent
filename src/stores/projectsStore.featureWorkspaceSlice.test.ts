@@ -17,11 +17,18 @@ const ui = vi.hoisted(() => ({
   setActiveView: vi.fn(),
 }))
 
-vi.mock('../lib/featureWorkspace', () => ({
-  createFeatureWorkspace: ipc.create,
-  planFeatureWorkspace: ipc.plan,
-  removeFeatureWorkspace: ipc.remove,
-}))
+vi.mock('../lib/featureWorkspace', async () => {
+  const actual =
+    await vi.importActual<typeof import('../lib/featureWorkspace')>('../lib/featureWorkspace')
+  return {
+    featureSliceGroupNameKey: actual.featureSliceGroupNameKey,
+    canonicalFeatureSlices: actual.canonicalFeatureSlices,
+    FEATURE_SLICES: actual.FEATURE_SLICES,
+    createFeatureWorkspace: ipc.create,
+    planFeatureWorkspace: ipc.plan,
+    removeFeatureWorkspace: ipc.remove,
+  }
+})
 
 vi.mock('../lib/i18n', () => ({
   getLocale: () => 'en',
@@ -37,7 +44,7 @@ vi.mock('./uiStore', () => ({
 import { createFeatureWorkspaceSlice } from './projectsStore.featureWorkspaceSlice'
 
 const REQUEST: FeatureWorkspaceStoreRequest = {
-  kind: 'backendFrontend',
+  slices: ['backend', 'frontend'],
   category: 'feature',
   name: 'orders',
   sources: [
@@ -63,6 +70,37 @@ const RESULT: FeatureWorkspaceResult = {
   ],
 }
 
+const REPOS: Record<'backend' | 'frontend' | 'scripts', { id: string; path: string }> = {
+  backend: { id: 'api', path: 'C:/repos/api' },
+  frontend: { id: 'web', path: 'C:/repos/web' },
+  scripts: { id: 'tools', path: 'C:/repos/tools' },
+}
+
+/** Request/result pair for one slice combination, as the backend would answer. */
+function combinationFixture(slices: Array<'backend' | 'frontend' | 'scripts'>) {
+  return {
+    request: {
+      slices,
+      category: 'feature',
+      name: 'combo',
+      sources: slices.map((role) => ({
+        role,
+        path: REPOS[role].path,
+        projectId: REPOS[role].id,
+      })),
+    } satisfies FeatureWorkspaceStoreRequest,
+    result: {
+      branch: 'feature/combo',
+      workspaceRoot: 'C:/worktrees/feature-combo',
+      items: slices.map((role) => ({
+        role,
+        source: REPOS[role].path,
+        destination: `C:/worktrees/feature-combo/${role}`,
+      })),
+    } satisfies FeatureWorkspaceResult,
+  }
+}
+
 function sourceProject(id: string, name: string, defaultCwd: string): Project {
   return {
     id,
@@ -76,31 +114,36 @@ function sourceProject(id: string, name: string, defaultCwd: string): Project {
   }
 }
 
-function createHarness(failTerminalAt = Number.POSITIVE_INFINITY) {
+function createHarness(
+  failTerminalAt = Number.POSITIVE_INFINITY,
+  initialGroups: Group[] = [],
+) {
   const events: string[] = []
   const initialProjects = [
     sourceProject('api', 'API', 'C:/repos/api'),
     sourceProject('web', 'Web', 'C:/repos/web'),
+    sourceProject('tools', 'Tools', 'C:/repos/tools'),
   ]
   let terminalCalls = 0
   let nextProjectId = 0
+  let nextGroupId = 0
   let state = {
     projects: initialProjects,
-    groups: [] as Group[],
+    groups: initialGroups,
     ungroupedOrder: initialProjects.map((project) => project.id),
     activeProjectId: null,
     workspace: { containers: [], tabs: [], history: [], historyIndex: -1 },
   } as unknown as ProjectsState
 
-  state.createGroup = (name) => {
-    events.push('group')
+  state.createGroup = (name, color, parentGroupId = null) => {
+    events.push(`group:${name}`)
     const group: Group = {
-      id: 'feature-group',
+      id: `group-${++nextGroupId}`,
       name,
-      color: '#fff',
+      color: color ?? '#fff',
       collapsed: false,
       projectIds: [],
-      parentGroupId: null,
+      parentGroupId,
       createdAt: 1,
     }
     state = { ...state, groups: [...state.groups, group] }
@@ -187,13 +230,13 @@ describe('createFeatureWorkspace store action', () => {
     })
   })
 
-  it('registers every destination before it opens the paired group', async () => {
+  it('nests the feature subgroup inside the combined slice group it creates', async () => {
     const harness = createHarness()
 
     const registration = await harness.getState().createFeatureWorkspace(REQUEST)
 
     expect(ipc.plan).toHaveBeenCalledWith({
-      kind: 'backendFrontend',
+      slices: ['backend', 'frontend'],
       category: 'feature',
       name: 'orders',
       sources: [
@@ -202,7 +245,7 @@ describe('createFeatureWorkspace store action', () => {
       ],
     })
     expect(ipc.create).toHaveBeenCalledWith({
-      kind: 'backendFrontend',
+      slices: ['backend', 'frontend'],
       category: 'feature',
       name: 'orders',
       sources: [
@@ -210,18 +253,29 @@ describe('createFeatureWorkspace store action', () => {
         { role: 'frontend', path: 'C:/repos/web' },
       ],
     })
+    // Slice group first, then the branch subgroup, then one project per slice.
     expect(harness.events).toEqual([
-      'group',
+      'group:featureWorkspace.group.backendFrontend',
+      'group:feature/orders',
       'project',
       'terminal',
       'project',
       'terminal',
       'open-group',
     ])
-    expect(registration.groupId).toBe('feature-group')
+
+    const groups = harness.getState().groups
+    const sliceGroup = groups.find((group) => group.id === registration.sliceGroupId)
+    const featureGroup = groups.find((group) => group.id === registration.groupId)
+    expect(sliceGroup?.name).toBe('featureWorkspace.group.backendFrontend')
+    expect(sliceGroup?.parentGroupId).toBeNull()
+    expect(featureGroup?.name).toBe('feature/orders')
+    expect(featureGroup?.parentGroupId).toBe(sliceGroup?.id)
+
     const registered = harness
       .getState()
       .projects.filter((project) => registration.projectIds.includes(project.id))
+    expect(registered.every((project) => project.groupId === featureGroup?.id)).toBe(true)
     expect(registered.map((project) => project.defaultCwd)).toEqual(
       RESULT.items.map((item) => item.destination),
     )
@@ -233,6 +287,97 @@ describe('createFeatureWorkspace store action', () => {
     expect(ui.setActiveView).toHaveBeenCalledWith('workspace')
   })
 
+  it('reuses an existing slice group whose name matches, ignoring case', async () => {
+    const existing: Group = {
+      id: 'existing-slice-group',
+      name: 'FEATUREWORKSPACE.GROUP.BACKENDFRONTEND',
+      color: '#fff',
+      collapsed: false,
+      projectIds: [],
+      parentGroupId: null,
+      createdAt: 1,
+    }
+    const harness = createHarness(Number.POSITIVE_INFINITY, [existing])
+
+    const registration = await harness.getState().createFeatureWorkspace(REQUEST)
+
+    expect(registration.sliceGroupId).toBe('existing-slice-group')
+    expect(harness.events).toEqual([
+      'group:feature/orders',
+      'project',
+      'terminal',
+      'project',
+      'terminal',
+      'open-group',
+    ])
+    expect(
+      harness.getState().groups.filter((group) => group.parentGroupId === null),
+    ).toHaveLength(1)
+  })
+
+  it('never reuses an archived or nested group as the slice group', async () => {
+    const harness = createHarness(Number.POSITIVE_INFINITY, [
+      {
+        id: 'archived',
+        name: 'featureWorkspace.group.backendFrontend',
+        color: '#fff',
+        collapsed: false,
+        projectIds: [],
+        parentGroupId: null,
+        archived: true,
+        createdAt: 1,
+      },
+      {
+        id: 'nested',
+        name: 'featureWorkspace.group.backendFrontend',
+        color: '#fff',
+        collapsed: false,
+        projectIds: [],
+        parentGroupId: 'archived',
+        createdAt: 1,
+      },
+    ])
+
+    const registration = await harness.getState().createFeatureWorkspace(REQUEST)
+
+    expect(registration.sliceGroupId).toBe('group-1')
+  })
+
+  it.each([
+    [['backend'] as const, 'featureWorkspace.group.backend'],
+    [['frontend'] as const, 'featureWorkspace.group.frontend'],
+    [['scripts'] as const, 'featureWorkspace.group.scripts'],
+    [['backend', 'frontend'] as const, 'featureWorkspace.group.backendFrontend'],
+    [['backend', 'scripts'] as const, 'featureWorkspace.group.backendScripts'],
+    [['frontend', 'scripts'] as const, 'featureWorkspace.group.frontendScripts'],
+    [
+      ['backend', 'frontend', 'scripts'] as const,
+      'featureWorkspace.group.backendFrontendScripts',
+    ],
+  ])('puts a %s feature in the %s group', async (slices, groupName) => {
+    const combination = combinationFixture([...slices])
+    ipc.plan.mockResolvedValue(combination.result)
+    ipc.create.mockResolvedValue(combination.result)
+    const harness = createHarness()
+
+    const registration = await harness
+      .getState()
+      .createFeatureWorkspace(combination.request)
+
+    const groups = harness.getState().groups
+    expect(groups.find((group) => group.id === registration.sliceGroupId)?.name).toBe(groupName)
+    expect(registration.projectIds).toHaveLength(slices.length)
+    const featureGroup = groups.find((group) => group.id === registration.groupId)
+    expect(featureGroup?.name).toBe('feature/combo')
+    expect(featureGroup?.parentGroupId).toBe(registration.sliceGroupId)
+    expect(
+      harness
+        .getState()
+        .projects.filter((project) => registration.projectIds.includes(project.id))
+        .every((project) => project.groupId === featureGroup?.id),
+    ).toBe(true)
+  })
+
   it('restores registration state and removes Git work when terminal registration fails', async () => {
     const harness = createHarness(2)
 
@@ -242,7 +387,11 @@ describe('createFeatureWorkspace store action', () => {
 
     expect(ipc.remove).toHaveBeenCalledWith(RESULT)
     expect(harness.events).not.toContain('open-group')
-    expect(harness.getState().projects.map((project) => project.id)).toEqual(['api', 'web'])
+    expect(harness.getState().projects.map((project) => project.id)).toEqual([
+      'api',
+      'web',
+      'tools',
+    ])
     expect(harness.getState().groups).toEqual([])
     expect(ui.pushToast).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'featureWorkspace.createFailedTitle' }),

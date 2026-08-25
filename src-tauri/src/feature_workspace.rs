@@ -15,20 +15,19 @@ use crate::worktrees::git_arg;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum FeatureKind {
-    Backend,
-    Frontend,
-    BackendFrontend,
-    Scripts,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub enum FeatureRole {
     Backend,
     Frontend,
     Scripts,
 }
+
+/// Canonical slice order. Every plan, destination list, and removal report
+/// follows it, so a workspace descriptor round-trips byte for byte.
+const FEATURE_ROLE_ORDER: [FeatureRole; 3] = [
+    FeatureRole::Backend,
+    FeatureRole::Frontend,
+    FeatureRole::Scripts,
+];
 
 impl FeatureRole {
     fn as_str(self) -> &'static str {
@@ -50,7 +49,8 @@ pub struct FeatureWorkspaceSource {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FeatureWorkspaceRequest {
-    pub kind: FeatureKind,
+    /// Non-empty set of slices the feature spans, in any order.
+    pub slices: Vec<FeatureRole>,
     pub category: String,
     pub name: String,
     pub sources: Vec<FeatureWorkspaceSource>,
@@ -195,20 +195,29 @@ pub(crate) fn feature_workspace_remove_inner(
     })
 }
 
-fn expected_roles(kind: FeatureKind) -> &'static [FeatureRole] {
-    match kind {
-        FeatureKind::Backend => &[FeatureRole::Backend],
-        FeatureKind::Frontend => &[FeatureRole::Frontend],
-        FeatureKind::BackendFrontend => &[FeatureRole::Backend, FeatureRole::Frontend],
-        FeatureKind::Scripts => &[FeatureRole::Scripts],
+/// Rejects an empty or repeating slice set and returns it in canonical order.
+fn canonical_slices(slices: &[FeatureRole]) -> Result<Vec<FeatureRole>, String> {
+    if slices.is_empty() {
+        return Err("invalid_slices".to_string());
     }
+    let mut selected = HashSet::with_capacity(slices.len());
+    for slice in slices {
+        if !selected.insert(*slice) {
+            return Err("invalid_slices".to_string());
+        }
+    }
+    Ok(FEATURE_ROLE_ORDER
+        .iter()
+        .copied()
+        .filter(|role| selected.contains(role))
+        .collect())
 }
 
 fn resolve_request(
     request: FeatureWorkspaceRequest,
     check_collisions: bool,
 ) -> Result<ResolvedFeatureWorkspace, String> {
-    let expected = expected_roles(request.kind);
+    let expected = canonical_slices(&request.slices)?;
     if request.sources.len() != expected.len() {
         return Err("invalid_source_count".to_string());
     }
@@ -241,7 +250,7 @@ fn resolve_request(
 
     let mut roots = Vec::with_capacity(expected.len());
     let mut unique_roots = HashSet::with_capacity(expected.len());
-    for role in expected {
+    for role in &expected {
         let source = sources_by_role
             .get(role)
             .expect("validated feature role must have a source");
@@ -665,19 +674,14 @@ fn resolve_workspace_descriptor(
         return Err("invalid_workspace_descriptor".to_string());
     }
 
-    let kind = match workspace.items.as_slice() {
-        [item] if item.role == FeatureRole::Backend => FeatureKind::Backend,
-        [item] if item.role == FeatureRole::Frontend => FeatureKind::Frontend,
-        [item] if item.role == FeatureRole::Scripts => FeatureKind::Scripts,
-        [backend, frontend]
-            if backend.role == FeatureRole::Backend && frontend.role == FeatureRole::Frontend =>
-        {
-            FeatureKind::BackendFrontend
-        }
-        _ => return Err("invalid_workspace_descriptor".to_string()),
-    };
+    let slices: Vec<FeatureRole> = workspace.items.iter().map(|item| item.role).collect();
+    // Rejects an empty or repeating slice set; the plan comparison below then
+    // rejects anything that is not already in canonical order.
+    if canonical_slices(&slices).is_err() {
+        return Err("invalid_workspace_descriptor".to_string());
+    }
     let request = FeatureWorkspaceRequest {
-        kind,
+        slices,
         category: category.to_string(),
         name: name.to_string(),
         sources: workspace
@@ -853,12 +857,12 @@ mod tests {
     }
 
     fn request(
-        kind: FeatureKind,
+        slices: &[FeatureRole],
         name: &str,
         sources: Vec<FeatureWorkspaceSource>,
     ) -> FeatureWorkspaceRequest {
         FeatureWorkspaceRequest {
-            kind,
+            slices: slices.to_vec(),
             category: "feature".to_string(),
             name: name.to_string(),
             sources,
@@ -871,7 +875,7 @@ mod tests {
         let repo = base.join("api");
         init_repo(&repo);
         let request = request(
-            FeatureKind::Backend,
+            &[FeatureRole::Backend],
             "invalid name",
             vec![source(FeatureRole::Backend, &repo)],
         );
@@ -886,7 +890,7 @@ mod tests {
     #[test]
     fn rejects_wrong_source_count_before_resolving_paths() {
         let request = request(
-            FeatureKind::BackendFrontend,
+            &[FeatureRole::Backend, FeatureRole::Frontend],
             "paired",
             vec![FeatureWorkspaceSource {
                 role: FeatureRole::Backend,
@@ -906,17 +910,13 @@ mod tests {
         let repo = base.join("repo");
         init_repo(&repo);
 
-        for (kind, role, name) in [
-            (FeatureKind::Backend, FeatureRole::Backend, "backend-work"),
-            (
-                FeatureKind::Frontend,
-                FeatureRole::Frontend,
-                "frontend-work",
-            ),
-            (FeatureKind::Scripts, FeatureRole::Scripts, "scripts-work"),
+        for (role, name) in [
+            (FeatureRole::Backend, "backend-work"),
+            (FeatureRole::Frontend, "frontend-work"),
+            (FeatureRole::Scripts, "scripts-work"),
         ] {
             let plan = feature_workspace_plan_inner(request(
-                kind,
+                &[role],
                 name,
                 vec![source(role, &repo)],
             ))
@@ -931,12 +931,206 @@ mod tests {
     }
 
     #[test]
+    fn canonical_slices_orders_and_rejects_empty_or_repeated_sets() {
+        assert_eq!(
+            canonical_slices(&[FeatureRole::Scripts, FeatureRole::Backend]).unwrap(),
+            vec![FeatureRole::Backend, FeatureRole::Scripts]
+        );
+        assert_eq!(
+            canonical_slices(&[
+                FeatureRole::Scripts,
+                FeatureRole::Frontend,
+                FeatureRole::Backend
+            ])
+            .unwrap(),
+            vec![FeatureRole::Backend, FeatureRole::Frontend, FeatureRole::Scripts]
+        );
+        assert_eq!(canonical_slices(&[]).unwrap_err(), "invalid_slices");
+        assert_eq!(
+            canonical_slices(&[FeatureRole::Backend, FeatureRole::Backend]).unwrap_err(),
+            "invalid_slices"
+        );
+    }
+
+    #[test]
+    fn plans_every_slice_combination_in_canonical_order() {
+        let base = temp_root("all-combinations");
+        let repos = [
+            base.join("api"),
+            base.join("web"),
+            base.join("tools"),
+        ];
+        for repo in &repos {
+            init_repo(repo);
+        }
+        let repo_for = |role: FeatureRole| match role {
+            FeatureRole::Backend => &repos[0],
+            FeatureRole::Frontend => &repos[1],
+            FeatureRole::Scripts => &repos[2],
+        };
+
+        // The frontend may hand the slices over in any order; the plan must not care.
+        let combinations: [(&[FeatureRole], &[FeatureRole]); 7] = [
+            (&[FeatureRole::Backend], &[FeatureRole::Backend]),
+            (&[FeatureRole::Frontend], &[FeatureRole::Frontend]),
+            (&[FeatureRole::Scripts], &[FeatureRole::Scripts]),
+            (
+                &[FeatureRole::Frontend, FeatureRole::Backend],
+                &[FeatureRole::Backend, FeatureRole::Frontend],
+            ),
+            (
+                &[FeatureRole::Scripts, FeatureRole::Backend],
+                &[FeatureRole::Backend, FeatureRole::Scripts],
+            ),
+            (
+                &[FeatureRole::Scripts, FeatureRole::Frontend],
+                &[FeatureRole::Frontend, FeatureRole::Scripts],
+            ),
+            (
+                &[FeatureRole::Scripts, FeatureRole::Frontend, FeatureRole::Backend],
+                &[FeatureRole::Backend, FeatureRole::Frontend, FeatureRole::Scripts],
+            ),
+        ];
+
+        for (index, (requested, canonical)) in combinations.iter().enumerate() {
+            let name = format!("combo-{index}");
+            let plan = feature_workspace_plan_inner(request(
+                requested,
+                &name,
+                requested
+                    .iter()
+                    .map(|role| source(*role, repo_for(*role)))
+                    .collect(),
+            ))
+            .expect("plan for slice combination");
+
+            assert_eq!(plan.branch, format!("feature/{name}"));
+            assert_eq!(
+                plan.items.iter().map(|item| item.role).collect::<Vec<_>>(),
+                canonical.to_vec()
+            );
+            for (item, role) in plan.items.iter().zip(canonical.iter()) {
+                assert!(Path::new(&item.destination)
+                    .ends_with(Path::new(&format!("feature-{name}")).join(role.as_str())));
+                assert!(same_path(
+                    Path::new(&item.source),
+                    repo_for(*role).as_path()
+                ));
+            }
+        }
+
+        fs::remove_dir_all(base).expect("cleanup fixture");
+    }
+
+    #[test]
+    fn rejects_empty_and_repeated_slice_sets_before_touching_git() {
+        assert_eq!(
+            feature_workspace_plan_inner(request(&[], "nothing", Vec::new())).unwrap_err(),
+            "invalid_slices"
+        );
+        assert_eq!(
+            feature_workspace_plan_inner(request(
+                &[FeatureRole::Scripts, FeatureRole::Scripts],
+                "twice",
+                vec![FeatureWorkspaceSource {
+                    role: FeatureRole::Scripts,
+                    path: "does-not-need-to-exist".to_string(),
+                }],
+            ))
+            .unwrap_err(),
+            "invalid_slices"
+        );
+    }
+
+    #[test]
+    fn creates_and_removes_a_three_slice_workspace() {
+        let base = temp_root("three-slices");
+        let backend = base.join("api");
+        let frontend = base.join("web");
+        let scripts = base.join("tools");
+        init_repo(&backend);
+        init_repo(&frontend);
+        init_repo(&scripts);
+
+        let created = feature_workspace_create_inner(request(
+            &[FeatureRole::Scripts, FeatureRole::Backend, FeatureRole::Frontend],
+            "three-slices",
+            vec![
+                source(FeatureRole::Scripts, &scripts),
+                source(FeatureRole::Backend, &backend),
+                source(FeatureRole::Frontend, &frontend),
+            ],
+        ))
+        .expect("three-slice workspace");
+
+        assert_eq!(created.items.len(), 3);
+        for item in &created.items {
+            assert!(Path::new(&item.destination).exists());
+        }
+        // The worktree branch must stay without an upstream.
+        for root in [&backend, &frontend, &scripts] {
+            let output = git_command(
+                root,
+                &[
+                    "rev-parse",
+                    "--abbrev-ref",
+                    "feature/three-slices@{upstream}",
+                ],
+            )
+            .expect("upstream probe runs");
+            assert!(!output.status.success(), "branch must have no upstream");
+        }
+
+        let cleanup = feature_workspace_remove_inner(created).expect("cleanup report");
+        assert!(cleanup.complete);
+        assert_eq!(cleanup.items.len(), 3);
+        assert!(cleanup
+            .items
+            .iter()
+            .all(|item| item.worktree_removed && item.branch_removed));
+        fs::remove_dir_all(base).expect("cleanup fixture");
+    }
+
+    #[test]
+    fn rejects_a_workspace_descriptor_whose_items_are_not_canonical() {
+        let base = temp_root("descriptor-order");
+        let backend = base.join("api");
+        let scripts = base.join("tools");
+        init_repo(&backend);
+        init_repo(&scripts);
+        let plan = feature_workspace_plan_inner(request(
+            &[FeatureRole::Backend, FeatureRole::Scripts],
+            "descriptor-order",
+            vec![
+                source(FeatureRole::Backend, &backend),
+                source(FeatureRole::Scripts, &scripts),
+            ],
+        ))
+        .expect("valid plan");
+
+        let mut shuffled = plan.clone();
+        shuffled.items.reverse();
+        assert_eq!(
+            feature_workspace_remove_inner(shuffled).unwrap_err(),
+            "invalid_workspace_descriptor"
+        );
+
+        let mut repeated = plan;
+        repeated.items[1] = repeated.items[0].clone();
+        assert_eq!(
+            feature_workspace_remove_inner(repeated).unwrap_err(),
+            "invalid_workspace_descriptor"
+        );
+        fs::remove_dir_all(base).expect("cleanup fixture");
+    }
+
+    #[test]
     fn rejects_branch_and_destination_collisions_during_plan() {
         let base = temp_root("collisions");
         let repo = base.join("api");
         init_repo(&repo);
         let request = request(
-            FeatureKind::Backend,
+            &[FeatureRole::Backend],
             "collision",
             vec![source(FeatureRole::Backend, &repo)],
         );
@@ -960,7 +1154,7 @@ mod tests {
         init_repo(&backend);
         init_repo(&frontend);
         let paired = request(
-            FeatureKind::BackendFrontend,
+            &[FeatureRole::Frontend, FeatureRole::Backend],
             "paired-plan",
             vec![
                 source(FeatureRole::Frontend, &frontend),
@@ -980,7 +1174,7 @@ mod tests {
             .ends_with(Path::new("feature-paired-plan").join("frontend")));
 
         let duplicate = request(
-            FeatureKind::BackendFrontend,
+            &[FeatureRole::Backend, FeatureRole::Frontend],
             "duplicate",
             vec![
                 source(FeatureRole::Backend, &backend),
@@ -1004,7 +1198,7 @@ mod tests {
         init_repo(&frontend);
         let resolved = resolve_request(
             request(
-                FeatureKind::BackendFrontend,
+                &[FeatureRole::Backend, FeatureRole::Frontend],
                 "rollback",
                 vec![
                     source(FeatureRole::Backend, &backend),
@@ -1045,7 +1239,7 @@ mod tests {
         let repo = base.join("api");
         init_repo(&repo);
         let request = request(
-            FeatureKind::Backend,
+            &[FeatureRole::Backend],
             "idempotent-remove",
             vec![source(FeatureRole::Backend, &repo)],
         );
@@ -1071,7 +1265,7 @@ mod tests {
         let repo = base.join("api");
         init_repo(&repo);
         let plan = feature_workspace_plan_inner(request(
-            FeatureKind::Backend,
+            &[FeatureRole::Backend],
             "partial-remove",
             vec![source(FeatureRole::Backend, &repo)],
         ))

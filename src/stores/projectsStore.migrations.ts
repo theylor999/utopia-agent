@@ -7,6 +7,7 @@
 import { nanoid } from 'nanoid'
 
 import { normalizeEnabledFeatures } from '../lib/features'
+import { migrateLegacyDefaultProfileImageUrl } from '../lib/profile'
 import { normalizeAppIconTheme } from '../lib/themeIcons'
 import { normalizeTodoTags, normalizeTodoTitle } from '../lib/todos'
 import {
@@ -252,7 +253,7 @@ export function normalizePreferences(raw: LegacyPreferences | undefined): Prefer
     mcpDefaultScope: preferences.mcpDefaultScope === 'project' ? 'project' : 'global',
     mcpOnboardingSeen: Boolean(preferences.mcpOnboardingSeen),
     displayName: preferences.displayName.trim(),
-    profileImageUrl: preferences.profileImageUrl.trim(),
+    profileImageUrl: migrateLegacyDefaultProfileImageUrl(preferences.profileImageUrl),
     todoStoragePath: preferences.todoStoragePath.trim(),
     spotifyClientId: preferences.spotifyClientId.trim(),
     spotifyClientSecret: preferences.spotifyClientSecret.trim(),

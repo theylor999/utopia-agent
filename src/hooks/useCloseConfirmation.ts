@@ -1,5 +1,4 @@
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { confirm } from '@tauri-apps/plugin-dialog'
 import { useEffect } from 'react'
 
 import { type CloseFailureStage,createCloseCoordinator } from '../lib/closeCoordinator'
@@ -31,23 +30,34 @@ function reportCloseFailure(stage: CloseFailureStage, error: unknown): void {
   })
 }
 
+/**
+ * Asks with our own themed modal (`CloseConfirmModal`) instead of the native OS dialog. The modal
+ * is mounted for the whole app lifetime and flags itself ready; when it is not there to ask, this
+ * rejects so the coordinator reaches for `confirmFallback` instead of hanging forever.
+ */
+export function confirmCloseWithModal(): Promise<boolean> {
+  const ui = useUiStore.getState()
+  if (!ui.closeConfirmReady) {
+    return Promise.reject(new Error('Close confirmation modal is not mounted'))
+  }
+  return ui.requestCloseConfirm()
+}
+
 const appWindow = getCurrentWindow()
-const closeCoordinator = createCloseCoordinator({
-  confirmNative: () => {
-    const locale = getLocale()
-    return confirm(translate(locale, 'appClose.message'), {
-      title: translate(locale, 'appClose.title'),
-      kind: 'warning',
-      okLabel: translate(locale, 'appClose.confirm'),
-      cancelLabel: translate(locale, 'appClose.cancel'),
-    })
-  },
-  confirmFallback: () => window.confirm(translate(getLocale(), 'appClose.message')),
-  beforeClose: flushProjectsState,
-  destroyWindow: () => appWindow.destroy(),
-  quitApp: () => quitApp(),
-  onFailure: reportCloseFailure,
-})
+
+/** Exported so tests can exercise the real wiring on a coordinator with fresh internal guards. */
+export function createAppCloseCoordinator() {
+  return createCloseCoordinator({
+    confirmNative: confirmCloseWithModal,
+    confirmFallback: () => window.confirm(translate(getLocale(), 'appClose.message')),
+    beforeClose: flushProjectsState,
+    destroyWindow: () => appWindow.destroy(),
+    quitApp: () => quitApp(),
+    onFailure: reportCloseFailure,
+  })
+}
+
+const closeCoordinator = createAppCloseCoordinator()
 
 export function requestAppClose(): Promise<void> {
   return closeCoordinator.handleCloseRequest({ preventDefault: () => {} })

@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  canonicalFeatureSlices,
   createFeatureWorkspace,
+  featureSliceGroupNameKey,
   planFeatureWorkspace,
   removeFeatureWorkspace,
+  type FeatureRole,
   type FeatureWorkspaceRequest,
   type FeatureWorkspaceResult,
   type FeatureWorkspaceRemovalResult,
@@ -14,7 +17,7 @@ const invoke = vi.hoisted(() => vi.fn())
 vi.mock('@tauri-apps/api/core', () => ({ invoke }))
 
 const request: FeatureWorkspaceRequest = {
-  kind: 'backendFrontend',
+  slices: ['backend', 'frontend'],
   category: 'feature',
   name: 'workspace-wizard',
   sources: [
@@ -76,5 +79,53 @@ describe('feature workspace IPC', () => {
 
     await expect(removeFeatureWorkspace(result)).resolves.toEqual(cleanup)
     expect(invoke).toHaveBeenCalledWith('feature_workspace_remove', { workspace: result })
+  })
+})
+
+describe('feature slice sets', () => {
+  it('deduplicates and orders any selection backend, frontend, scripts', () => {
+    expect(canonicalFeatureSlices(['scripts', 'backend'])).toEqual(['backend', 'scripts'])
+    expect(canonicalFeatureSlices(['scripts', 'frontend', 'backend'])).toEqual([
+      'backend',
+      'frontend',
+      'scripts',
+    ])
+    expect(canonicalFeatureSlices(['frontend', 'frontend'])).toEqual(['frontend'])
+    expect(canonicalFeatureSlices([])).toEqual([])
+  })
+
+  it('maps every one of the seven combinations to its own group name key', () => {
+    expect(featureSliceGroupNameKey(['backend'])).toBe('featureWorkspace.group.backend')
+    expect(featureSliceGroupNameKey(['frontend'])).toBe('featureWorkspace.group.frontend')
+    expect(featureSliceGroupNameKey(['scripts'])).toBe('featureWorkspace.group.scripts')
+    expect(featureSliceGroupNameKey(['frontend', 'backend'])).toBe(
+      'featureWorkspace.group.backendFrontend',
+    )
+    expect(featureSliceGroupNameKey(['scripts', 'backend'])).toBe(
+      'featureWorkspace.group.backendScripts',
+    )
+    expect(featureSliceGroupNameKey(['scripts', 'frontend'])).toBe(
+      'featureWorkspace.group.frontendScripts',
+    )
+    expect(featureSliceGroupNameKey(['scripts', 'frontend', 'backend'])).toBe(
+      'featureWorkspace.group.backendFrontendScripts',
+    )
+    expect(
+      new Set(
+        [
+          ['backend'],
+          ['frontend'],
+          ['scripts'],
+          ['backend', 'frontend'],
+          ['backend', 'scripts'],
+          ['frontend', 'scripts'],
+          ['backend', 'frontend', 'scripts'],
+        ].map((slices) => featureSliceGroupNameKey(slices as FeatureRole[])),
+      ).size,
+    ).toBe(7)
+  })
+
+  it('has no group name for an empty selection', () => {
+    expect(featureSliceGroupNameKey([])).toBeNull()
   })
 })

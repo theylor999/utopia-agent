@@ -23,7 +23,11 @@ export function featureWorkspaceReadableError(error: unknown): string {
   const locale = getLocale()
 
   if (code === 'invalid_branch') return translate(locale, 'featureWorkspace.error.invalidBranch')
-  if (code === 'invalid_source_count' || code === 'invalid_source_roles') {
+  if (
+    code === 'invalid_slices' ||
+    code === 'invalid_source_count' ||
+    code === 'invalid_source_roles'
+  ) {
     return translate(locale, 'featureWorkspace.error.invalidSources')
   }
   if (code === 'duplicate_source') {

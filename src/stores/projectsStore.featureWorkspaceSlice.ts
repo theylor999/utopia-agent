@@ -1,5 +1,6 @@
 import {
   createFeatureWorkspace as createFeatureWorkspaceIpc,
+  featureSliceGroupNameKey,
   planFeatureWorkspace,
   removeFeatureWorkspace,
   type FeatureRole,
@@ -12,7 +13,7 @@ import { featureWorkspaceReadableError } from '../lib/featureWorkspaceError'
 import { getLocale, translate } from '../lib/i18n'
 import { sameCwd } from '../lib/paths'
 import { getProjectDefaultCwd } from '../lib/terminalFactory'
-import type { Project } from '../lib/types'
+import type { Group, Project } from '../lib/types'
 import type { ProjectsState } from './projectsStore'
 import type { SliceCtx } from './projectsStore.slices'
 import { useUiStore } from './uiStore'
@@ -31,7 +32,10 @@ export type FeatureWorkspaceStoreRequest = Omit<FeatureWorkspaceRequest, 'source
 
 export type FeatureWorkspaceRegistration = {
   result: FeatureWorkspaceResult
-  groupId: string | null
+  /** Combined group named after the slice set, reused when it already exists. */
+  sliceGroupId: string
+  /** Subgroup named after the branch, always created inside the slice group. */
+  groupId: string
   projectIds: string[]
 }
 
@@ -60,6 +64,25 @@ function resolveSourceProjects(
 
 function removalErrorDetails(result: FeatureWorkspaceRemovalResult): string {
   return [...result.errors, ...result.items.flatMap((item) => item.errors)].join('; ')
+}
+
+function sameGroupName(left: string, right: string): boolean {
+  return left.trim().toLocaleLowerCase() === right.trim().toLocaleLowerCase()
+}
+
+/**
+ * Top-level group named after the slice set. Reused when a group with that
+ * name already exists (case-insensitive), created on demand otherwise.
+ */
+function resolveSliceGroup(
+  get: Pick<SliceCtx, 'get'>['get'],
+  name: string,
+): Group {
+  const existing = get().groups.find(
+    (group) =>
+      group.parentGroupId === null && !group.archived && sameGroupName(group.name, name),
+  )
+  return existing ?? get().createGroup(name)
 }
 
 
@@ -100,7 +123,7 @@ export function createFeatureWorkspaceSlice({
 
         const sourceProjects = resolveSourceProjects(request, get().projects)
         const workspaceRequest: FeatureWorkspaceRequest = {
-          kind: request.kind,
+          slices: request.slices,
           category: request.category,
           name: request.name,
           sources: request.sources.map(({ role, path }) => ({ role, path })),
@@ -117,8 +140,17 @@ export function createFeatureWorkspaceSlice({
         }
         registrationSnapshot = snapshot
 
-        const group =
-          createdWorkspace.items.length > 1 ? get().createGroup(createdWorkspace.branch) : null
+        const groupNameKey = featureSliceGroupNameKey(
+          createdWorkspace.items.map((item) => item.role),
+        )
+        if (!groupNameKey) throw new Error('feature_slice_group_unknown')
+        const sliceGroup = resolveSliceGroup(get, t(groupNameKey))
+        // The feature itself is a subgroup of the slice group, one project per slice.
+        const featureGroup = get().createGroup(
+          createdWorkspace.branch,
+          sliceGroup.color,
+          sliceGroup.id,
+        )
         const projectIds: string[] = []
 
         for (const item of createdWorkspace.items) {
@@ -131,7 +163,7 @@ export function createFeatureWorkspaceSlice({
             name: `${sourceProject.name} · ${createdWorkspace.branch}`,
             color: sourceProject.color,
             iconUrl: sourceProject.iconUrl,
-            groupId: group?.id ?? null,
+            groupId: featureGroup.id,
             defaultCwd: item.destination,
           })
           get().createTerminal(project.id, {
@@ -157,25 +189,21 @@ export function createFeatureWorkspaceSlice({
           activeProjectId: snapshot.activeProjectId,
           workspace: snapshot.workspace,
         })
-        if (group) {
-          get().openGroupWorkspace(group.id, 'only')
-        } else {
-          const projectId = projectIds[0]
-          if (!projectId) throw new Error('feature_registration_incomplete')
-          get().openProjectWorkspace(projectId)
-        }
+        get().openGroupWorkspace(featureGroup.id, 'only')
         useUiStore.getState().setActiveView('workspace')
         useUiStore.getState().pushToast({
           title: t('featureWorkspace.createdTitle'),
           body: t('featureWorkspace.createdBody', {
             branch: createdWorkspace.branch,
             count: projectIds.length,
+            group: sliceGroup.name,
           }),
         })
 
         return {
           result: createdWorkspace,
-          groupId: group?.id ?? null,
+          sliceGroupId: sliceGroup.id,
+          groupId: featureGroup.id,
           projectIds,
         }
       } catch (error) {

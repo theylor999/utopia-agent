@@ -85,16 +85,22 @@ export const ptBR: Record<MessageKey, string> = {
 
   /* ---- feature workspace ---- */
   'featureWorkspace.title': 'Nova funcionalidade',
-  'featureWorkspace.kindLabel': 'Tipo de workspace',
-  'featureWorkspace.kindBackend': 'Backend',
-  'featureWorkspace.kindBackendHint': 'Cria uma worktree a partir de um projeto backend.',
-  'featureWorkspace.kindFrontend': 'Frontend',
-  'featureWorkspace.kindFrontendHint': 'Cria uma worktree a partir de um projeto frontend.',
-  'featureWorkspace.kindPaired': 'Backend + frontend',
-  'featureWorkspace.kindPairedHint':
-    'Cria worktrees correspondentes a partir de projetos backend e frontend distintos.',
-  'featureWorkspace.kindScripts': 'Scripts',
-  'featureWorkspace.kindScriptsHint': 'Cria uma worktree a partir de um projeto de scripts.',
+  'featureWorkspace.slicesLabel': 'Camadas',
+  'featureWorkspace.slicesHint':
+    'Escolha todas as camadas que a funcionalidade toca. Cada camada recebe a própria worktree, do próprio repositório.',
+  'featureWorkspace.slicesRequired': 'Selecione pelo menos uma camada.',
+  'featureWorkspace.sliceBackendHint': 'Worktree de um projeto backend.',
+  'featureWorkspace.sliceFrontendHint': 'Worktree de um projeto frontend.',
+  'featureWorkspace.sliceScriptsHint': 'Worktree de um projeto de scripts.',
+  'featureWorkspace.group.backend': 'Backend',
+  'featureWorkspace.group.frontend': 'Frontend',
+  'featureWorkspace.group.scripts': 'Scripts',
+  'featureWorkspace.group.backendFrontend': 'Backend e frontend',
+  'featureWorkspace.group.backendScripts': 'Backend e scripts',
+  'featureWorkspace.group.frontendScripts': 'Frontend e scripts',
+  'featureWorkspace.group.backendFrontendScripts': 'Backend, frontend e scripts',
+  'featureWorkspace.groupLabel': 'Grupo',
+  'featureWorkspace.groupPath': '{group} › {branch}',
   'featureWorkspace.roleBackend': 'Backend',
   'featureWorkspace.roleFrontend': 'Frontend',
   'featureWorkspace.roleScripts': 'Scripts',
@@ -114,6 +120,7 @@ export const ptBR: Record<MessageKey, string> = {
   'featureWorkspace.category.fix': 'Correção',
   'featureWorkspace.category.chore': 'Tarefa',
   'featureWorkspace.category.refactor': 'Refatoração',
+  'featureWorkspace.category.hotfix': 'Hotfix',
   'featureWorkspace.categorySearch': 'Escolha ou digite uma categoria',
   'featureWorkspace.useCategory': 'Usar “{category}”',
   'featureWorkspace.nameLabel': 'Nome da funcionalidade',
@@ -127,7 +134,8 @@ export const ptBR: Record<MessageKey, string> = {
   'featureWorkspace.create': 'Criar workspace da funcionalidade',
   'featureWorkspace.terminalName': 'Shell',
   'featureWorkspace.createdTitle': 'Workspace da funcionalidade criado',
-  'featureWorkspace.createdBody': '{branch} está pronto com {count} projeto(s).',
+  'featureWorkspace.createdBody':
+    '{branch} está pronto com {count} projeto(s) em {group}.',
   'featureWorkspace.registrationRollbackFailed':
     'O registro falhou — {error}. O rollback do Git ficou incompleto — {rollbackError}',
   'featureWorkspace.rollbackIncomplete': 'Não foi possível remover algumas worktrees ou branches.',
@@ -1577,6 +1585,8 @@ export const ptBR: Record<MessageKey, string> = {
   'ui.sidebar.newGroup': 'Novo grupo',
   'ui.sidebar.newGroupTitle': 'Novo grupo ({shortcut})',
   'ui.sidebar.newProject': 'Novo projeto',
+  'ui.sidebar.newFeature': 'Nova funcionalidade…',
+  'ui.sidebar.createMenu': 'Criar…',
   'ui.sidebar.newProjectTitle': 'Novo projeto ({shortcut})',
   'ui.sidebar.noProjects': 'Nenhum projeto.',
   'ui.sidebar.createFirst': 'Criar primeiro',
@@ -2436,8 +2446,7 @@ export const ptBR: Record<MessageKey, string> = {
   'featureWorkspace.namePreview': 'Branch e pasta vão usar: {branch}',
   'featureWorkspace.nameUnusable':
     'Use pelo menos uma letra ou número no nome da funcionalidade.',
-  'featureWorkspace.sameSourceWarning':
-    'Escolha dois projetos diferentes para o backend e o frontend.',
-  'featureWorkspace.pairedNeedsTwoProjects':
-    'Cadastre um segundo projeto para parear backend e frontend.',
+  'featureWorkspace.sameSourceWarning': 'Escolha um projeto diferente para cada camada.',
+  'featureWorkspace.needsMoreProjects':
+    'Cadastre {count} projetos com pasta de trabalho para criar {count} worktrees.',
 }

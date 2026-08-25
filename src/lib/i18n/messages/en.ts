@@ -87,16 +87,22 @@ export const en = {
 
   /* ---- feature workspace ---- */
   'featureWorkspace.title': 'New feature',
-  'featureWorkspace.kindLabel': 'Workspace type',
-  'featureWorkspace.kindBackend': 'Backend',
-  'featureWorkspace.kindBackendHint': 'Create a worktree from one backend project.',
-  'featureWorkspace.kindFrontend': 'Frontend',
-  'featureWorkspace.kindFrontendHint': 'Create a worktree from one frontend project.',
-  'featureWorkspace.kindPaired': 'Backend + frontend',
-  'featureWorkspace.kindPairedHint':
-    'Create matching worktrees from distinct backend and frontend projects.',
-  'featureWorkspace.kindScripts': 'Scripts',
-  'featureWorkspace.kindScriptsHint': 'Create a worktree from one scripts project.',
+  'featureWorkspace.slicesLabel': 'Slices',
+  'featureWorkspace.slicesHint':
+    'Pick every slice the feature touches. Each slice gets its own worktree from its own repository.',
+  'featureWorkspace.slicesRequired': 'Select at least one slice.',
+  'featureWorkspace.sliceBackendHint': 'Worktree from a backend project.',
+  'featureWorkspace.sliceFrontendHint': 'Worktree from a frontend project.',
+  'featureWorkspace.sliceScriptsHint': 'Worktree from a scripts project.',
+  'featureWorkspace.group.backend': 'Backend',
+  'featureWorkspace.group.frontend': 'Frontend',
+  'featureWorkspace.group.scripts': 'Scripts',
+  'featureWorkspace.group.backendFrontend': 'Backend & frontend',
+  'featureWorkspace.group.backendScripts': 'Backend & scripts',
+  'featureWorkspace.group.frontendScripts': 'Frontend & scripts',
+  'featureWorkspace.group.backendFrontendScripts': 'Backend, frontend & scripts',
+  'featureWorkspace.groupLabel': 'Group',
+  'featureWorkspace.groupPath': '{group} › {branch}',
   'featureWorkspace.roleBackend': 'Backend',
   'featureWorkspace.roleFrontend': 'Frontend',
   'featureWorkspace.roleScripts': 'Scripts',
@@ -116,6 +122,7 @@ export const en = {
   'featureWorkspace.category.fix': 'Fix',
   'featureWorkspace.category.chore': 'Chore',
   'featureWorkspace.category.refactor': 'Refactor',
+  'featureWorkspace.category.hotfix': 'Hotfix',
   'featureWorkspace.categorySearch': 'Choose or enter a category',
   'featureWorkspace.useCategory': 'Use “{category}”',
   'featureWorkspace.nameLabel': 'Feature name',
@@ -129,7 +136,8 @@ export const en = {
   'featureWorkspace.create': 'Create feature workspace',
   'featureWorkspace.terminalName': 'Shell',
   'featureWorkspace.createdTitle': 'Feature workspace created',
-  'featureWorkspace.createdBody': '{branch} is ready with {count} project(s).',
+  'featureWorkspace.createdBody':
+    '{branch} is ready with {count} project(s) in {group}.',
   'featureWorkspace.registrationRollbackFailed':
     'Registration failed — {error}. Git rollback was incomplete — {rollbackError}',
   'featureWorkspace.rollbackIncomplete': 'Some worktrees or branches could not be removed.',
@@ -1557,6 +1565,8 @@ export const en = {
   'ui.sidebar.newGroup': 'New group',
   'ui.sidebar.newGroupTitle': 'New group ({shortcut})',
   'ui.sidebar.newProject': 'New project',
+  'ui.sidebar.newFeature': 'New feature…',
+  'ui.sidebar.createMenu': 'Create…',
   'ui.sidebar.newProjectTitle': 'New project ({shortcut})',
   'ui.sidebar.noProjects': 'No projects.',
   'ui.sidebar.createFirst': 'Create first',
@@ -2417,10 +2427,9 @@ export const en = {
   'featureWorkspace.namePreview': 'Branch and folder will use: {branch}',
   'featureWorkspace.nameUnusable':
     'Use at least one letter or number in the feature name.',
-  'featureWorkspace.sameSourceWarning':
-    'Pick two different projects for the backend and the frontend.',
-  'featureWorkspace.pairedNeedsTwoProjects':
-    'Register a second project to pair a backend and a frontend worktree.',
+  'featureWorkspace.sameSourceWarning': 'Pick a different project for each slice.',
+  'featureWorkspace.needsMoreProjects':
+    'Register {count} projects with a working folder to create {count} worktrees.',
 } as const
 
 export type MessageKey = keyof typeof en
