@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 
 import { preparePtyRuntimeLaunch } from '../../lib/agentRuntimeAdapter'
+import { confirmAction } from '../../lib/confirmAction'
 import { featureRunPlan } from '../../lib/featureRun'
 import { useT } from '../../lib/i18n'
 import { buildAgentLaunch } from '../../lib/sessionLaunch'
@@ -287,16 +288,16 @@ export function createSidebarMenus(deps: SidebarMenuDeps) {
       icon: <Trash2 size={14} />,
       danger: true,
       onClick: () => {
-        if (
-          window.confirm(
-            t('ui.sidebar.confirmDeleteProject', {
-              name: project.name,
-              count: project.terminals.length,
-            }),
-          )
-        ) {
-          actions.deleteProject(project.id)
-        }
+        void confirmAction({
+          title: t('confirm.deleteProjectTitle'),
+          message: t('ui.sidebar.confirmDeleteProject', {
+            name: project.name,
+            count: project.terminals.length,
+          }),
+          confirmLabel: t('confirm.deleteLabel'),
+        }).then((confirmed) => {
+          if (confirmed) actions.deleteProject(project.id)
+        })
       },
     },
   ]
@@ -402,16 +403,16 @@ export function createSidebarMenus(deps: SidebarMenuDeps) {
       label: t('ui.sidebar.deleteGroupAndProjects'),
       danger: true,
       onClick: () => {
-        if (
-          window.confirm(
-            t('ui.sidebar.confirmDeleteGroupCascade', {
-              name: group.name,
-              count: group.projectIds.length,
-            }),
-          )
-        ) {
-          actions.deleteGroup(group.id, 'cascade')
-        }
+        void confirmAction({
+          title: t('confirm.deleteGroupCascadeTitle'),
+          message: t('ui.sidebar.confirmDeleteGroupCascade', {
+            name: group.name,
+            count: group.projectIds.length,
+          }),
+          confirmLabel: t('confirm.deleteLabel'),
+        }).then((confirmed) => {
+          if (confirmed) actions.deleteGroup(group.id, 'cascade')
+        })
       },
     },
   ]
@@ -475,9 +476,13 @@ export function createSidebarMenus(deps: SidebarMenuDeps) {
   }
 
   const confirmAndDeleteTerminal = (projectId: string, term: Terminal) => {
-    if (window.confirm(t('ui.sidebar.confirmDeleteTerminal', { name: term.name }))) {
-      void actions.deleteTerminalWithWorktreeCleanup(projectId, term.id)
-    }
+    void confirmAction({
+      title: t('confirm.deleteTerminalTitle'),
+      message: t('ui.sidebar.confirmDeleteTerminal', { name: term.name }),
+      confirmLabel: t('confirm.deleteLabel'),
+    }).then((confirmed) => {
+      if (confirmed) void actions.deleteTerminalWithWorktreeCleanup(projectId, term.id)
+    })
   }
 
   const terminalMenu = (projectId: string, term: Terminal): MenuItem[] => {

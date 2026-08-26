@@ -34,10 +34,44 @@ if (-not $exe) {
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 $target = Join-Path $InstallDir 'UtopiaAgent.exe'
 
-# The app cannot overwrite itself while it is running.
-Get-Process -Name 'UtopiaAgent','utopia-agent' -ErrorAction SilentlyContinue |
-  Stop-Process -Force -ErrorAction SilentlyContinue
-Start-Sleep -Milliseconds 400
+# The app cannot overwrite itself while it is running, so a running instance has
+# to go. Ask it to close the way the user would, so it runs its own shutdown and
+# flushes projects.json; force-killing skips that and loses the session.
+function Stop-RunningApp([int]$GracefulTimeoutSeconds = 25) {
+  $running = @(Get-Process -Name 'UtopiaAgent','utopia-agent' -ErrorAction SilentlyContinue)
+  if (-not $running) { return }
+
+  Write-Host "Utopia Agent is running. Asking it to close..."
+  Write-Host "If the app shows its close confirmation, accept it."
+  foreach ($p in $running) {
+    # WM_CLOSE on the main window: the same path as clicking the window's X,
+    # which lets the app persist its state before it exits.
+    try { [void]$p.CloseMainWindow() } catch { }
+  }
+
+  $deadline = (Get-Date).AddSeconds($GracefulTimeoutSeconds)
+  while ((Get-Date) -lt $deadline) {
+    $alive = @(Get-Process -Name 'UtopiaAgent','utopia-agent' -ErrorAction SilentlyContinue)
+    if (-not $alive) {
+      Write-Host "Utopia Agent closed cleanly."
+      # Give Windows a moment to release the handle on the old binary.
+      Start-Sleep -Milliseconds 400
+      return
+    }
+    Start-Sleep -Milliseconds 500
+  }
+
+  # Last resort only. Anything the app had not written yet is lost here.
+  $stubborn = @(Get-Process -Name 'UtopiaAgent','utopia-agent' -ErrorAction SilentlyContinue)
+  if ($stubborn) {
+    Write-Warning "Utopia Agent did not close within $GracefulTimeoutSeconds s - force-killing it."
+    Write-Warning "Any workspace state it had not saved yet is lost."
+    $stubborn | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 800
+  }
+}
+
+Stop-RunningApp
 
 Copy-Item -Path $exe.FullName -Destination $target -Force
 $ico = Join-Path $InstallDir 'UtopiaAgent.ico'

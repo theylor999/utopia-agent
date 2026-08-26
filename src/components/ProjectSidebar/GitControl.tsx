@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { confirmAction } from '../../lib/confirmAction'
 import { readableError } from '../../lib/errors'
 import { gitActionReadableError, isBypassBlockedError } from '../../lib/gitActionError'
 import { type MessageKey,useT } from '../../lib/i18n'
@@ -158,7 +159,13 @@ export function GitControl({ projectId, cwd, ptyId, terminalName }: GitControlPr
     }
     if (status.staged.length === 0) {
       if (allStageable.length === 0) return
-      if (!window.confirm(t('git.confirm.stageAllCommit'))) return
+      const confirmed = await confirmAction({
+        title: t('confirm.stageAllCommitTitle'),
+        message: t('git.confirm.stageAllCommit'),
+        confirmLabel: t('confirm.stageAllCommitLabel'),
+        tone: 'primary',
+      })
+      if (!confirmed) return
     }
     await run(async () => {
       if (status.staged.length === 0) await gitStage(status.repoRoot, allStageable)
@@ -413,8 +420,14 @@ function ChangeGroup({
   const paths = uniquePaths(items)
   const primaryTitle = kind === 'staged' ? t('git.unstageAll') : t('git.stageAll')
   const confirmDiscard = (selected: string[]) => {
-    if (onDiscard && window.confirm(t('git.confirm.discard', { count: selected.length })))
-      onDiscard(selected)
+    if (!onDiscard) return
+    void confirmAction({
+      title: t('confirm.discardChangesTitle'),
+      message: t('git.confirm.discard', { count: selected.length }),
+      confirmLabel: t('confirm.discardLabel'),
+    }).then((confirmed) => {
+      if (confirmed) onDiscard(selected)
+    })
   }
   return (
     <section className={styles.group}>

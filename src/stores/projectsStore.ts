@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid'
 import { create } from 'zustand'
 
+import { getLocale, translate } from '../lib/i18n'
 import { setStorageNamespace } from '../lib/storageNamespace'
 import {
   listProfiles,
@@ -59,6 +60,7 @@ import {
 } from './projectsStore.slices'
 import { createContainersSlice, createTerminalsSlice } from './projectsStore.terminalSlices'
 import { createWorkspaceSlice } from './projectsStore.workspaceSlices'
+import { useUiStore } from './uiStore'
 
 export { getProjectDefaultCwd, getProjectRepoRoot }
 export {
@@ -67,13 +69,44 @@ export {
   UI_ZOOM_LIMITS,
 } from './projectsStore.constants'
 
+/** Coalescing window for ordinary edits: renames, layout, active tab, focus. */
 const SAVE_DEBOUNCE_MS = 500
+/**
+ * Hard ceiling on how long a dirty document may stay unwritten. The debounce
+ * timer is restarted by every mutation, so without this a steady mutation
+ * stream postpones the only write forever and a force kill loses the session.
+ */
+const SAVE_MAX_WAIT_MS = 3_000
+/**
+ * Coalescing window for structural edits — a project, group or terminal
+ * created or removed. Short enough to survive a kill, long enough that a
+ * multi-slice feature workspace still writes once instead of once per project.
+ */
+const SAVE_STRUCTURAL_MS = 60
 const SAVE_RETRY_MS = 2_000
+
+/** Bounded wait for the two boot reads, so `hydrate` can never hang forever. */
+const HYDRATE_TIMEOUT_MS = 10_000
+const HYDRATE_RETRY_MS = 3_000
+const HYDRATE_MAX_ATTEMPTS = 5
+
+/**
+ * Whether the in-memory document may be written to disk.
+ *
+ * - `pending` — the boot read has not finished. Writing now would persist the
+ *   empty placeholder over a good file.
+ * - `ready` — memory reflects disk (or disk had no file). Writing is safe.
+ * - `failed` — the boot read errored or timed out. Memory does NOT reflect
+ *   disk, so every write is suppressed rather than risk erasing the file.
+ */
+export type HydrationStatus = 'pending' | 'ready' | 'failed'
 
 export type ProjectsState = ProjectsFile & {
   activeProfileId: string
   profiles: ProfileMeta[]
   hydrated: boolean
+  /** Persistence gate. Only `ready` allows a write to `projects.json`. */
+  hydrationStatus: HydrationStatus
   hydrate: () => Promise<void>
   /** True while handleCleanupWorktrees is running, preventing duplicate clicks. */
   isCleaningOrphans: boolean
@@ -355,6 +388,13 @@ export type ProjectsState = ProjectsFile & {
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 let pendingSave = false
 let lastSaveErrorLoggedAt = 0
+/**
+ * Whether anything mutated the in-memory document since the last hydrate. A
+ * retry after a failed boot read may only replace an untouched document —
+ * otherwise it would erase work the user already did in this session.
+ */
+let documentTouched = false
+let hydrateRetryTimer: ReturnType<typeof setTimeout> | null = null
 
 let lastWriteSequence = Date.now()
 
@@ -377,30 +417,123 @@ function projectsPayload(state: ProjectsState): ProjectsFile {
   }
 }
 
-function scheduleSave(getState: () => ProjectsState) {
-  if (!getState().hydrated) return
+/** Wall-clock time the current unwritten window opened, for the max-wait cap. */
+let pendingSince = 0
+
+function clearSaveTimer() {
+  if (saveTimer) {
+    clearTimeout(saveTimer)
+    saveTimer = null
+  }
+}
+
+function writeDocument(getState: () => ProjectsState) {
+  if (getState().hydrationStatus !== 'ready') return
+  pendingSave = false
+  pendingSince = 0
+  const payload = projectsPayload(getState())
+  void saveProjectsFile(JSON.stringify(payload, null, 2), nextWriteSequence()).catch((error) => {
+    pendingSave = true
+    pendingSince = Date.now()
+    console.error('Failed to persist projects.json; retrying.', error)
+    const now = Date.now()
+    if (now - lastSaveErrorLoggedAt >= 30_000) {
+      lastSaveErrorLoggedAt = now
+      void recordFrontendError(String(error), null, 'projects.save')
+    }
+    clearSaveTimer()
+    saveTimer = setTimeout(() => {
+      saveTimer = null
+      writeDocument(getState)
+    }, SAVE_RETRY_MS)
+  })
+}
+
+/**
+ * Queues a write of the whole document.
+ *
+ * `structural` marks a mutation that created or removed a project, group or
+ * terminal — work the user cannot reconstruct — and gets a much shorter
+ * window. Everything else coalesces for `SAVE_DEBOUNCE_MS`, but no dirty
+ * document ever waits longer than `SAVE_MAX_WAIT_MS`, so a mutation burst
+ * cannot starve the timer the way a plain restart-on-every-change debounce does.
+ */
+function scheduleSave(getState: () => ProjectsState, kind: 'ordinary' | 'structural' = 'ordinary') {
+  if (getState().hydrationStatus !== 'ready') return
+  const now = Date.now()
+  if (!pendingSave) pendingSince = now
   pendingSave = true
-  if (saveTimer) clearTimeout(saveTimer)
+
+  const coalesceWindow = kind === 'structural' ? SAVE_STRUCTURAL_MS : SAVE_DEBOUNCE_MS
+  const remainingBudget = Math.max(0, SAVE_MAX_WAIT_MS - (now - pendingSince))
+  const delay = Math.min(coalesceWindow, remainingBudget)
+
+  clearSaveTimer()
   saveTimer = setTimeout(() => {
     saveTimer = null
     if (!pendingSave) return
-    pendingSave = false
-    const state = getState()
-    const payload = projectsPayload(state)
-    void saveProjectsFile(JSON.stringify(payload, null, 2), nextWriteSequence()).catch((error) => {
-      pendingSave = true
-      console.error('Failed to persist projects.json; retrying.', error)
-      const now = Date.now()
-      if (now - lastSaveErrorLoggedAt >= 30_000) {
-        lastSaveErrorLoggedAt = now
-        void recordFrontendError(String(error), null, 'projects.save')
-      }
-      saveTimer = setTimeout(() => {
-        saveTimer = null
-        scheduleSave(getState)
-      }, SAVE_RETRY_MS)
-    })
-  }, SAVE_DEBOUNCE_MS)
+    writeDocument(getState)
+  }, delay)
+}
+
+/**
+ * Counts of the things a user creates by hand. A change here means the
+ * document must reach disk promptly; anything else can wait out the debounce.
+ */
+function structuralSignature(state: ProjectsState): string {
+  let terminals = 0
+  for (const project of state.projects) terminals += project.terminals.length
+  return `${state.projects.length}:${state.groups.length}:${terminals}`
+}
+
+/**
+ * Rejects instead of waiting forever. The boot reads are synchronous Tauri
+ * commands, so a busy main thread can leave their promises unsettled — which
+ * used to leave `hydrate` unfinished and every save disabled for the session.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+    promise.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (error) => {
+        clearTimeout(timer)
+        reject(error)
+      },
+    )
+  })
+}
+
+let hydrationAttempts = 0
+
+function announceHydrationFailure() {
+  const locale = getLocale()
+  useUiStore.getState().pushToast({
+    title: translate(locale, 'projects.hydrateFailedTitle'),
+    body: translate(locale, 'projects.hydrateFailedBody'),
+  })
+}
+
+/**
+ * Retries the boot read so a transient failure does not cost the whole
+ * session. Only ever retries while the in-memory document is untouched;
+ * once the user has created something, replacing memory with disk would
+ * throw that work away.
+ */
+function scheduleHydrationRetry(getState: () => ProjectsState) {
+  if (documentTouched) return
+  if (hydrationAttempts >= HYDRATE_MAX_ATTEMPTS) return
+  hydrationAttempts += 1
+  if (hydrateRetryTimer) clearTimeout(hydrateRetryTimer)
+  hydrateRetryTimer = setTimeout(() => {
+    hydrateRetryTimer = null
+    if (documentTouched) return
+    if (getState().hydrationStatus !== 'failed') return
+    void getState().hydrate()
+  }, HYDRATE_RETRY_MS)
 }
 
 export const useProjectsStore = create<ProjectsState>((set, get) => {
@@ -408,6 +541,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => {
 
   const update = (mutator: (state: ProjectsState) => Partial<ProjectsState> | void) => {
     let changed = false
+    const signatureBefore = structuralSignature(get())
     set((state) => {
       let result = mutator(state)
       if (!result || Object.keys(result).length === 0) return state
@@ -479,7 +613,9 @@ export const useProjectsStore = create<ProjectsState>((set, get) => {
       changed = true
       return result
     })
-    if (changed) scheduleSave(get)
+    if (!changed) return
+    documentTouched = true
+    scheduleSave(get, structuralSignature(get()) === signatureBefore ? 'ordinary' : 'structural')
   }
 
   const navigationUpdate = (mutator: (state: ProjectsState) => Partial<ProjectsState> | void) => {
@@ -674,62 +810,71 @@ export const useProjectsStore = create<ProjectsState>((set, get) => {
     activeProfileId: 'default',
     profiles: [],
     hydrated: false,
+    hydrationStatus: 'pending',
     isCleaningOrphans: false,
 
     hydrate: async () => {
       // A profile switch replaces the in-memory document. Never let a delayed
       // save from the previous profile write into the newly selected namespace.
-      if (saveTimer) {
-        clearTimeout(saveTimer)
-        saveTimer = null
-      }
+      clearSaveTimer()
       pendingSave = false
+      pendingSince = 0
+      if (hydrateRetryTimer) {
+        clearTimeout(hydrateRetryTimer)
+        hydrateRetryTimer = null
+      }
+      // Writes stay blocked until the boot read says memory reflects disk.
+      set({ hydrationStatus: 'pending' })
+
       let profileState: ProfilesState = {
         active_profile_id: 'default',
         profiles: [],
       }
       try {
-        profileState = await listProfiles()
+        profileState = await withTimeout(listProfiles(), HYDRATE_TIMEOUT_MS, 'list_profiles')
         setStorageNamespace(profileState.active_profile_id)
       } catch (err) {
-        console.error('Falha ao carregar profiles.json — usando default', err)
+        console.error('Could not load profiles.json — falling back to default', err)
         void recordFrontendError(String(err), null, 'profiles.load')
         setStorageNamespace('default')
       }
 
+      const identity = {
+        activeProfileId: profileState.active_profile_id,
+        profiles: profileState.profiles,
+      }
+
       try {
-        const raw = await loadProjectsFile()
+        const raw = await withTimeout(loadProjectsFile(), HYDRATE_TIMEOUT_MS, 'load_projects')
         if (!raw) {
-          set({
-            hydrated: true,
-            activeProfileId: profileState.active_profile_id,
-            profiles: profileState.profiles,
-          })
+          set({ ...identity, hydrated: true, hydrationStatus: 'ready' })
+          documentTouched = false
+          hydrationAttempts = 0
           get().seedFeatureSliceGroups()
           void recordAppEvent('projects.hydrate', 'source=empty')
           return
         }
         const parsed = JSON.parse(raw)
         const migrated = migrate(parsed)
-        set({
-          ...migrated,
-          hydrated: true,
-          activeProfileId: profileState.active_profile_id,
-          profiles: profileState.profiles,
-        })
+        set({ ...migrated, ...identity, hydrated: true, hydrationStatus: 'ready' })
+        documentTouched = false
+        hydrationAttempts = 0
         get().seedFeatureSliceGroups()
         void recordAppEvent(
           'projects.hydrate',
           `source=disk projects=${migrated.projects.length} groups=${migrated.groups.length} tabs=${migrated.workspace.tabs.length} active_tab=${Boolean(migrated.workspace.activeTabId)} left_sidebar=${migrated.preferences.leftSidebarVisible} right_sidebar=${migrated.preferences.rightSidebarVisible}`,
         )
       } catch (err) {
-        console.error('Falha ao carregar projects.json — usando estado vazio', err)
+        // The document on disk is unknown, so it must not be overwritten with
+        // this session's placeholder. The UI still comes up, but every write
+        // stays suppressed and the user is told so, instead of a whole session
+        // silently going nowhere.
+        console.error('Could not load projects.json — persistence is suspended', err)
         void recordFrontendError(String(err), null, 'projects.load')
-        set({
-          hydrated: true,
-          activeProfileId: profileState.active_profile_id,
-          profiles: profileState.profiles,
-        })
+        void recordAppEvent('projects.hydrate', `source=failed attempt=${hydrationAttempts + 1}`)
+        set({ ...identity, hydrated: true, hydrationStatus: 'failed' })
+        announceHydrationFailure()
+        scheduleHydrationRetry(get)
       }
     },
 
@@ -747,14 +892,26 @@ export const useProjectsStore = create<ProjectsState>((set, get) => {
 
 /** Flushes the debounced document before the native window is destroyed. */
 export async function flushProjectsState(): Promise<void> {
-  if (saveTimer) {
-    clearTimeout(saveTimer)
-    saveTimer = null
+  clearSaveTimer()
+  pendingSave = false
+  pendingSince = 0
+  const state = useProjectsStore.getState()
+  // A document that never loaded must not overwrite the file it failed to read.
+  if (state.hydrationStatus !== 'ready') return
+  await saveProjectsFile(JSON.stringify(projectsPayload(state), null, 2), nextWriteSequence())
+}
+
+/** Test hook: drops the module-level save/hydrate timers between cases. */
+export function resetProjectsPersistenceForTests(): void {
+  clearSaveTimer()
+  if (hydrateRetryTimer) {
+    clearTimeout(hydrateRetryTimer)
+    hydrateRetryTimer = null
   }
   pendingSave = false
-  const state = useProjectsStore.getState()
-  if (!state.hydrated) return
-  await saveProjectsFile(JSON.stringify(projectsPayload(state), null, 2), nextWriteSequence())
+  pendingSince = 0
+  documentTouched = false
+  hydrationAttempts = 0
 }
 
 /* ------------ selectors ------------ */

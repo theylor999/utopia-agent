@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { confirmAction } from '../../../lib/confirmAction'
 import { pickDirectory } from '../../../lib/dialog'
 import { readableError } from '../../../lib/errors'
 import {
@@ -519,9 +520,14 @@ export function OrganizationPage() {
                   title={t('prefs.deleteArchivedGroup')}
                   aria-label={t('prefs.deleteArchivedGroup')}
                   onClick={() => {
-                    if (window.confirm(t('prefs.deleteArchivedGroupConfirm', { name: group.name }))) {
-                      deleteGroup(group.id, 'unassign')
-                    }
+                    void confirmAction({
+                      title: t('confirm.deleteArchivedGroupTitle'),
+                      message: t('prefs.deleteArchivedGroupConfirm', { name: group.name }),
+                      confirmLabel: t('confirm.removeLabel'),
+                      nested: true,
+                    }).then((confirmed) => {
+                      if (confirmed) deleteGroup(group.id, 'unassign')
+                    })
                   }}
                 >
                   <Trash2 size={14} />

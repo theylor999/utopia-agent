@@ -12,6 +12,7 @@ import {
 import { memo, useEffect, useRef, useState } from 'react'
 
 import { browserHiddenEvictionDelay } from '../../lib/browserResourcePolicy'
+import { confirmAction } from '../../lib/confirmAction'
 import { useT } from '../../lib/i18n'
 import { suspendNativeSurfaces } from '../../lib/overlayPresence'
 import { openInBrowser } from '../../lib/tauri'
@@ -84,9 +85,15 @@ export const WebPane = memo(function WebPane({
   }
 
   const onDelete = () => {
-    if (!window.confirm(t('webPane.confirmClose', { name: terminal.name }))) return
-    deleteTerminal(projectId, terminal.id)
-    if (isFocusMode) setFocusedTerminal(null)
+    void confirmAction({
+      title: t('confirm.closePaneTitle'),
+      message: t('webPane.confirmClose', { name: terminal.name }),
+      confirmLabel: t('confirm.closeLabel'),
+    }).then((confirmed) => {
+      if (!confirmed) return
+      deleteTerminal(projectId, terminal.id)
+      if (isFocusMode) setFocusedTerminal(null)
+    })
   }
 
   return (

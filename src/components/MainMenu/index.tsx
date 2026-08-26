@@ -19,6 +19,7 @@ import { useRef } from 'react'
 
 import { useOnClickOutside } from '../../hooks/useOnClickOutside'
 import { useOnEscape } from '../../hooks/useOnEscape'
+import { confirmAction } from '../../lib/confirmAction'
 import { pickFile, saveFile } from '../../lib/dialog'
 import { AGENT_SANDBOX_ENABLED } from '../../lib/featureFlags'
 import { useT } from '../../lib/i18n'
@@ -70,13 +71,23 @@ export function MainMenu() {
   }
 
   const reset = async () => {
-    if (!window.confirm(t('menu.confirmReset'))) return
+    const confirmed = await confirmAction({
+      title: t('confirm.resetAppDataTitle'),
+      message: t('menu.confirmReset'),
+      confirmLabel: t('confirm.resetAppDataLabel'),
+    })
+    if (!confirmed) return
     await resetAppData()
     window.location.reload()
   }
 
   const factoryReset = async () => {
-    if (!window.confirm(t('menu.confirmFactoryReset'))) return
+    const confirmed = await confirmAction({
+      title: t('confirm.factoryResetTitle'),
+      message: t('menu.confirmFactoryReset'),
+      confirmLabel: t('confirm.factoryResetLabel'),
+    })
+    if (!confirmed) return
     await wipeAllAppData()
     try {
       localStorage.clear()
@@ -235,7 +246,12 @@ export function MainMenu() {
               filters: [{ name: t('menu.backupFilter'), extensions: ['zip'] }],
             })
             if (!source) return
-            if (!window.confirm(t('menu.confirmImport'))) return
+            const confirmed = await confirmAction({
+              title: t('confirm.importBackupTitle'),
+              message: t('menu.confirmImport'),
+              confirmLabel: t('confirm.importBackupLabel'),
+            })
+            if (!confirmed) return
             const currentPtyIds = new Set(
               projects.flatMap((project) =>
                 project.terminals.flatMap((terminal) =>

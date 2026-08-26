@@ -1,6 +1,8 @@
 import { Bot, GitBranch, GitMerge, Palette } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { confirmAction } from '../../lib/confirmAction'
+import { readableError } from '../../lib/errors'
 import { useT } from '../../lib/i18n'
 import {
   detectProjectStack,
@@ -162,14 +164,18 @@ export function EditProjectModal() {
   const handleRemoveWorktree = async (agentId: string) => {
     const repoPath = project.terminals[0]?.cwd
     if (!repoPath) return
-    if (confirm(`Tem certeza que deseja excluir o ambiente do agente "${agentId}"?`)) {
-      try {
-        await worktreeRemove(repoPath, agentId, true)
-        void loadWorktrees(repoPath)
-      } catch (err) {
-        console.error('Falha ao excluir worktree:', err)
-        alert('Erro ao excluir: ' + err)
-      }
+    const confirmed = await confirmAction({
+      title: t('confirm.deleteAgentEnvTitle'),
+      message: t('confirm.deleteAgentEnvMessage', { name: agentId }),
+      confirmLabel: t('confirm.deleteLabel'),
+      nested: true,
+    })
+    if (!confirmed) return
+    try {
+      await worktreeRemove(repoPath, agentId, true)
+      void loadWorktrees(repoPath)
+    } catch (err) {
+      pushToast({ title: t('confirm.deleteAgentEnvFailed'), body: readableError(err) })
     }
   }
 

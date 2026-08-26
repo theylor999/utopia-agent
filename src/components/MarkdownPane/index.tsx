@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 
+import { confirmAction } from '../../lib/confirmAction'
 import { pathSegments } from '../../lib/paths'
 import { useT } from '../../lib/i18n'
 import {
@@ -159,10 +160,15 @@ export const MarkdownPane = memo(function MarkdownPane({
 
                                                                               
   const onDelete = () => {
-    if (window.confirm(t('ui.markdown.confirmClose', { name: terminal.name }))) {
+    void confirmAction({
+      title: t('confirm.closePaneTitle'),
+      message: t('ui.markdown.confirmClose', { name: terminal.name }),
+      confirmLabel: t('confirm.closeLabel'),
+    }).then((confirmed) => {
+      if (!confirmed) return
       deleteTerminal(projectId, terminal.id)
       if (isFocusMode) setFocusedTerminal(null)
-    }
+    })
   }
 
   const copyMarkdown = async () => {

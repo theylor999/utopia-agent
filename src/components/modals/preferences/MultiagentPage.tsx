@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
+import { confirmAction } from '../../../lib/confirmAction'
+import { useT } from '../../../lib/i18n'
 import {
   getPlanningAutocommit,
   getTelemetryMetrics,
@@ -24,6 +26,7 @@ import { SettingsSection } from './primitives'
 import { Dropdown } from '../../ui/Dropdown'
 
 export function MultiagentPage() {
+  const t = useT()
   const projects = useProjectsStore((state) => state.projects)
   const [selectedProjectId, setSelectedProjectId] = useState<string>(projects[0]?.id ?? '')
   const schedulerStore = useSchedulerStore()
@@ -139,14 +142,19 @@ export function MultiagentPage() {
   }
 
   const handleUninstallPlugin = async (id: string) => {
-    if (confirm(`Tem certeza que deseja desinstalar o plugin "${id}"?`)) {
-      try {
-        await pluginUninstall(id)
-        alert('Plugin desinstalado!')
-        void loadPlugins()
-      } catch (err) {
-        alert('Erro ao desinstalar plugin: ' + err)
-      }
+    const confirmed = await confirmAction({
+      title: t('confirm.uninstallPluginTitle'),
+      message: t('confirm.uninstallPluginMessage', { id }),
+      confirmLabel: t('confirm.uninstallPluginLabel'),
+      nested: true,
+    })
+    if (!confirmed) return
+    try {
+      await pluginUninstall(id)
+      alert('Plugin desinstalado!')
+      void loadPlugins()
+    } catch (err) {
+      alert('Erro ao desinstalar plugin: ' + err)
     }
   }
 

@@ -17,6 +17,28 @@ import type { UpdateInfo } from '../lib/updater'
 
 /** Ephemeral UI state. Persisted state belongs in `projectsStore`. */
 
+/** How the confirm button reads: `danger` for anything that destroys data. */
+export type ConfirmTone = 'danger' | 'primary'
+
+/**
+ * One confirmation on screen. The strings arrive already translated — the store never holds i18n
+ * keys, and a confirmation only lives for as long as the question is open.
+ */
+export type ConfirmRequest = {
+  title: string
+  /** Must name concretely what the action destroys. */
+  message: string
+  confirmLabel: string
+  /** Defaults to `common.cancel`. */
+  cancelLabel?: string
+  /** Defaults to `danger`. */
+  tone?: ConfirmTone
+  /** Set when the question is raised from inside another modal, so it layers above it. */
+  nested?: boolean
+  /** `power` for the app-close question, `warning` (the default) for everything else. */
+  icon?: 'warning' | 'power'
+}
+
 type ModalKind =
   | 'newProject'
   | 'newFeature'
@@ -122,12 +144,12 @@ type UiState = {
   gsdSyncActivityView: { worktreePath: string; sessionId: string; title: string } | null
 
   /**
-   * Close confirmation, driven by the close coordinator. Transient by design — it must never be
+   * The confirmation currently on screen, or null. Transient by design — it must never be
    * persisted: a pending resolver only makes sense inside the session that created it.
    */
-  closeConfirmPending: boolean
-  /** True while `CloseConfirmModal` is mounted and therefore able to ask. */
-  closeConfirmReady: boolean
+  confirmRequest: ConfirmRequest | null
+  /** True while `ConfirmActionModal` is mounted and therefore able to ask. */
+  confirmReady: boolean
 
   openModal_: (kind: Exclude<ModalKind, null>, context?: Record<string, unknown>) => void
   closeModal: () => void
@@ -174,18 +196,18 @@ type UiState = {
   setGsdSyncActivityView: (
     view: { worktreePath: string; sessionId: string; title: string } | null,
   ) => void
-  setCloseConfirmReady: (ready: boolean) => void
-  /** Opens the close confirmation and resolves once the user answers. */
-  requestCloseConfirm: () => Promise<boolean>
-  /** Settles the pending close confirmation. A second call is a no-op. */
-  resolveCloseConfirm: (confirmed: boolean) => void
+  setConfirmReady: (ready: boolean) => void
+  /** Opens the confirmation dialog and resolves once the user answers. */
+  requestConfirm: (request: ConfirmRequest) => Promise<boolean>
+  /** Settles the pending confirmation. A second call is a no-op. */
+  resolveConfirm: (confirmed: boolean) => void
 }
 
 /**
- * Resolver of the in-flight close confirmation. Deliberately module-scoped instead of stored in
- * the state tree: it is a live callback, never data to keep, snapshot or serialize.
+ * Resolver of the in-flight confirmation. Deliberately module-scoped instead of stored in the
+ * state tree: it is a live callback, never data to keep, snapshot or serialize.
  */
-let closeConfirmResolve: ((confirmed: boolean) => void) | null = null
+let confirmResolve: ((confirmed: boolean) => void) | null = null
 
 export const useUiStore = create<UiState>((set) => ({
   openModal: null,
@@ -214,8 +236,8 @@ export const useUiStore = create<UiState>((set) => ({
   updateInfo: null,
   linkViewerUrl: null,
   gsdSyncActivityView: null,
-  closeConfirmPending: false,
-  closeConfirmReady: false,
+  confirmRequest: null,
+  confirmReady: false,
 
   openModal_: (kind, context) =>
     set({ openModal: kind, modalContext: context ?? null, showMainMenu: false }),
@@ -332,20 +354,20 @@ export const useUiStore = create<UiState>((set) => ({
   openLinkViewer: (url) => set({ linkViewerUrl: url }),
   closeLinkViewer: () => set({ linkViewerUrl: null }),
   setGsdSyncActivityView: (view) => set({ gsdSyncActivityView: view }),
-  setCloseConfirmReady: (ready) =>
-    set((s) => (s.closeConfirmReady === ready ? s : { closeConfirmReady: ready })),
-  requestCloseConfirm: () =>
+  setConfirmReady: (ready) =>
+    set((s) => (s.confirmReady === ready ? s : { confirmReady: ready })),
+  requestConfirm: (request) =>
     new Promise<boolean>((resolve) => {
-      // The coordinator keeps a single request in flight, but if one ever survives (a reload of
-      // the hook, say), cancel it instead of leaking a never-settled promise.
-      closeConfirmResolve?.(false)
-      closeConfirmResolve = resolve
-      set({ closeConfirmPending: true })
+      // Only one confirmation can be on screen. A second request cancels the first (answering it
+      // "no") rather than leaking a promise that would never settle.
+      confirmResolve?.(false)
+      confirmResolve = resolve
+      set({ confirmRequest: request })
     }),
-  resolveCloseConfirm: (confirmed) => {
-    const resolve = closeConfirmResolve
-    closeConfirmResolve = null
-    set({ closeConfirmPending: false })
+  resolveConfirm: (confirmed) => {
+    const resolve = confirmResolve
+    confirmResolve = null
+    set({ confirmRequest: null })
     resolve?.(confirmed)
   },
 }))

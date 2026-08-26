@@ -249,6 +249,22 @@ const SLICE_GROUP_KEYS: Record<string, MessageKey> = {
  * Message key of the combined group the feature's projects belong to, or null
  * when the slice set is empty.
  */
+const ROLE_LABEL_KEYS: Record<FeatureRole, MessageKey> = {
+  backend: 'featureWorkspace.roleBackend',
+  frontend: 'featureWorkspace.roleFrontend',
+  scripts: 'featureWorkspace.roleScripts',
+}
+
+/**
+ * The label a slice carries in the UI. It is what names the project a feature
+ * creates: the slice group already says which area it is and the feature
+ * subgroup already says the branch, so repeating either there is noise — the
+ * role is the only part that tells two siblings of one feature apart.
+ */
+export function featureRoleLabelKey(role: FeatureRole): MessageKey {
+  return ROLE_LABEL_KEYS[role]
+}
+
 export function featureSliceGroupNameKey(slices: Iterable<FeatureRole>): MessageKey | null {
   const canonical = canonicalFeatureSlices(slices)
   if (canonical.length === 0) return null

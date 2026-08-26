@@ -17,6 +17,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 
 import { preparePtyRuntimeLaunch } from '../../lib/agentRuntimeAdapter'
 import { buildAgentLaunch } from '../../lib/sessionLaunch'
+import { confirmAction } from '../../lib/confirmAction'
 import { useT } from '../../lib/i18n'
 import { agentCliCommand, type SubTab, type Terminal } from '../../lib/types'
 import {
@@ -159,9 +160,15 @@ function InspectorBody({ projectId, terminal }: { projectId: string; terminal: T
 
   const onDeletePane = () => {
     const key = isWebPane ? 'webPane.confirmClose' : 'ui.markdown.confirmClose'
-    if (!window.confirm(t(key, { name: terminal.name }))) return
-    deleteTerminal(projectId, terminal.id)
-    if (isFocusMode) setFocusedTerminal(null)
+    void confirmAction({
+      title: t('confirm.closePaneTitle'),
+      message: t(key, { name: terminal.name }),
+      confirmLabel: t('confirm.closeLabel'),
+    }).then((confirmed) => {
+      if (!confirmed) return
+      deleteTerminal(projectId, terminal.id)
+      if (isFocusMode) setFocusedTerminal(null)
+    })
   }
 
   return (

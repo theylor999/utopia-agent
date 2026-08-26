@@ -31,16 +31,28 @@ function reportCloseFailure(stage: CloseFailureStage, error: unknown): void {
 }
 
 /**
- * Asks with our own themed modal (`CloseConfirmModal`) instead of the native OS dialog. The modal
+ * Asks with our own themed modal (`ConfirmActionModal`) instead of the native OS dialog. The modal
  * is mounted for the whole app lifetime and flags itself ready; when it is not there to ask, this
  * rejects so the coordinator reaches for `confirmFallback` instead of hanging forever.
+ *
+ * This deliberately does not go through `confirmAction`: that helper resolves `false` when it
+ * cannot ask (the safe default for destroying data), whereas a close the user already requested
+ * should still proceed.
  */
 export function confirmCloseWithModal(): Promise<boolean> {
   const ui = useUiStore.getState()
-  if (!ui.closeConfirmReady) {
+  if (!ui.confirmReady) {
     return Promise.reject(new Error('Close confirmation modal is not mounted'))
   }
-  return ui.requestCloseConfirm()
+  const locale = getLocale()
+  return ui.requestConfirm({
+    title: translate(locale, 'appClose.title'),
+    message: translate(locale, 'appClose.message'),
+    confirmLabel: translate(locale, 'appClose.confirm'),
+    cancelLabel: translate(locale, 'appClose.cancel'),
+    tone: 'danger',
+    icon: 'power',
+  })
 }
 
 const appWindow = getCurrentWindow()
@@ -49,7 +61,12 @@ const appWindow = getCurrentWindow()
 export function createAppCloseCoordinator() {
   return createCloseCoordinator({
     confirmNative: confirmCloseWithModal,
-    confirmFallback: () => window.confirm(translate(getLocale(), 'appClose.message')),
+    // The user already asked to close by triggering the close request; with no
+    // modal mounted there is nothing left to ask with. `window.confirm` is not
+    // an option here — tauri-plugin-dialog rewrites it into an IPC call to a
+    // command that no longer exists, which rejected and left the close path
+    // with an unhandled rejection on every session.
+    confirmFallback: () => true,
     beforeClose: flushProjectsState,
     destroyWindow: () => appWindow.destroy(),
     quitApp: () => quitApp(),

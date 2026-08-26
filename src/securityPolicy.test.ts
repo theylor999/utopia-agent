@@ -131,7 +131,6 @@ describe('production renderer security policy', () => {
       'core:webview:allow-set-webview-zoom',
       'dialog:allow-open',
       'dialog:allow-save',
-      'dialog:allow-confirm',
       'dialog:allow-message',
       'notification:allow-is-permission-granted',
       'notification:allow-request-permission',
@@ -140,6 +139,11 @@ describe('production renderer security policy', () => {
       'updater:allow-download-and-install',
       'process:allow-restart',
     ])
+    // `dialog:allow-confirm` is a deprecated alias for `allow-message` and
+    // grants no `confirm` command; listing it only suggests that the plugin's
+    // `window.confirm` replacement works, which it does not. See
+    // `src/bootstrap.ts`.
+    expect(capability.permissions).not.toContain('dialog:allow-confirm')
     expect(capability.permissions).not.toContain('core:default')
     expect(capability.permissions).not.toContain('core:event:allow-emit')
     expect(capability.permissions).not.toContain('core:event:allow-emit-to')

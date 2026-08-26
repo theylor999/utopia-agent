@@ -17,6 +17,7 @@ import {
   canonicalFeatureSlices,
   FEATURE_ROLE_REPO_PREFERENCE,
   featureBaseRef,
+  featureRoleLabelKey,
   featureRoleRepoPath,
   featureSliceGroupNameKey,
   featureWorkspacesRoot,
@@ -38,11 +39,6 @@ import controls from './controls.module.css'
 import styles from './NewFeatureModal.module.css'
 import { Modal } from './Modal'
 
-const ROLE_LABEL_KEYS: Record<FeatureRole, MessageKey> = {
-  backend: 'featureWorkspace.roleBackend',
-  frontend: 'featureWorkspace.roleFrontend',
-  scripts: 'featureWorkspace.roleScripts',
-}
 
 const ROLE_HINT_KEYS: Record<FeatureRole, MessageKey> = {
   backend: 'featureWorkspace.sliceBackendHint',
@@ -441,7 +437,7 @@ export function NewFeatureModal() {
     if (!showPicker && source) {
       return (
         <div className={controls.field} key={role}>
-          <label className={controls.label}>{t(ROLE_LABEL_KEYS[role])}</label>
+          <label className={controls.label}>{t(featureRoleLabelKey(role))}</label>
           <div className={styles.resolvedSource}>
             <FolderGit2 size={13} aria-hidden="true" />
             <span className={styles.resolvedPath} title={source.path}>
@@ -457,7 +453,7 @@ export function NewFeatureModal() {
           </div>
           {remembered[role] ? (
             <small className={styles.hint}>
-              {t('featureWorkspace.rememberedSource', { role: t(ROLE_LABEL_KEYS[role]) })}
+              {t('featureWorkspace.rememberedSource', { role: t(featureRoleLabelKey(role)) })}
             </small>
           ) : null}
         </div>
@@ -521,7 +517,7 @@ export function NewFeatureModal() {
 
     return (
       <div className={controls.field} key={role}>
-        <label className={controls.label}>{t(ROLE_LABEL_KEYS[role])}</label>
+        <label className={controls.label}>{t(featureRoleLabelKey(role))}</label>
         <Dropdown
           className={controls.input}
           value={value}
@@ -546,7 +542,7 @@ export function NewFeatureModal() {
               }))
             }
           }}
-          ariaLabel={t(ROLE_LABEL_KEYS[role])}
+          ariaLabel={t(featureRoleLabelKey(role))}
           options={options}
           placeholder={t('featureWorkspace.chooseSource')}
           searchable
@@ -559,7 +555,7 @@ export function NewFeatureModal() {
           </small>
         ) : (
           <small className={styles.hint}>
-            {t('featureWorkspace.roleNotConfigured', { role: t(ROLE_LABEL_KEYS[role]) })}
+            {t('featureWorkspace.roleNotConfigured', { role: t(featureRoleLabelKey(role)) })}
           </small>
         )}
         {configured ? (
@@ -620,7 +616,7 @@ export function NewFeatureModal() {
                 >
                   {ROLE_ICONS[role]}
                   <span className={controls.modeChoiceBody}>
-                    <strong>{t(ROLE_LABEL_KEYS[role])}</strong>
+                    <strong>{t(featureRoleLabelKey(role))}</strong>
                     <small>{t(ROLE_HINT_KEYS[role])}</small>
                   </span>
                   <span className={styles.sliceIndicator} aria-hidden="true">
@@ -758,12 +754,12 @@ export function NewFeatureModal() {
               </div>
               {plan.items.map((item) => (
                 <div className={styles.planItem} key={item.role}>
-                  <strong>{t(ROLE_LABEL_KEYS[item.role])}</strong>
+                  <strong>{t(featureRoleLabelKey(item.role))}</strong>
                   <span title={item.source}>{item.source}</span>
                   <code
                     className={styles.baseChip}
                     title={t('featureWorkspace.baseRefItemTitle', {
-                      role: t(ROLE_LABEL_KEYS[item.role]),
+                      role: t(featureRoleLabelKey(item.role)),
                       baseRef: plan.baseRef,
                     })}
                   >

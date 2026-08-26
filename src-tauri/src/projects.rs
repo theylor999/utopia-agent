@@ -97,12 +97,18 @@ pub async fn save_projects(app: AppHandle, content: String, sequence: u64) -> Re
     if sequence <= last {
         let delay_ms = rust_now as i64 - sequence as i64;
         if delay_ms > STALE_WRITE_THRESHOLD_MS {
-            return Ok(());
+            // Reporting Ok here used to hide the drop: the caller believed the
+            // document was on disk and never retried. Failing instead lets the
+            // frontend re-send the live state under a fresh sequence.
+            return Err(format!(
+                "save_projects: dropped stale write (sequence {sequence} <= last {last}, \
+                 {delay_ms}ms old); resend with a current sequence"
+            ));
         }
 
         eprintln!(
-            "[projects] aviso: sequence {sequence} <= last {last}, mas dentro do limiar \
-             de {STALE_WRITE_THRESHOLD_MS}ms (possível recuo de relógio) — gravando mesmo assim."
+            "[projects] warning: sequence {sequence} <= last {last}, but within the \
+             {STALE_WRITE_THRESHOLD_MS}ms threshold (possible clock rewind) — writing anyway."
         );
     }
 

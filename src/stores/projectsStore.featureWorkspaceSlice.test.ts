@@ -32,6 +32,7 @@ vi.mock('../lib/featureWorkspace', async () => {
     await vi.importActual<typeof import('../lib/featureWorkspace')>('../lib/featureWorkspace')
   return {
     featureSliceGroupNameKey: actual.featureSliceGroupNameKey,
+    featureRoleLabelKey: actual.featureRoleLabelKey,
     canonicalFeatureSlices: actual.canonicalFeatureSlices,
     FEATURE_SLICES: actual.FEATURE_SLICES,
     SEEDED_FEATURE_SLICE_COMBINATIONS: actual.SEEDED_FEATURE_SLICE_COMBINATIONS,
@@ -573,7 +574,7 @@ describe('createFeatureWorkspace store action', () => {
       .getState()
       .projects.find((candidate) => candidate.id === registration.projectIds[0])
     // Named after the folder, since no registered project lends its name.
-    expect(project?.name).toBe('checkout-api · feature/orders')
+    expect(project?.name).toBe('featureWorkspace.roleBackend')
     expect(project?.defaultCwd).toBe('C:/worktrees/feature-orders/backend')
   })
 
@@ -607,6 +608,61 @@ describe('createFeatureWorkspace store action', () => {
     expect(ui.pushToast).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'featureWorkspace.createFailedTitle' }),
     )
+  })
+
+  it('carries the configured workspaces root into the create call, not only the plan', async () => {
+    // The plan call being right is not enough: the worktrees are made by the
+    // create call, so the root has to survive into that request and into the
+    // destinations the registered projects and terminals point at.
+    const harness = createHarness()
+    const request: FeatureWorkspaceStoreRequest = {
+      ...REQUEST,
+      workspacesRoot: 'C:/utopia_repos',
+    }
+    ipc.create.mockResolvedValueOnce({
+      branch: 'feature/orders',
+      baseRef: BASE_REF,
+      workspaceRoot: 'C:/utopia_repos/front_back/feature/orders',
+      items: [
+        {
+          role: 'backend',
+          source: 'C:/repos/api',
+          destination: 'C:/utopia_repos/front_back/feature/orders/back',
+        },
+        {
+          role: 'frontend',
+          source: 'C:/repos/web',
+          destination: 'C:/utopia_repos/front_back/feature/orders/front',
+        },
+      ],
+    } satisfies FeatureWorkspaceResult)
+
+    await harness.getState().createFeatureWorkspace(request)
+
+    const expectedRequest = {
+      slices: ['backend', 'frontend'],
+      category: 'feature',
+      name: 'orders',
+      baseRef: BASE_REF,
+      workspacesRoot: 'C:/utopia_repos',
+      sources: [
+        { role: 'backend', path: 'C:/repos/api' },
+        { role: 'frontend', path: 'C:/repos/web' },
+      ],
+    }
+    expect(ipc.plan).toHaveBeenCalledWith(expectedRequest)
+    expect(ipc.create).toHaveBeenCalledWith(expectedRequest)
+
+    // Nothing landed next to the source repositories.
+    const destinations = harness
+      .getState()
+      .projects.filter((project) => project.id.startsWith('new-'))
+      .map((project) => project.defaultCwd)
+    expect(destinations).toEqual([
+      'C:/utopia_repos/front_back/feature/orders/back',
+      'C:/utopia_repos/front_back/feature/orders/front',
+    ])
+    expect(harness.terminalArgs.map((args) => args.cwd)).toEqual(destinations)
   })
 })
 

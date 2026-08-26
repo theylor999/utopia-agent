@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { confirmAction } from '../../lib/confirmAction'
 import { readableError } from '../../lib/errors'
 import { type MessageKey, useT } from '../../lib/i18n'
 import {
@@ -148,9 +149,15 @@ export function GitGraph({ repoRoot, onMutated }: { repoRoot: string; onMutated?
       label: t('git.graph.menu.resetHard'),
       icon: <RotateCcw size={13} />,
       onClick: () => {
-        if (window.confirm(t('git.graph.menu.resetHardConfirm'))) {
-          void runAction(() => gitResetToCommit(repoRoot, hash, 'hard'), 'git.graph.menu.resetDone')
-        }
+        void (async () => {
+          const confirmed = await confirmAction({
+            title: t('confirm.resetHardTitle'),
+            message: t('git.graph.menu.resetHardConfirm'),
+            confirmLabel: t('confirm.resetHardLabel'),
+          })
+          if (!confirmed) return
+          await runAction(() => gitResetToCommit(repoRoot, hash, 'hard'), 'git.graph.menu.resetDone')
+        })()
       },
     },
   ]

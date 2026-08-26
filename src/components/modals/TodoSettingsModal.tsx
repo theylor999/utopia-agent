@@ -1,6 +1,7 @@
 import { Folder, RotateCcw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { confirmAction } from '../../lib/confirmAction'
 import { pickDirectory } from '../../lib/dialog'
 import { useT } from '../../lib/i18n'
 import { ensureTodoTemplate } from '../../lib/tauri'
@@ -45,9 +46,16 @@ export function TodoSettingsModal() {
   }
 
   const resetDefault = () => {
-    if (!window.confirm(t('todo.resetDefaultConfirm'))) return
-    resetTodosToDefault()
-    closeModal()
+    void confirmAction({
+      title: t('confirm.todoResetTitle'),
+      message: t('todo.resetDefaultConfirm'),
+      confirmLabel: t('confirm.todoResetLabel'),
+      nested: true,
+    }).then((confirmed) => {
+      if (!confirmed) return
+      resetTodosToDefault()
+      closeModal()
+    })
   }
 
   return (

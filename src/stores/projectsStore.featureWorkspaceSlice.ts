@@ -12,6 +12,7 @@ import {
   type FeatureWorkspaceRequest,
   type FeatureWorkspaceResult,
   type FeatureWorkspaceSource,
+  featureRoleLabelKey,
   planFeatureWorkspace,
   removeFeatureWorkspace,
   SEEDED_FEATURE_SLICE_COMBINATIONS,
@@ -343,7 +344,7 @@ export function createFeatureWorkspaceSlice({
           }
 
           const project = get().createProject({
-            name: `${identity.name} · ${createdWorkspace.branch}`,
+            name: t(featureRoleLabelKey(item.role)),
             color: identity.color,
             iconUrl: identity.iconUrl,
             groupId: featureGroup.id,

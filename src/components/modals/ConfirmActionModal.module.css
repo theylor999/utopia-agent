@@ -11,8 +11,16 @@
   display: grid;
   place-items: center;
   border-radius: var(--radius-md);
+}
+
+.iconDanger {
   background: var(--status-offline-soft);
   color: var(--status-offline);
+}
+
+.iconPrimary {
+  background: var(--accent-faint);
+  color: var(--accent);
 }
 
 .message {
@@ -20,4 +28,5 @@
   font-size: 13px;
   line-height: 1.55;
   color: var(--fg-muted);
+  white-space: pre-line;
 }

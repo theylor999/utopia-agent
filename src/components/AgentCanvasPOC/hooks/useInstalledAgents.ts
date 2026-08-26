@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { CORE_AGENTS } from '../../../lib/agentCanvasConfig'
 import { AGENT_LIBRARY } from '../../../lib/agentLibrary'
+import { confirmAction } from '../../../lib/confirmAction'
 import { useT } from '../../../lib/i18n'
 import {
   economyAgentsEnabled,
@@ -100,9 +101,13 @@ export function useInstalledAgents(session: Session | null) {
         })
         .catch((err) => {
           if (String(err) === 'conflict') {
-            if (window.confirm(t('ws.confirmOverwriteForeignAgent', { name }))) {
-              installAgent(name, true)
-            }
+            void confirmAction({
+              title: t('confirm.overwriteAgentTitle'),
+              message: t('ws.confirmOverwriteForeignAgent', { name }),
+              confirmLabel: t('confirm.overwriteLabel'),
+            }).then((confirmed) => {
+              if (confirmed) installAgent(name, true)
+            })
             return
           }
           console.error('[AgentCanvasPOC] falha instalando agent:', err)
@@ -117,14 +122,20 @@ export function useInstalledAgents(session: Session | null) {
       const msg = agent.from_alethe
         ? t('ws.confirmRemoveAgent', { name: agent.name })
         : t('ws.confirmRemoveForeignAgent', { name: agent.name })
-      if (!window.confirm(msg)) return
-      uninstallAgentCmd(session.folder, agent.name, true)
-        .then(() => {
-          console.log('[AgentCanvasPOC] agent removido:', agent.name)
-          setRestartHint(true)
-          refreshInstalled()
-        })
-        .catch((err) => console.error('[AgentCanvasPOC] falha removendo agent:', err))
+      void confirmAction({
+        title: t('confirm.removeAgentTitle'),
+        message: msg,
+        confirmLabel: t('confirm.removeLabel'),
+      }).then((confirmed) => {
+        if (!confirmed) return
+        uninstallAgentCmd(session.folder, agent.name, true)
+          .then(() => {
+            console.log('[AgentCanvasPOC] agent removido:', agent.name)
+            setRestartHint(true)
+            refreshInstalled()
+          })
+          .catch((err) => console.error('[AgentCanvasPOC] falha removendo agent:', err))
+      })
     },
     [session, refreshInstalled, t],
   )

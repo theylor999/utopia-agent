@@ -63,6 +63,7 @@ vi.mock('../../lib/featureWorkspace', async () => {
     featureRoleRepoPath: actual.featureRoleRepoPath,
     canonicalFeatureSlices: actual.canonicalFeatureSlices,
     featureSliceGroupNameKey: actual.featureSliceGroupNameKey,
+    featureRoleLabelKey: actual.featureRoleLabelKey,
     planFeatureWorkspace: feature.plan,
   }
 })

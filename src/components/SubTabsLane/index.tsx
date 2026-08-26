@@ -1,6 +1,7 @@
 import { Plus, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { confirmAction } from '../../lib/confirmAction'
 import { useT } from '../../lib/i18n'
 import { useProjectsStore } from '../../stores/projectsStore'
 import type { SubTab } from '../../lib/types'
@@ -56,10 +57,13 @@ export function SubTabsLane({
                 className={styles.close}
                 onClick={(e) => {
                   e.stopPropagation()
-                  if (
-                    window.confirm(t('ui.subtabs.confirmCloseTab', { name: tab.name || tab.type }))
-                  )
-                    onClose(tab.id)
+                  void confirmAction({
+                    title: t('confirm.closeTabTitle'),
+                    message: t('ui.subtabs.confirmCloseTab', { name: tab.name || tab.type }),
+                    confirmLabel: t('confirm.closeLabel'),
+                  }).then((confirmed) => {
+                    if (confirmed) onClose(tab.id)
+                  })
                 }}
                 title={t('ui.subtabs.closeTab')}
                 aria-label={t('ui.subtabs.closeTab')}

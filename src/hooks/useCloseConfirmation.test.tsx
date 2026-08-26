@@ -24,7 +24,7 @@ vi.mock('../lib/i18n', () => ({
   translate: (_locale: string, key: string) => key,
 }))
 
-import { CloseConfirmModal } from '../components/modals/CloseConfirmModal'
+import { ConfirmActionModal } from '../components/modals/ConfirmActionModal'
 import { useUiStore } from '../stores/uiStore'
 import { confirmCloseWithModal, createAppCloseCoordinator } from './useCloseConfirmation'
 
@@ -40,11 +40,11 @@ function closeEvent(): { preventDefault: () => void; prevented: number } {
 describe('close confirmation modal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useUiStore.setState({ closeConfirmPending: false, closeConfirmReady: false, toasts: [] })
+    useUiStore.setState({ confirmRequest: null, confirmReady: false, toasts: [] })
   })
 
   it('resolves true when the user confirms in the modal', async () => {
-    render(<CloseConfirmModal />)
+    render(<ConfirmActionModal />)
     const answer = confirmCloseWithModal()
 
     const dialog = await screen.findByRole('dialog')
@@ -52,11 +52,11 @@ describe('close confirmation modal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'appClose.confirm' }))
 
     await expect(answer).resolves.toBe(true)
-    expect(useUiStore.getState().closeConfirmPending).toBe(false)
+    expect(useUiStore.getState().confirmRequest).toBeNull()
   })
 
   it('resolves false when the user cancels in the modal', async () => {
-    render(<CloseConfirmModal />)
+    render(<ConfirmActionModal />)
     const answer = confirmCloseWithModal()
 
     await screen.findByRole('dialog')
@@ -66,7 +66,7 @@ describe('close confirmation modal', () => {
   })
 
   it('Escape resolves false and Enter resolves true', async () => {
-    render(<CloseConfirmModal />)
+    render(<ConfirmActionModal />)
 
     const cancelled = confirmCloseWithModal()
     await screen.findByRole('dialog')
@@ -87,11 +87,11 @@ describe('close confirmation modal', () => {
 describe('close coordinator honouring the modal answer', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useUiStore.setState({ closeConfirmPending: false, closeConfirmReady: false, toasts: [] })
+    useUiStore.setState({ confirmRequest: null, confirmReady: false, toasts: [] })
   })
 
   it('confirming flushes the projects state and then quits', async () => {
-    render(<CloseConfirmModal />)
+    render(<ConfirmActionModal />)
     const coordinator = createAppCloseCoordinator()
     const event = closeEvent()
 
@@ -107,7 +107,7 @@ describe('close coordinator honouring the modal answer', () => {
   })
 
   it('cancelling keeps the app open', async () => {
-    render(<CloseConfirmModal />)
+    render(<ConfirmActionModal />)
     const coordinator = createAppCloseCoordinator()
 
     const closing = coordinator.handleCloseRequest(closeEvent())
@@ -121,7 +121,7 @@ describe('close coordinator honouring the modal answer', () => {
   })
 
   it('a second close request does not open a second modal', async () => {
-    render(<CloseConfirmModal />)
+    render(<ConfirmActionModal />)
     const coordinator = createAppCloseCoordinator()
 
     const first = coordinator.handleCloseRequest(closeEvent())
@@ -134,14 +134,20 @@ describe('close coordinator honouring the modal answer', () => {
     expect(backend.quitApp).not.toHaveBeenCalled()
   })
 
-  it('without a rendered modal it falls back to window.confirm and reports the failure', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+  it('without a rendered modal it closes anyway, reports it, and never calls window.confirm', async () => {
+    // `window.confirm` is not usable here: tauri-plugin-dialog rewrites it into
+    // an IPC call to `plugin:dialog|confirm`, a command that no longer exists,
+    // so it rejected and left an unhandled rejection in the close path on every
+    // session. With no modal to ask with, the close the user already requested
+    // proceeds, and the missing modal is still reported.
+    const confirmSpy = vi.spyOn(window, 'confirm')
     const coordinator = createAppCloseCoordinator()
 
     await coordinator.handleCloseRequest(closeEvent())
 
-    expect(confirmSpy).toHaveBeenCalledTimes(1)
-    expect(backend.quitApp).not.toHaveBeenCalled()
+    expect(confirmSpy).not.toHaveBeenCalled()
+    expect(projects.flushProjectsState).toHaveBeenCalledTimes(1)
+    expect(backend.quitApp).toHaveBeenCalledTimes(1)
     expect(backend.recordFrontendError).toHaveBeenCalledWith(
       expect.stringContaining('App close failed during confirm'),
       expect.anything(),
@@ -152,7 +158,7 @@ describe('close coordinator honouring the modal answer', () => {
 
   it('a failed quit reports the quit stage, toasts and destroys the window', async () => {
     backend.quitApp.mockRejectedValueOnce(new Error('quit denied'))
-    render(<CloseConfirmModal />)
+    render(<ConfirmActionModal />)
     const coordinator = createAppCloseCoordinator()
 
     const closing = coordinator.handleCloseRequest(closeEvent())

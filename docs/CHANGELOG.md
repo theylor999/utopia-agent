@@ -16,6 +16,39 @@ Notable user-facing changes to **Utopia Agent** are documented here. The format 
 
 ### Changed
 
+- **Workspace state is persisted even when the app does not exit cleanly.** Creating or removing a
+  project, group or terminal now reaches disk within ~60 ms, and every other edit within 500 ms
+  with a hard 3 s ceiling, so a burst of edits coalesces but can never postpone the write
+  indefinitely — a per-frame drag used to be able to starve it forever. The close-time flush stays
+  as a final safety net.
+- **A boot read that never settles no longer disables saving silently.** Both reads at startup are
+  now bounded by a timeout, and hydration has an explicit `pending` / `ready` / `failed` state that
+  gates persistence. A failed read is logged and surfaced to the user instead of passing unnoticed,
+  and it no longer allows the empty placeholder document to be written over the file it just failed
+  to read. Retries only happen while the in-memory document is untouched, so a late retry can never
+  overwrite real work.
+- Rust `save_projects` returns an error instead of a silent `Ok` when it drops a stale write, so the
+  frontend retries with live state rather than believing the document was saved.
+- Removed `dialog:allow-confirm` from the capabilities. It is a deprecated alias for
+  `allow-message`, the `plugin:dialog|confirm` command does not exist in the plugin, and its
+  presence suggested the ACL could grant something it cannot. A test now asserts it stays out.
+- `scripts/install-local.ps1` asks the running app to close through its own shutdown path and waits
+  up to 25 s before force-killing, so installing an update no longer discards unsaved state.
+
+### Fixed
+
+- **Destructive actions ask again.** The dialog plugin replaced `window.confirm` with an async shim
+  invoking a command it never registers, so it produced an unhandled rejection every session and,
+  because a Promise is truthy, every `if (!window.confirm(...)) return` guard fell through: 24
+  actions — factory reset, `git reset --hard`, file deletion, worktree and project deletion, group
+  deletion with its cascade, plugin uninstall, backup import, discarding working-tree changes — had
+  been running with no prompt at all. All 24 now go through one in-app confirmation modal
+  (`confirmAction`), with copy that names what will be destroyed, in both locales. It resolves
+  `false` when it cannot be shown, so "could not ask" means "do not destroy". Two messages that were
+  hardcoded Portuguese moved into i18n.
+- A test now scans the source for `window.confirm` and fails if anything reintroduces it, so the
+  shim cannot creep back in unnoticed.
+
 - The project continues as **Utopia Agent**, a fork of
   [Alethe Agents](https://github.com/Kc1t/alethe-agents) by Kauã Miguel
   ([@Kc1t](https://github.com/Kc1t)), still under AGPL-3.0-or-later. Upstream copyright and
@@ -43,6 +76,10 @@ Notable user-facing changes to **Utopia Agent** are documented here. The format 
 ## [Unreleased]
 
 ### Added
+
+- Feature projects are named after their slice (`Backend`, `Frontend`, `Scripts`). The slice group
+  already says the area and the feature subgroup already says the branch, so repeating either was
+  noise; the role is what tells two siblings of one feature apart.
 
 - A **run action per feature slice**, in the project's context menu: "Run backend (dotnet run)" in
   the slice's `NPlan.Api` subfolder, "Run frontend (npm run dev)" in the slice root. It opens a

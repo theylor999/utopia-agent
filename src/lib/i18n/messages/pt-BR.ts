@@ -11,6 +11,7 @@ export const ptBR: Record<MessageKey, string> = {
   'common.skip': 'Pular',
   'common.close': 'Fechar',
   'common.cancel': 'Cancelar',
+  'common.confirm': 'Confirmar',
   'common.save': 'Salvar',
   'common.create': 'Criar',
   'common.remove': 'Remover',
@@ -1459,6 +1460,9 @@ export const ptBR: Record<MessageKey, string> = {
   'appClose.failedTitle': 'Não foi possível fechar o Utopia Agent',
   'appClose.failedBody':
     'O pedido de fechamento falhou. Tente novamente ou abra os logs para ver os detalhes.',
+  'projects.hydrateFailedTitle': 'Seu workspace não está sendo salvo',
+  'projects.hydrateFailedBody':
+    'O Utopia Agent não conseguiu ler o projects.json e não vai sobrescrevê-lo. Feche e abra o app novamente antes de criar algo que você queira manter.',
   'ui.workspace.openIndividually': 'Abrir individualmente',
   'ui.workspace.addToCurrent': 'Adicionar à tela atual',
   'ui.subtabs.confirmCloseTab': 'Fechar tab "{name}"?',
@@ -2556,4 +2560,60 @@ export const ptBR: Record<MessageKey, string> = {
     'Uma funcionalidade de backend + frontend chamada tal vai para {root}\\front_back\\feature\\tal\\back e …\\front.',
   'prefs.featureWorkspacesRootUnset':
     'Não definida: as áreas de trabalho são criadas ao lado do repositório principal, como antes.',
+
+  /* ---- confirmações (ConfirmActionModal) ---- */
+  'confirm.deleteLabel': 'Excluir',
+  'confirm.removeLabel': 'Remover',
+  'confirm.discardLabel': 'Descartar',
+  'confirm.closeLabel': 'Fechar',
+  'confirm.continueLabel': 'Continuar',
+  'confirm.overwriteLabel': 'Sobrescrever',
+
+  'confirm.resetAppDataTitle': 'Apagar todo o estado do app?',
+  'confirm.resetAppDataLabel': 'Apagar tudo',
+  'confirm.factoryResetTitle': 'Voltar ao estado de instalação nova?',
+  'confirm.factoryResetLabel': 'Apagar todos os perfis',
+  'confirm.importBackupTitle': 'Substituir o estado atual por este backup?',
+  'confirm.importBackupLabel': 'Importar e substituir',
+
+  'confirm.resetHardTitle': 'Fazer reset hard neste branch?',
+  'confirm.resetHardLabel': 'Descartar alterações e resetar',
+  'confirm.discardChangesTitle': 'Descartar as alterações selecionadas?',
+  'confirm.stageAllCommitTitle': 'Commitar todas as alterações?',
+  'confirm.stageAllCommitLabel': 'Adicionar tudo e commitar',
+  'confirm.gitInitTitle': 'Inicializar um repositório Git aqui?',
+  'confirm.gitInitLabel': 'Executar git init',
+
+  'confirm.deleteFileTitle': 'Excluir este arquivo?',
+  'confirm.deleteFolderTitle': 'Excluir esta pasta?',
+
+  'confirm.deleteAgentEnvTitle': 'Excluir este ambiente do agente?',
+  'confirm.deleteAgentEnvMessage':
+    'Excluir a worktree do agente "{name}"? A pasta é removida junto com qualquer trabalho não commitado dentro dela. O branch em si é preservado.',
+  'confirm.deleteAgentEnvFailed': 'Não foi possível excluir o ambiente do agente',
+
+  'confirm.uninstallPluginTitle': 'Desinstalar este plugin?',
+  'confirm.uninstallPluginMessage':
+    'Desinstalar o plugin "{id}"? O manifest e o registro dele são removidos deste perfil.',
+  'confirm.uninstallPluginLabel': 'Desinstalar',
+
+  'confirm.removeAgentTitle': 'Remover este arquivo de agente?',
+  'confirm.overwriteAgentTitle': 'Sobrescrever o arquivo de agente existente?',
+
+  'confirm.rejectMergeTitle': 'Rejeitar este merge?',
+  'confirm.rejectMergeLabel': 'Remover worktree',
+
+  'confirm.deleteProjectTitle': 'Excluir este projeto?',
+  'confirm.deleteGroupCascadeTitle': 'Excluir este grupo e seus projetos?',
+  'confirm.deleteTerminalTitle': 'Excluir este terminal?',
+  'confirm.deleteArchivedGroupTitle': 'Remover este grupo arquivado?',
+  'confirm.closePaneTitle': 'Fechar este painel?',
+  'confirm.closeTabTitle': 'Fechar esta aba?',
+
+  'confirm.todoResetTitle': 'Restaurar a lista de Todo padrão?',
+  'confirm.todoResetLabel': 'Substituir minha lista',
+  'confirm.migrateWorktreesTitle': 'Mover os terminais existentes para worktrees?',
+  'confirm.migrateWorktreesLabel': 'Mover e reiniciar',
+  'confirm.resetSessionTitle': 'Reiniciar todos os painéis de agente?',
+  'confirm.resetSessionLabel': 'Reiniciar painéis',
 }

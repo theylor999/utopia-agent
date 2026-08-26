@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { confirmAction } from '../../lib/confirmAction'
 import { readableError } from '../../lib/errors'
 import { writeFileDragPayload } from '../../lib/fileDrag'
 import { useT } from '../../lib/i18n'
@@ -139,7 +140,14 @@ export function FileExplorer({ projectId, cwd, ptyId, terminalName }: FileExplor
 
   const deleteEntry = async (entry: DirectoryEntry) => {
     setMenu(null)
-    if (!window.confirm(t(entry.is_dir ? 'files.deleteFolderConfirm' : 'files.deleteFileConfirm', { name: entry.name }))) return
+    const confirmed = await confirmAction({
+      title: t(entry.is_dir ? 'confirm.deleteFolderTitle' : 'confirm.deleteFileTitle'),
+      message: t(entry.is_dir ? 'files.deleteFolderConfirm' : 'files.deleteFileConfirm', {
+        name: entry.name,
+      }),
+      confirmLabel: t('confirm.deleteLabel'),
+    })
+    if (!confirmed) return
     try {
       await deleteFilesystemEntry(entry.path)
       setReloadKey((value) => value + 1)

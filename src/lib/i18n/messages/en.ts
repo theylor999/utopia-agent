@@ -9,6 +9,7 @@ export const en = {
   'common.skip': 'Skip',
   'common.close': 'Close',
   'common.cancel': 'Cancel',
+  'common.confirm': 'Confirm',
   'common.save': 'Save',
   'common.create': 'Create',
   'common.remove': 'Remove',
@@ -1440,6 +1441,9 @@ export const en = {
   'appClose.cancel': 'Cancel',
   'appClose.failedTitle': 'Utopia Agent could not close',
   'appClose.failedBody': 'The close request failed. Try again or open the logs for details.',
+  'projects.hydrateFailedTitle': 'Your workspace is not being saved',
+  'projects.hydrateFailedBody':
+    'Utopia Agent could not read projects.json, so it will not write over it. Close and reopen the app before you create anything you want to keep.',
   'ui.workspace.openIndividually': 'Open individually',
   'ui.workspace.addToCurrent': 'Add to current view',
   'ui.subtabs.confirmCloseTab': 'Close tab "{name}"?',
@@ -2536,6 +2540,62 @@ export const en = {
     'A backend + frontend feature named tal lands in {root}\\front_back\\feature\\tal\\back and …\\front.',
   'prefs.featureWorkspacesRootUnset':
     'Not set: workspaces are created next to the main repository, as before.',
+
+  /* ---- confirmations (ConfirmActionModal) ---- */
+  'confirm.deleteLabel': 'Delete',
+  'confirm.removeLabel': 'Remove',
+  'confirm.discardLabel': 'Discard',
+  'confirm.closeLabel': 'Close',
+  'confirm.continueLabel': 'Continue',
+  'confirm.overwriteLabel': 'Overwrite',
+
+  'confirm.resetAppDataTitle': 'Erase all app state?',
+  'confirm.resetAppDataLabel': 'Erase everything',
+  'confirm.factoryResetTitle': 'Reset to a brand-new install?',
+  'confirm.factoryResetLabel': 'Erase every profile',
+  'confirm.importBackupTitle': 'Replace the current state with this backup?',
+  'confirm.importBackupLabel': 'Import and replace',
+
+  'confirm.resetHardTitle': 'Hard reset this branch?',
+  'confirm.resetHardLabel': 'Discard changes and reset',
+  'confirm.discardChangesTitle': 'Discard the selected changes?',
+  'confirm.stageAllCommitTitle': 'Commit every change?',
+  'confirm.stageAllCommitLabel': 'Stage all and commit',
+  'confirm.gitInitTitle': 'Initialize a Git repository here?',
+  'confirm.gitInitLabel': 'Run git init',
+
+  'confirm.deleteFileTitle': 'Delete this file?',
+  'confirm.deleteFolderTitle': 'Delete this folder?',
+
+  'confirm.deleteAgentEnvTitle': 'Delete this agent environment?',
+  'confirm.deleteAgentEnvMessage':
+    'Delete the worktree of agent "{name}"? Its folder is removed along with any uncommitted work inside it. The branch itself is preserved.',
+  'confirm.deleteAgentEnvFailed': 'Could not delete the agent environment',
+
+  'confirm.uninstallPluginTitle': 'Uninstall this plugin?',
+  'confirm.uninstallPluginMessage':
+    'Uninstall the plugin "{id}"? Its manifest and registration are removed from this profile.',
+  'confirm.uninstallPluginLabel': 'Uninstall',
+
+  'confirm.removeAgentTitle': 'Remove this agent file?',
+  'confirm.overwriteAgentTitle': 'Overwrite the existing agent file?',
+
+  'confirm.rejectMergeTitle': 'Reject this merge?',
+  'confirm.rejectMergeLabel': 'Remove worktree',
+
+  'confirm.deleteProjectTitle': 'Delete this project?',
+  'confirm.deleteGroupCascadeTitle': 'Delete this group and its projects?',
+  'confirm.deleteTerminalTitle': 'Delete this terminal?',
+  'confirm.deleteArchivedGroupTitle': 'Remove this archived group?',
+  'confirm.closePaneTitle': 'Close this pane?',
+  'confirm.closeTabTitle': 'Close this tab?',
+
+  'confirm.todoResetTitle': 'Restore the default Todo list?',
+  'confirm.todoResetLabel': 'Replace my list',
+  'confirm.migrateWorktreesTitle': 'Move existing terminals into worktrees?',
+  'confirm.migrateWorktreesLabel': 'Move and restart',
+  'confirm.resetSessionTitle': 'Restart every agent pane?',
+  'confirm.resetSessionLabel': 'Restart panes',
 } as const
 
 export type MessageKey = keyof typeof en
